@@ -1,5 +1,5 @@
 import express from "express";
-import { sendOtp, verifyOtp } from "../controllers/otp.controller.js";
+import { sendOtp, verifyOtpRegister } from "../controllers/otp.controller.js";
 
 const router = express.Router();
 
@@ -7,6 +7,6 @@ const router = express.Router();
 router.post("/send", sendOtp);
 
 // Xác thực OTP
-router.post("/verify", verifyOtp);
+router.post("/verify", verifyOtpRegister);
 
 export default router;

@@ -1,6 +1,10 @@
 import User from "../models/user.model.js";
+import { sendOtp, verifyOtpRegister } from "./otp.controller.js";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
+
+export const registerSendOtp = sendOtp;
+export const registerVerifyOtp = verifyOtpRegister;
 export const Register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -21,19 +25,22 @@ export const Register = async (req, res) => {
       name,
       email,
       password: hashPassword,
+      active: false
     });
 
     await newRegistration.save();
+    // Gửi OTP
+    await sendOtp({ body: { email } }, res);
 
-    res.status(200).json({
-      status: true,
-      message: "Registration success.",
-    });
+    // res.status(200).json({
+    //   status: true,
+    //   message: "Registration success.",
+    // });
   } catch (error) {
-    res.status(500),
+    res.status(500).
       json({
         status: false,
-        error,
+        error:error.message,
       });
   }
 };

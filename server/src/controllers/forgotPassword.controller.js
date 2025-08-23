@@ -1,12 +1,12 @@
 import bcrypt from "bcrypt";
 import User from "../models/user.model.js";
-import { sendOtp, verifyOtp } from "./otp.controller.js"; // tái sử dụng
+import { sendOtp, verifyOtpForgot } from "./otp.controller.js"; // tái sử dụng
 
 // Bước 1: Gửi OTP
 export const forgotPasswordSendOtp = sendOtp;
 
 // Bước 2: Xác thực OTP
-export const forgotPasswordVerifyOtp = verifyOtp;
+export const forgotPasswordVerifyOtp = verifyOtpForgot;
 
 // Bước 3: Reset mật khẩu
 export const resetPassword = async (req, res) => {
