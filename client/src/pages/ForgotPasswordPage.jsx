@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { z } from "zod";
-import { toast } from "react-toastify";
-import { Link } from "react-router-dom";
-import "react-toastify/dist/ReactToastify.css";
-
+import { toast, Toaster } from "sonner";
+import { Link, useNavigate } from "react-router-dom";
+import authService from "../services/authService";
 const forgotPasswordSchema = z.object({
   email: z
     .string()
@@ -17,37 +16,44 @@ const forgotPasswordSchema = z.object({
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+  const navigate = useNavigate();
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     try {
+      // Validate email
       forgotPasswordSchema.parse({ email });
 
-      if (!baseUrl) throw new Error("API base URL is not defined.");
-
       setIsLoading(true);
-      const response = await fetch(`${baseUrl}/api/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
+      const res = await authService.forgotPassword(email);
       setIsLoading(false);
 
-      if (response.ok && data.status) {
-        toast.success("Liên kết đặt lại mật khẩu đã được gửi!");
+      // Kiểm tra success từ response
+      if (res.data.success) {
+        toast.success(res.data.message);
+        navigate("/verify-otp", { state: { email, mode: "forgot-password" } });
       } else {
-        toast.error("Không tìm thấy tài khoản với thông tin này.");
+        toast.error(
+          res.data.message || "Không tìm thấy tài khoản với thông tin này."
+        );
       }
     } catch (error) {
       setIsLoading(false);
+
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
+      } else if (error.response) {
+        // Xử lý theo status code của backend
+        const status = error.response.status;
+        const message =
+          error.response.data?.message || "Có lỗi xảy ra, vui lòng thử lại!";
+
+        if (status === 429) {
+          toast.error(message); // Quá số lần gửi OTP
+        } else {
+          toast.error(message);
+        }
       } else {
-        console.error(error);
         toast.error("Có lỗi xảy ra, vui lòng thử lại!");
       }
     }
@@ -97,9 +103,11 @@ const ForgotPasswordPage = () => {
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 
+                  <path
+                    d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 
                   1.79-4 4 1.79 4 4 4zm0 2c-2.67 
-                  0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                  0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                  />
                 </svg>
               </div>
             </div>

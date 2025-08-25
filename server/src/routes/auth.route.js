@@ -1,10 +1,18 @@
 import express from "express";
-import { Register, Login, registerVerifyOtp } from "../controllers/auth.controller.js";
+import {
+  Register,
+  Login,
+  resetPassword,
+} from "../controllers/auth.controller.js";
 import { authenticate } from "../middleware/authenticate.js";
-import { forgotPasswordSendOtp, forgotPasswordVerifyOtp, resetPassword } from "../controllers/forgotPassword.controller.js";
+import {
+  resendOtpRegister,
+  sendOtpForgotPass,
+  verifyOtpForgot,
+  verifyOtpRegister,
+} from "../controllers/otp.controller.js";
 
 const router = express.Router();
-
 
 router.post("/login", Login);
 router.get("/get-user", authenticate, (req, res) => {
@@ -13,12 +21,12 @@ router.get("/get-user", authenticate, (req, res) => {
 
 //Register
 router.post("/register", Register);
-//router.post("/register/send-otp", registerSendOtp);
-router.post("/register/verify-otp", registerVerifyOtp);
+router.post("/register/resend-otp", resendOtpRegister);
+router.post("/register/verify-otp", verifyOtpRegister);
 
 //Forgot Password
-router.post("/forgot-password/send-otp", forgotPasswordSendOtp);
-router.post("/forgot-password/verify-otp", forgotPasswordVerifyOtp);
+router.post("/forgot-password/send-otp", sendOtpForgotPass);
+router.post("/forgot-password/verify-otp", verifyOtpForgot);
 router.post("/forgot-password/reset", resetPassword);
 
 export default router;
