@@ -1,47 +1,64 @@
-import User from "../models/user.model.js";
-import { sendOtp, verifyOtpRegister } from "./otp.controller.js";
-import bcryptjs from "bcryptjs";
+import userModel from "../models/user.model.js";
+import { verifyOtpRegister } from "./otp.controller.js";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
-export const registerSendOtp = sendOtp;
+import crypto from "crypto";
+import sendMail from "../utils/sendMail.js";      
+import redisClient from "../utils/redisClient.js";
 export const registerVerifyOtp = verifyOtpRegister;
-export const Register = async (req, res) => {
+const SALT_ROUNDS = 10;
+const sendOtpToEmail = async (email) => {
+  try {
+    // Tạo OTP 6 chữ số
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    // Lưu OTP vào Redis với TTL 120s
+    await redisClient.setEx(`otp:register:${email}`, 120, otp);
+
+    // Gửi OTP qua email
+    await sendMail(email, "Mã OTP đăng ký", `Mã OTP đăng ký của bạn: ${otp}`);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Send OTP error:", error);
+    return { success: false, error };
+  }
+};
+
+export const Register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
+    const emailCheck = await userModel.findOne({ email });
+    if (emailCheck) {
+      return res.status(400).json({ message: "Email is already existed" });
+    } else {
+      const hashPassword = bcrypt.hashSync(req.body.password, SALT_ROUNDS);
+      let newUser = req.body;
+      newUser.password = hashPassword;
+      newUser.active = false;
 
-    //check if user registered
-    const checkRegistrationStatus = await User.findOne({ email });
-    if (checkRegistrationStatus) {
-      return res.status(409).json({
-        status: false,
-        message: "User already register",
-      });
+      const createdUser = await userModel.create(newUser);
+      if (!createdUser) {
+        return res.sendError(res, "User is existed");
+      }
+
+      const otpResult = await sendOtpToEmail(createdUser.email);
+      if (otpResult.success) {
+        return res.status(201).json({
+          message:
+            "User created successfully. Please check your email for OTP verification.",
+          user: { _id: createdUser._id, email: createdUser.email },
+        });
+      } else {
+        return res.status(201).json({
+          message:
+            "User created successfully but OTP sending failed. Please try to resend OTP.",
+          user: { _id: createdUser._id, email: createdUser.email },
+        });
+      }
     }
-
-    // hash password
-    const hashPassword = bcryptjs.hashSync(password);
-
-    const newRegistration = new User({
-      name,
-      email,
-      password: hashPassword,
-      active: false
-    });
-
-    await newRegistration.save();
-    // Gửi OTP
-    await sendOtp({ body: { email } }, res);
-
-    // res.status(200).json({
-    //   status: true,
-    //   message: "Registration success.",
-    // });
   } catch (error) {
-    res.status(500).
-      json({
-        status: false,
-        error:error.message,
-      });
+    next(error);
   }
 };
 

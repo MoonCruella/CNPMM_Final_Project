@@ -1,5 +1,5 @@
 import express from "express";
-import { Register, Login, registerSendOtp, registerVerifyOtp } from "../controllers/auth.controller.js";
+import { Register, Login, registerVerifyOtp } from "../controllers/auth.controller.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { forgotPasswordSendOtp, forgotPasswordVerifyOtp, resetPassword } from "../controllers/forgotPassword.controller.js";
 
@@ -13,7 +13,7 @@ router.get("/get-user", authenticate, (req, res) => {
 
 //Register
 router.post("/register", Register);
-router.post("/register/send-otp", registerSendOtp);
+//router.post("/register/send-otp", registerSendOtp);
 router.post("/register/verify-otp", registerVerifyOtp);
 
 //Forgot Password

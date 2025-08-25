@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import AuthRoute from "./routes/auth.route.js";
-import otpRoutes from "./routes/otp.js";
+import otpRoutes from "./routes/otp.route.js";
 import cors from "cors";
 dotenv.config();
 const app = express();
