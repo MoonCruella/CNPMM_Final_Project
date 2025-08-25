@@ -5,18 +5,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast, Toaster } from 'sonner';
 
+// Schema validate
 const formSchema = z
   .object({
-    name: z.string().min(3, {
-      message: 'Họ và tên phải có ít nhất 3 ký tự.',
-    }),
+    name: z.string().min(3, { message: 'Họ và tên phải có ít nhất 3 ký tự.' }),
     email: z.string().email({ message: 'Email không hợp lệ.' }),
-    password: z
-      .string()
-      .min(8, { message: 'Mật khẩu phải có ít nhất 8 ký tự.' }),
-    confirm_password: z
-      .string()
-      .min(8, { message: 'Xác nhận mật khẩu phải có ít nhất 8 ký tự.' }),
+    password: z.string().min(8, { message: 'Mật khẩu phải có ít nhất 8 ký tự.' }),
+    confirm_password: z.string().min(8, { message: 'Xác nhận mật khẩu phải có ít nhất 8 ký tự.' }),
   })
   .refine((data) => data.password === data.confirm_password, {
     message: 'Mật khẩu và xác nhận mật khẩu phải giống nhau.',
@@ -24,14 +19,14 @@ const formSchema = z
   });
 
 const RegisterPage = () => {
-  const [showRegisterModal, setShowRegisterModal] = useState(true);
+  const [loading, setLoading] = useState(false);
   const baseUrl = import.meta.env.VITE_API_BASE_URL;
   const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -44,9 +39,7 @@ const RegisterPage = () => {
 
   const onSubmit = async (values) => {
     try {
-      if (!baseUrl) {
-        throw new Error('API base URL is not defined. Please check your .env file.');
-      }
+      setLoading(true);
 
       const response = await fetch(`${baseUrl}/api/auth/register`, {
         method: 'POST',
@@ -54,127 +47,114 @@ const RegisterPage = () => {
         body: JSON.stringify(values),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(data.message || `HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
       if (data.status) {
         toast.success('Đăng ký thành công! Vui lòng đăng nhập.');
-        setShowRegisterModal(false);
         navigate('/login');
       } else {
-        toast.error('Email đã được đăng ký!');
+        toast.error(data.message || 'Email đã được đăng ký!');
       }
     } catch (error) {
       console.error('Register error:', error);
       toast.error('Đã có lỗi xảy ra khi đăng ký!');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const closeRegisterModal = () => {
-    setShowRegisterModal(false);
-    navigate('/login');
-  };
-
-  if (!showRegisterModal) return null;
-
   return (
-    <div
-      id="registerModal"
-      className="fixed inset-0 bg-white bg-opacity-60 flex items-center justify-center p-4 z-50"
-      onClick={(e) => e.target.id === 'registerModal' && closeRegisterModal()}
-    >
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-green-100 to-green-50 p-4">
       <Toaster richColors />
-      <div className="bg-white rounded-3xl p-10 max-w-md w-full mx-4 shadow-2xl">
-        <h3 className="text-3xl font-bold mb-8 text-gray-800 text-center">Đăng ký tài khoản mới</h3>
+      <div className="bg-white rounded-3xl p-10 max-w-md w-full shadow-2xl">
+        <h2 className="text-3xl font-bold mb-8 text-gray-800 text-center">
+          Đăng ký tài khoản mới
+        </h2>
+
         <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+          {/* Họ và tên */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-2 text-sm uppercase tracking-wide">
-              Họ và tên
-            </label>
+            <label className="block text-gray-700 font-semibold mb-2">Họ và tên</label>
             <input
               {...register('name')}
               type="text"
-              className={`input-focus w-full px-5 py-4 border-2 border-gray-200 rounded-2xl transition-all duration-300 ${
-                errors.name ? 'border-red-500' : ''
-              }`}
               placeholder="Nhập họ tên"
-              disabled={isSubmitting}
+              className={`w-full px-5 py-3 border-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400 ${
+                errors.name ? 'border-red-500' : 'border-gray-200'
+              }`}
+              disabled={loading}
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
           </div>
+
+          {/* Email */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-2 text-sm uppercase tracking-wide">
-              Email
-            </label>
+            <label className="block text-gray-700 font-semibold mb-2">Email</label>
             <input
               {...register('email')}
               type="email"
-              className={`input-focus w-full px-5 py-4 border-2 border-gray-200 rounded-2xl transition-all duration-300 ${
-                errors.email ? 'border-red-500' : ''
-              }`}
               placeholder="Nhập email"
-              disabled={isSubmitting}
+              className={`w-full px-5 py-3 border-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400 ${
+                errors.email ? 'border-red-500' : 'border-gray-200'
+              }`}
+              disabled={loading}
             />
             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
           </div>
+
+          {/* Mật khẩu */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-2 text-sm uppercase tracking-wide">
-              Mật khẩu
-            </label>
+            <label className="block text-gray-700 font-semibold mb-2">Mật khẩu</label>
             <input
               {...register('password')}
               type="password"
-              className={`input-focus w-full px-5 py-4 border-2 border-gray-200 rounded-2xl transition-all duration-300 ${
-                errors.password ? 'border-red-500' : ''
-              }`}
               placeholder="Tạo mật khẩu"
-              disabled={isSubmitting}
+              className={`w-full px-5 py-3 border-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400 ${
+                errors.password ? 'border-red-500' : 'border-gray-200'
+              }`}
+              disabled={loading}
             />
             {errors.password && (
               <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
             )}
           </div>
+
+          {/* Xác nhận mật khẩu */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-2 text-sm uppercase tracking-wide">
-              Xác nhận mật khẩu
-            </label>
+            <label className="block text-gray-700 font-semibold mb-2">Xác nhận mật khẩu</label>
             <input
               {...register('confirm_password')}
               type="password"
-              className={`input-focus w-full px-5 py-4 border-2 border-gray-200 rounded-2xl transition-all duration-300 ${
-                errors.confirm_password ? 'border-red-500' : ''
-              }`}
               placeholder="Xác nhận mật khẩu"
-              disabled={isSubmitting}
+              className={`w-full px-5 py-3 border-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-400 ${
+                errors.confirm_password ? 'border-red-500' : 'border-gray-200'
+              }`}
+              disabled={loading}
             />
             {errors.confirm_password && (
               <p className="text-red-500 text-sm mt-1">{errors.confirm_password.message}</p>
             )}
           </div>
+
+          {/* Nút đăng ký */}
           <button
             type="submit"
-            className="btn-primary w-full text-white bg-green-600 py-4 rounded-2xl font-bold text-lg shadow-lg disabled:bg-gray-400"
-            disabled={isSubmitting}
+            className="w-full text-white bg-green-600 py-3 rounded-2xl font-bold text-lg shadow-lg hover:bg-green-700 transition-all disabled:bg-gray-400"
+            disabled={loading}
           >
-            {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký 🌱'}
+            {loading ? 'Đang đăng ký...' : 'Đăng ký 🌱'}
           </button>
         </form>
-        <button
-          onClick={closeRegisterModal}
-          className="w-full mt-4 bg-gray-100 text-gray-700 py-4 rounded-2xl font-bold text-lg hover:bg-gray-200 transition-all duration-300"
-        >
-          Hủy
-        </button>
-        <div className="mt-4 text-center">
+
+        {/* Link đăng nhập */}
+        <div className="mt-6 text-center">
           <p className="text-gray-600">
             Đã có tài khoản?{' '}
-            <Link
-              to="/login"
-              className="text-green-600 hover:text-green-800 font-bold transition-colors"
-              onClick={closeRegisterModal}
-            >
+            <Link to="/login" className="text-green-600 hover:text-green-800 font-bold">
               Đăng nhập
             </Link>
           </p>
