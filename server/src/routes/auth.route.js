@@ -1,13 +1,13 @@
 import express from "express";
 import { Register, Login, registerVerifyOtp } from "../controllers/auth.controller.js";
-import { authenticate } from "../middleware/authenticate.js";
+import { authenticateToken } from "../middleware/auth.middleware.js";
 import { forgotPasswordSendOtp, forgotPasswordVerifyOtp, resetPassword } from "../controllers/forgotPassword.controller.js";
 
 const router = express.Router();
 
 
 router.post("/login", Login);
-router.get("/get-user", authenticate, (req, res) => {
+router.get("/get-user", authenticateToken, (req, res) => {
   res.status(200).json({ status: true, user: req.user });
 });
 

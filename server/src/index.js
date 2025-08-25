@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import AuthRoute from "./routes/auth.route.js";
 import otpRoutes from "./routes/otp.route.js";
+import userRoutes from "./routes/user.route.js"
 import connectDB from "./config/db.js";
 import { config } from "./config/env.js";
 
@@ -31,6 +32,8 @@ connectDB();
 app.use("/api/auth", AuthRoute);
 //OTP
 app.use("/api/otp", otpRoutes);
+//User
+app.use("/api/user", userRoutes)
 
 console.log("=== Environment Variables Debug ===");
 console.log("EMAIL_USER:", config.email ? "SET" : "NOT SET");
