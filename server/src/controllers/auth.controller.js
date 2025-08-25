@@ -1,10 +1,16 @@
 import userModel from "../models/user.model.js";
 import { verifyOtpRegister } from "./otp.controller.js";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import sendMail from "../utils/sendMail.js";      
 import redisClient from "../utils/redisClient.js";
+import response from '../helpers/response.js';
+import { config } from "../config/env.js";
+
+import * as authMethod from '../method/auth.method.js';
+
+
+
 export const registerVerifyOtp = verifyOtpRegister;
 const SALT_ROUNDS = 10;
 const sendOtpToEmail = async (email) => {
@@ -44,17 +50,17 @@ export const Register = async (req, res, next) => {
 
       const otpResult = await sendOtpToEmail(createdUser.email);
       if (otpResult.success) {
-        return res.status(201).json({
-          message:
-            "User created successfully. Please check your email for OTP verification.",
-          user: { _id: createdUser._id, email: createdUser.email },
-        });
+        
+        return response.sendSuccess(res, {
+					message: 'User created successfully. Please check your email for OTP verification.',
+					user: createdUser
+				});
       } else {
-        return res.status(201).json({
-          message:
-            "User created successfully but OTP sending failed. Please try to resend OTP.",
-          user: { _id: createdUser._id, email: createdUser.email },
-        });
+        
+        return response.sendSuccess(res, {
+					message: 'User created successfully but OTP sending failed. Please try to resend OTP.',
+					user: createdUser
+				});
       }
     }
   } catch (error) {
@@ -62,43 +68,38 @@ export const Register = async (req, res, next) => {
   }
 };
 
-export const Login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    //check if user not registered
-    const user = await User.findOne({ email }).lean().exec();
-    if (!user) {
-      return res.status(403).json({
-        status: false,
-        message: "Invalid login credentials.",
-      });
-    }
-
-    // check password
-    const isVerifyPassword = await bcryptjs.compare(password, user.password);
-    if (!isVerifyPassword) {
-      return res.status(403).json({
-        status: false,
-        message: "Invalid login credentials.",
-      });
-    }
-
-    delete user.password;
-
-    const token = jwt.sign(user, process.env.JWT_SECRET);
-    res.cookie("access_token", token, {
-      httpOnly: true,
-    });
-    res.status(200).json({
-      status: true,
-      message: "Login success.",
-    });
-  } catch (error) {
-    res.status(500),
-      json({
-        status: false,
-        error,
-      });
-  }
+export const Login = async (req, res, next) => {
+  try{
+		const email = req.body.email
+		const password = req.body.password
+		
+		const user = await userModel.findOne({ email }).lean().exec();
+		if (!user){
+			return response.sendError(res, 'User not found', 404)
+		}
+		else{
+			console.log(bcrypt.compareSync(password, user.password))
+			if (!bcrypt.compareSync(password, user.password)){
+				return response.sendError(res, 'Password or username is incorrect', 401)
+			}
+			// Thêm kiểm tra active
+			if (!user.active) {
+				return response.sendError(res, 'Tài khoản chưa được kích hoạt. Hãy xác nhận mã OTP cho tài khoản mình', 401)
+			}
+			
+			const dataForAccessToken = {
+				email: email
+			}
+			const accessToken = authMethod.generateJwt(dataForAccessToken)
+			// let refreshToken = randToken.generate()
+			return response.sendSuccess(res, {
+				accessToken, 
+				user
+			})
+		}
+	}
+	catch (error){
+		console.log('Error', error)
+		next(error)
+	}
 };

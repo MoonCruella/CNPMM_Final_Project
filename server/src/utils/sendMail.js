@@ -1,19 +1,21 @@
 import nodemailer from "nodemailer";
+import { config } from "../config/env.js";
+
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
   secure: false, // Thêm dòng này
   auth: {
-    user: 'ttnghia204@gmail.com',
-    pass: 'byzf engd xbey rdkl',
+    user: config.email,
+    pass: config.passEmail,
   },
   tls: {
     rejectUnauthorized: false // Thêm dòng này để tránh lỗi SSL
   }
 });
 
-// Thêm verify connection để debug
+
 transporter.verify(function(error, success) {
   if (error) {
     console.log("SMTP Connection Error:", error);
@@ -25,7 +27,7 @@ transporter.verify(function(error, success) {
 const sendMail = async (to, subject, text) => {
   try {
     const result = await transporter.sendMail({
-      from: 'ttnghia204@gmail.com',
+      from: config.email,
       to,
       subject,
       text,
