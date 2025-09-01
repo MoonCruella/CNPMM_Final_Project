@@ -1,4 +1,12 @@
-# dotenv environment variable files
+# Environment variables
 .env
-.env.*
-!.env.example
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Other common files to ignore
+node_modules/
+dist/
+build/
+*.log
