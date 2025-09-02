@@ -41,32 +41,20 @@ export const assets = {
   cod_icon,
 };
 
-export const categories = [
+export const categoriesColors = [
   {
-    text: "Hải sản khô",
-    path: "Seafoods",
-    image: squad_icon,
     bgColor: "#fff8ee",
     bgMainColor: "#ffd28e",
   },
   {
-    text: "Nông sản",
-    path: "FarmFoods",
-    image: farm_icon,
     bgColor: "#e3f8ee",
     bgMainColor: "#8ee3ba",
   },
   {
-    text: "Bánh kẹo",
-    path: "Cakes",
-    image: cake_icon,
     bgColor: "#fbefef",
     bgMainColor: "#f0bfbd",
   },
   {
-    text: "Gia vị",
-    path: "Sauces",
-    image: sauces_icon,
     bgColor: "#f9f5ff",
     bgMainColor: "#eee2ff",
   },
