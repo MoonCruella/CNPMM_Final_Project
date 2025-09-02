@@ -1,10 +1,30 @@
-import { assets } from "@/assets/assets";
-import React from "react";
-import { categories } from "@/assets/assets";
+import React, { useEffect, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
-
+import { categoriesColors } from "@/assets/assets.js";
+import categoryService from "../services/categoryService.js";
 const Categories = () => {
   const { navigate } = useAppContext();
+  const [categories, setCategories] = useState([]);
+
+  // Gọi API khi component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await categoryService.getAll();
+
+        console.log("API categories:", res);
+
+        // chỉ lấy phần mảng
+        setCategories(res.data || []);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        setCategories([]);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   return (
     <section className="pt-20 ">
       <div className="container mx-auto px-4">
@@ -21,30 +41,35 @@ const Categories = () => {
 
         {/* Category List */}
         <div className="flex flex-wrap justify-center gap-6 mt-10">
-          {categories.map((item, index) => (
-            <div
-              key={index}
-              onClick={() => {
-                navigate(`/products/${item.path.toLowerCase()}`);
-                scrollTo(0, 0);
-              }}
-              className="w-36 rounded-2xl p-5 mx-5 mb-5 shadow-md flex flex-col justify-center items-center text-center transition-transform hover:scale-105"
-              style={{ backgroundColor: item.bgColor }}
-            >
-              {/* Icon/Image */}
+          {categories.map((item, index) => {
+            const style = categoriesColors[index % categoriesColors.length];
+            return (
               <div
-                className="w-16 h-16 flex items-center justify-center rounded-full mb-4"
-                style={{ backgroundColor: item.bgMainColor }}
+                key={item._id}
+                onClick={() => {
+                  navigate(`/products/${item.slug?.toLowerCase()}`);
+                  window.scrollTo(0, 0);
+                }}
+                className="w-36 h-40 p-5 rounded-2xl flex flex-col items-center justify-between transform transition duration-300 hover:scale-105 hover:shadow-lg"
+                style={{ backgroundColor: style.bgColor }}
               >
-                <img src={item.image} alt={item.text} className="w-8 h-8" />
-              </div>
+                {/* Khung ảnh tròn */}
+                <div
+                  className="w-16 h-16 flex items-center justify-center rounded-full"
+                  style={{ backgroundColor: style.bgMainColor }}
+                >
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-8 h-8 object-contain"
+                  />
+                </div>
 
-              {/* Content */}
-              <div>
-                <h5 className="font-semibold text-gray-800">{item.text}</h5>
+                {/* Tên category */}
+                <h3 className=" pb-1 font-semibold text-center">{item.name}</h3>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

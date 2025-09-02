@@ -6,7 +6,7 @@ const ProductCard = ({ product }) => {
       {/* Thumbnail */}
       <div className="relative overflow-hidden">
         <img
-          src={product.image}
+          src={product.primary_image}
           alt={product.name}
           className="w-full h-72 object-cover transform transition-transform duration-500 group-hover:scale-110"
         />
