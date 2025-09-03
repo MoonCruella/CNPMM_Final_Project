@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -153,7 +154,7 @@
   }
 }
 body {
-  font-family: "Inter", sans-serif;
+  font-family: "Quicksand", sans-serif;
 }
 .login-bg {
   background: linear-gradient(135deg, #16a34a 0%, #22c55e 50%, #4ade80 100%);
@@ -223,6 +224,17 @@ body {
   background: linear-gradient(135deg, #0a5d2a 0%, #15803d 100%);
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(12, 119, 53, 0.3);
+}
+.btn-secondary {
+  background: white;
+  color: black;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: #f3f4f6; /* gần giống hover:bg-gray-200 */
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 .input-focus:focus {
   border-color: #16a34a;
