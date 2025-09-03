@@ -13,7 +13,7 @@ const BestSeller = () => {
           Xem tất cả
         </Link>
       </div>
-      <ProductDisplay layout="slider" />
+      <ProductDisplay type="seller" layout="slider" />
     </div>
   );
 };

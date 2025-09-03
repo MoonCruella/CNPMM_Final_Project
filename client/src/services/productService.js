@@ -12,6 +12,18 @@ const productService = {
     const res = await api.get("/api/products/best-sellers?limit=8");
     return res.data;
   },
+
+  // Lấy 8 sản phẩm mới nhất
+  getNewest: async () => {
+    const res = await api.get("/api/products/newest?limit=8");
+    return res.data;
+  },
+
+  // Lấy 4 sản phẩm giảm giá sâu nhất
+  getBestDiscount: async () => {
+    const res = await api.get("api/products/discounts?limit=4");
+    return res.data;
+  },
 };
 
 export default productService;

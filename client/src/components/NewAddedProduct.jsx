@@ -9,7 +9,7 @@ const NewAddedProduct = () => {
           Sản phẩm mới
         </h2>
       </div>
-      <ProductDisplay layout="slider" />
+      <ProductDisplay type="newest" layout="slider" />
     </div>
   );
 };
