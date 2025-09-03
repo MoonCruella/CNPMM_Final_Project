@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
 import { toast, Toaster } from "sonner";
 import authService from "../services/authService";
+import { useAppContext } from "@/context/AppContext";
+import { fa } from "zod/v4/locales";
 
 const loginSchema = z.object({
   email: z
@@ -23,7 +25,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const { setUser, setIsSeller, navigate } = useAppContext();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,9 +36,14 @@ const LoginPage = () => {
       const res = await authService.login(email, password);
       setIsLoading(false);
 
-      if (res.data.status) {
-        toast.success("Login thành công!");
-        navigate("/dashboard");
+      if (res.data.status && res.data.data.user) {
+        setUser({
+          id: res.data.data.user._id,
+          name: res.data.data.user.name,
+          email: res.data.data.user.email,
+        });
+        setIsSeller(false);
+        navigate("/");
       } else {
         toast.error("Sai email hoặc mật khẩu");
       }
@@ -47,6 +54,7 @@ const LoginPage = () => {
       } else if (error.response) {
         toast.error(error.response.data.message || "Đăng nhập thất bại!");
       } else {
+        console.log(error.message);
         toast.error("Lỗi kết nối tới server!");
       }
     }
