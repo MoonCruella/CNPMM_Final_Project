@@ -3,8 +3,13 @@ import {
   Register,
   Login,
   resetPassword,
+  refreshToken,
+  logout,
+  logoutAll
 } from "../controllers/auth.controller.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
+
+import { authenticateToken, requireAdmin, requireOwnerOrAdmin } from "../middleware/auth.middleware.js";
+
 import {
   resendOtpRegister,
   sendOtpForgotPass,
@@ -15,7 +20,13 @@ import {
 const router = express.Router();
 
 router.post("/login", Login);
-router.get("/get-user", authMiddleware, (req, res) => {
+
+router.post('/refresh-token', refreshToken);
+// Protected routes
+router.post('/logout', authenticateToken, logout);
+router.post('/logout-all', authenticateToken, logoutAll);
+
+router.get("/get-user", authenticateToken, (req, res) => {
   res.status(200).json({ status: true, user: req.user });
 });
 

@@ -6,6 +6,8 @@ export const config = {
   port: process.env.PORT,
   accessTokenKey: process.env.ACCESS_TOKEN_KEY,
   accessTokenLife: process.env.ACCESS_TOKEN_LIFE,
+  refreshTokenKey: process.env.REFRESH_TOKEN_KEY,
+  refreshTokenLife: process.env.REFRESH_TOKEN_LIFE,
   email: process.env.EMAIL_USER,
   passEmail: process.env.EMAIL_PASS,
 
