@@ -18,6 +18,7 @@ import add_to_cart_icon from "./add_to_cart_icon.png";
 import vnpay_icon from "./vnpay_icon.png";
 import zalo_pay from "./zalopay_icon.png";
 import cod_icon from "./cod_icon.png";
+import page_banner from "./page_banner.jpg";
 export const assets = {
   logo,
   search_icon,
@@ -39,6 +40,7 @@ export const assets = {
   vnpay_icon,
   zalo_pay,
   cod_icon,
+  page_banner,
 };
 
 export const categoriesColors = [

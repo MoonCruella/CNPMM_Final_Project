@@ -7,6 +7,7 @@ const Navbar = () => {
   const { user, setUser, setShowUserLogin, navigate } = useAppContext();
   const logout = async () => {
     setUser(null);
+    localStorage.removeItem("accessToken");
     navigate("/");
   };
   return (
