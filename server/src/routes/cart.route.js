@@ -7,14 +7,14 @@ import {
   clearCart,
 } from "../controllers/cart.controller.js";
 
-import { authMiddleware } from "../middleware/auth.middleware.js";
+import { authenticateToken } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/", authMiddleware, getCart);
-router.post("/", authMiddleware, addToCart);
-router.put("/:id", authMiddleware, updateCartItem);
-router.delete("/:id", authMiddleware, removeFromCart);
-router.delete("/", authMiddleware, clearCart);
+router.get("/", authenticateToken, getCart);
+router.post("/", authenticateToken, addToCart);
+router.put("/:id", authenticateToken, updateCartItem);
+router.delete("/:id", authenticateToken, removeFromCart);
+router.delete("/", authenticateToken, clearCart);
 
 export default router;
