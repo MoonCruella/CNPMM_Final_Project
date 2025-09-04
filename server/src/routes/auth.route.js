@@ -4,7 +4,7 @@ import {
   Login,
   resetPassword,
 } from "../controllers/auth.controller.js";
-import { authenticateToken } from "../middleware/auth.middleware.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 import {
   resendOtpRegister,
   sendOtpForgotPass,
@@ -15,7 +15,7 @@ import {
 const router = express.Router();
 
 router.post("/login", Login);
-router.get("/get-user", authenticateToken, (req, res) => {
+router.get("/get-user", authMiddleware, (req, res) => {
   res.status(200).json({ status: true, user: req.user });
 });
 
