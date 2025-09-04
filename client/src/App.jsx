@@ -14,6 +14,7 @@ import NewPasswordPage from "./pages/NewPasswordPage";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import UploadImages from "./components/UploadImages";
+import AllProducts from "./pages/AllProducts";
 
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
@@ -31,6 +32,7 @@ const App = () => {
         <Route path="/verify-otp" element={<VerifyOTPPage />} />
         <Route path="/reset-password" element={<NewPasswordPage />} />
         <Route path="/upload-to-cloudinary" element={<UploadImages />} />
+        <Route path="/products" element={<AllProducts />} />
       </Routes>
       {isSellerPath ? null : <Footer />}
     </div>
