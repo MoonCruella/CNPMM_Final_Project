@@ -31,6 +31,7 @@ const App = () => {
         <Route path="/verify-otp" element={<VerifyOTPPage />} />
         <Route path="/reset-password" element={<NewPasswordPage />} />
         <Route path="/upload-to-cloudinary" element={<UploadImages />} />
+        <Route path="/my-profile" element={<ProfilePage />} />
       </Routes>
       {isSellerPath ? null : <Footer />}
     </div>

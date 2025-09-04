@@ -4,6 +4,7 @@ import AuthRoute from "./routes/auth.route.js";
 import uploadRoute from "./routes/upload.route.js";
 import categoryRoutes from "./routes/category.route.js";
 import productRoutes from "./routes/product.route.js";
+import userRoutes from "./routes/user.route.js"
 import cors from "cors";
 import {
   User,
@@ -44,6 +45,8 @@ app.use(cookieParser());
 
 //Auth
 app.use("/api/auth", AuthRoute);
+//User
+app.use("/api/users", userRoutes)
 
 //Upload Anh len Cloudinary
 app.use("/api/upload", uploadRoute);
