@@ -1,17 +1,26 @@
 import React, { useEffect, useState } from "react";
 import Slider from "react-slick";
 import ProductCard from "./ProductCard";
-import { assets } from "@/assets/assets";
 import productService from "../services/productService.js";
 
-const ProductDisplay = ({ layout = "grid" }) => {
+const ProductDisplay = ({ layout = "grid", type = "all" }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBestSellers = async () => {
+    const fetchProducts = async () => {
       try {
-        const data = await productService.getBestSeller(); // <-- await
+        let data;
+        if (type === "seller") {
+          data = await productService.getBestSeller();
+        } else if (type === "discount") {
+          data = await productService.getBestDiscount();
+        } else if (type === "newest") {
+          data = await productService.getNewest();
+        } else {
+          data = await productService.getAll();
+        }
+
         if (data.success) {
           setProducts(
             data.data.map((p) => ({
@@ -21,20 +30,21 @@ const ProductDisplay = ({ layout = "grid" }) => {
           );
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching products:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchBestSellers();
-  }, []);
+    fetchProducts();
+  }, [type]);
+
   const sliderSettings = {
     dots: true,
     infinite: true,
     speed: 500,
-    slidesToShow: 4, // hiển thị 4 sản phẩm cùng lúc
-    slidesToScroll: 4, // mỗi lần cuộn qua 4 sản phẩm
+    slidesToShow: 4,
+    slidesToScroll: 4,
     responsive: [
       { breakpoint: 1024, settings: { slidesToShow: 3, slidesToScroll: 3 } },
       { breakpoint: 768, settings: { slidesToShow: 2, slidesToScroll: 2 } },
@@ -42,18 +52,20 @@ const ProductDisplay = ({ layout = "grid" }) => {
     ],
   };
 
+  if (loading) return <p className="text-center">Đang tải sản phẩm...</p>;
+
   return (
     <div className="mx-4">
       {layout === "slider" ? (
         <Slider {...sliderSettings}>
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product._id} product={product} />
           ))}
         </Slider>
       ) : (
-        <div className="grid grid-cols-4 ">
+        <div className="grid grid-cols-4 gap-6">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product._id} product={product} />
           ))}
         </div>
       )}

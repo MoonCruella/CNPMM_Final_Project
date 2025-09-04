@@ -108,6 +108,7 @@ export const Login = async (req, res, next) => {
         );
       }
 
+
       const payload = {
         userId: user._id,
         email: user.email,
@@ -118,6 +119,7 @@ export const Login = async (req, res, next) => {
         address: user.address,
         gender: user.gender,
         date_of_birth: user.date_of_birth
+
       };
 
       const { accessToken, refreshToken } = generateTokenPair(payload);

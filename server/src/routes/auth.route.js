@@ -7,7 +7,9 @@ import {
   logout,
   logoutAll
 } from "../controllers/auth.controller.js";
+
 import { authenticateToken, requireAdmin, requireOwnerOrAdmin } from "../middleware/auth.middleware.js";
+
 import {
   resendOtpRegister,
   sendOtpForgotPass,
@@ -18,6 +20,7 @@ import {
 const router = express.Router();
 
 router.post("/login", Login);
+
 router.post('/refresh-token', refreshToken);
 // Protected routes
 router.post('/logout', authenticateToken, logout);

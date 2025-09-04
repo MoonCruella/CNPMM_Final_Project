@@ -35,6 +35,7 @@ const LoginPage = () => {
       await login(email, password);
       navigate("/");
       
+
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);

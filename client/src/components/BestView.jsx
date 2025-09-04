@@ -16,7 +16,7 @@ const BestView = () => {
         </div>
       </div>
 
-      <ProductDisplay layout="grid" />
+      <ProductDisplay type="all" layout="grid" />
     </div>
   );
 };

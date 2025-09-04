@@ -15,7 +15,7 @@ const BestDiscount = () => {
           </h2>
         </div>
       </div>
-      <ProductDisplay layout="grid" />
+      <ProductDisplay type="discount" layout="grid" />
 
       <img src={assets.grass} alt="grass shape" />
     </div>

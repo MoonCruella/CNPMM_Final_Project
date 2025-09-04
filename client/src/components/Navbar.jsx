@@ -38,6 +38,7 @@ const Navbar = () => {
     } catch (error) {
       toast.error('Có lỗi xảy ra khi đăng xuất');
     }
+
   };
 
   const handleLoginClick = () => {
