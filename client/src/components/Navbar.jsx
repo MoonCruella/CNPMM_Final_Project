@@ -2,10 +2,12 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import { useAppContext } from "../context/AppContext.jsx";
+import { useUserContext } from "../context/UserContext.jsx";
 import { toast } from "sonner";
 
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const {
     user,
     isAuthenticated,
@@ -15,7 +17,7 @@ const Navbar = () => {
     openLogin,
   } = useAppContext();
 
-  
+
 
   // Logout handlers
   const handleLogout = async () => {
@@ -23,7 +25,9 @@ const Navbar = () => {
       const loadingToast = toast.loading('Đang đăng xuất...');
       await logout();
       toast.dismiss(loadingToast);
+      
       setOpen(false);
+      setIsUserMenuOpen(false); 
     } catch (error) {
       toast.error('Có lỗi xảy ra khi đăng xuất');
     }
@@ -35,6 +39,7 @@ const Navbar = () => {
       await logoutAll();
       toast.dismiss(loadingToast);
       setOpen(false);
+      setIsUserMenuOpen(false); 
     } catch (error) {
       toast.error('Có lỗi xảy ra khi đăng xuất');
     }
@@ -45,6 +50,10 @@ const Navbar = () => {
     setOpen(false);
     openLogin();
     navigate("/login");
+  };
+  const handleMenuNavigation = (path) => {
+    navigate(path);
+    setIsUserMenuOpen(false);
   };
 
   return (
@@ -95,15 +104,19 @@ const Navbar = () => {
             Login
           </button>
         ) : (
-          <div className="relative group">
+          <div 
+            className="relative"
+            onMouseEnter={() => setIsUserMenuOpen(true)}
+            onMouseLeave={() => setIsUserMenuOpen(false)}
+          >
             {/* User Avatar with Status Indicator */}
-            <div className="relative">
+            <div className="relative cursor-pointer">
               <img 
                 src={
                   user.avatar || 
                   `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=10b981&color=fff&size=40`
                 } 
-                className="w-10 h-10 rounded-full border-2 border-gray-200" 
+                className="w-10 h-10 rounded-full border-2 border-gray-200 hover:border-green-500 transition-colors" 
                 alt="Profile"
                 onError={(e) => {
                   e.target.src = assets.profile_icon;
@@ -116,10 +129,12 @@ const Navbar = () => {
               }`}></div>
             </div>
 
-            {/* Dropdown Menu */}
-            <ul className="hidden group-hover:block absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50">
+            {/* ✅ Dropdown Menu with proper positioning and transitions */}
+            <div className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${
+              isUserMenuOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'
+            }`}>
               {/* User Info Header */}
-              <li className="px-4 py-2 border-b border-gray-100">
+              <div className="px-4 py-2 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <div>
                     <p className="font-medium text-gray-800 truncate">{user.name}</p>
@@ -144,60 +159,60 @@ const Navbar = () => {
                     {user.active === true ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-              </li>
+              </div>
 
               {/* Menu Items */}
-              <li
-                onClick={() => navigate("/my-profile")}
-                className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2"
+              <button
+                onClick={() => handleMenuNavigation("/my-profile")}
+                className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 transition-colors"
               >
                 <span>👤</span> My Profile
-              </li>
+              </button>
               
-              <li
-                onClick={() => navigate("/my-orders")}
-                className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2"
+              <button
+                onClick={() => handleMenuNavigation("/my-orders")}
+                className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 transition-colors"
               >
                 <span>📦</span> My Orders
-              </li>
+              </button>
 
               {/* Admin Link */}
               {user.role === 'admin' && (
-                <li
-                  onClick={() => navigate("/admin")}
-                  className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-purple-600"
+                <button
+                  onClick={() => handleMenuNavigation("/admin")}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-purple-600 transition-colors"
                 >
                   <span>⚙️</span> Admin Panel
-                </li>
+                </button>
               )}
 
               {/* Seller Dashboard */}
               {user.role === 'seller' && (
-                <li
-                  onClick={() => navigate("/seller")}
-                  className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-blue-600"
+                <button
+                  onClick={() => handleMenuNavigation("/seller")}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-blue-600 transition-colors"
                 >
                   <span>🏪</span> Seller Dashboard
-                </li>
+                </button>
               )}
 
               <hr className="my-1" />
 
               {/* Logout Options */}
-              <li
+              <button
                 onClick={handleLogout}
-                className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-gray-700"
+                className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-gray-700 transition-colors"
               >
                 <span>🚪</span> Logout
-              </li>
+              </button>
               
-              <li
+              <button
                 onClick={handleLogoutAll}
-                className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-red-600"
+                className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-red-600 transition-colors"
               >
                 <span>🚫</span> Logout All Devices
-              </li>
-            </ul>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -217,11 +232,11 @@ const Navbar = () => {
           <NavLink to="/" onClick={() => setOpen(false)}>
             Home
           </NavLink>
-          
+
           <NavLink to="/products" onClick={() => setOpen(false)}>
             All Products
           </NavLink>
-          
+
           <NavLink to="/contact" onClick={() => setOpen(false)}>
             Contact
           </NavLink>
@@ -230,15 +245,15 @@ const Navbar = () => {
           {isAuthenticated && user ? (
             <>
               <hr className="w-full my-2" />
-              
+
               {/* Mobile User Info */}
               <div className="flex items-center gap-3 py-2">
-                <img 
+                <img
                   src={
-                    user.avatar || 
+                    user.avatar ||
                     `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=10b981&color=fff&size=32`
-                  } 
-                  className="w-8 h-8 rounded-full" 
+                  }
+                  className="w-8 h-8 rounded-full"
                   alt="Profile"
                   onError={(e) => {
                     e.target.src = assets.profile_icon;
@@ -247,9 +262,8 @@ const Navbar = () => {
                 <div>
                   <p className="font-medium text-gray-800">{user.name}</p>
                   <div className="flex gap-1">
-                    <span className={`px-1.5 py-0.5 rounded text-xs ${
-                      user.active === true ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
+                    <span className={`px-1.5 py-0.5 rounded text-xs ${user.active === true ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
                       {user.active === true ? 'Active' : 'Inactive'}
                     </span>
                   </div>
@@ -259,7 +273,7 @@ const Navbar = () => {
               <NavLink to="/my-profile" onClick={() => setOpen(false)}>
                 👤 My Profile
               </NavLink>
-              
+
               <NavLink to="/my-orders" onClick={() => setOpen(false)}>
                 📦 My Orders
               </NavLink>

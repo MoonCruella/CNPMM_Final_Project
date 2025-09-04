@@ -4,7 +4,7 @@ import Product from "../models/product.model.js";
 // 1. Lấy giỏ hàng của user
 export const getCart = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const cartItems = await CartItem.find({ user_id: userId })
       .populate("product_id", "name price sale_price images")
       .sort({ updated_at: -1 }); // sản phẩm vừa thêm hoặc update lên đầu
@@ -21,7 +21,7 @@ export const getCart = async (req, res) => {
 // 2. Thêm sản phẩm vào giỏ
 export const addToCart = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const { product_id, quantity } = req.body;
     console.log("User ID:", userId);
     console.log("Product found:", product_id);
