@@ -108,6 +108,7 @@ export const Login = async (req, res, next) => {
       }
 
       const dataForAccessToken = {
+        id: user._id,
         email: email,
       };
       const accessToken = authMethod.generateJwt(dataForAccessToken);

@@ -37,6 +37,7 @@ const LoginPage = () => {
       setIsLoading(false);
 
       if (res.data.status && res.data.data.user) {
+        localStorage.setItem("accessToken", res.data.data.accessToken);
         setUser({
           id: res.data.data.user._id,
           name: res.data.data.user.name,
