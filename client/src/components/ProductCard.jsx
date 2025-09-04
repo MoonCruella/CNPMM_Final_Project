@@ -2,9 +2,11 @@ import React from "react";
 import { assets } from "@/assets/assets";
 import { useCartContext } from "@/context/CartContext";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCartContext();
+  const navigate = useNavigate();
 
   // Định dạng tiền tệ VNĐ
   const formatCurrency = (value) =>
@@ -48,7 +50,7 @@ const ProductCard = ({ product }) => {
               alt="Add to cart"
             />
           </button>
-          <button className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow hover:bg-green-100 transition">
+          <button onClick={() => navigate(`/products/${product._id}`)} className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow hover:bg-green-100 transition">
             <img src={assets.view_icon} className="w-5 h-5" alt="View" />
           </button>
         </div>

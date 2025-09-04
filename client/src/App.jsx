@@ -16,6 +16,7 @@ import Footer from "./components/Footer";
 import UploadImages from "./components/UploadImages";
 import CartPage from "./pages/CartPage";
 import AllProducts from "./pages/AllProducts";
+import ProductDetails from "./pages/ProductDetails";
 
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
@@ -34,7 +35,8 @@ const App = () => {
         <Route path="/reset-password" element={<NewPasswordPage />} />
         <Route path="/upload-to-cloudinary" element={<UploadImages />} />
         <Route path="/cart" element={<CartPage />} />
-		<Route path="/products" element={<AllProducts />} />
+        <Route path="/products" element={<AllProducts />} />
+        <Route path="/products/:id" element={<ProductDetails />} />
       </Routes>
       {isSellerPath ? null : <Footer />}
     </div>
