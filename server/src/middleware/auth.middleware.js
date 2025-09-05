@@ -19,6 +19,7 @@ export const authenticateToken = async (req, res, next) => {
     }
 
     req.user = decoded;
+    
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);

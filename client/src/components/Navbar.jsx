@@ -4,6 +4,7 @@ import { assets } from "@/assets/assets";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useUserContext } from "../context/UserContext.jsx";
 import { toast } from "sonner";
+import avatarService from "@/services/avatarService.js";
 
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);
@@ -16,7 +17,16 @@ const Navbar = () => {
     logoutAll,
     openLogin,
   } = useAppContext();
-
+  const { getUserAvatarUrl } = useUserContext();
+  const getAvatarUrl = (size = 40) => {
+    if (getUserAvatarUrl) {
+      return getUserAvatarUrl(size);
+    }
+    
+    // Fallback if getUserAvatarUrl is not available
+    const name = user?.name || user?.email || 'User';
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=${size}`;
+  };
 
 
   // Logout handlers
@@ -25,9 +35,9 @@ const Navbar = () => {
       const loadingToast = toast.loading('Đang đăng xuất...');
       await logout();
       toast.dismiss(loadingToast);
-      
+
       setOpen(false);
-      setIsUserMenuOpen(false); 
+      setIsUserMenuOpen(false);
     } catch (error) {
       toast.error('Có lỗi xảy ra khi đăng xuất');
     }
@@ -39,7 +49,7 @@ const Navbar = () => {
       await logoutAll();
       toast.dismiss(loadingToast);
       setOpen(false);
-      setIsUserMenuOpen(false); 
+      setIsUserMenuOpen(false);
     } catch (error) {
       toast.error('Có lỗi xảy ra khi đăng xuất');
     }
@@ -104,35 +114,35 @@ const Navbar = () => {
             Login
           </button>
         ) : (
-          <div 
+          <div
             className="relative"
             onMouseEnter={() => setIsUserMenuOpen(true)}
             onMouseLeave={() => setIsUserMenuOpen(false)}
           >
             {/* User Avatar with Status Indicator */}
             <div className="relative cursor-pointer">
-              <img 
+              <img
                 src={
-                  user.avatar || 
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=10b981&color=fff&size=40`
-                } 
-                className="w-10 h-10 rounded-full border-2 border-gray-200 hover:border-green-500 transition-colors" 
+                  getAvatarUrl(40)
+                }
+                className="w-10 h-10 rounded-full border-2 border-gray-200 hover:border-green-500 transition-colors"
                 alt="Profile"
                 onError={(e) => {
-                  e.target.src = assets.profile_icon;
+                  console.error('Avatar load error:', e.target.src);
+                  // ✅ Better fallback handling
+                  const name = user?.name || user?.email || 'User';
+                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=40`;
                 }}
               />
-              
+
               {/* Active Status Indicator */}
-              <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
-                user.active === true ? 'bg-green-500' : 'bg-red-500'
-              }`}></div>
+              <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${user.active === true ? 'bg-green-500' : 'bg-red-500'
+                }`}></div>
             </div>
 
             {/* ✅ Dropdown Menu with proper positioning and transitions */}
-            <div className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${
-              isUserMenuOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'
-            }`}>
+            <div className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${isUserMenuOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'
+              }`}>
               {/* User Info Header */}
               <div className="px-4 py-2 border-b border-gray-100">
                 <div className="flex items-center gap-2">
@@ -141,21 +151,19 @@ const Navbar = () => {
                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
                   </div>
                 </div>
-                
+
                 {/* Status Badge */}
                 <div className="flex gap-1 mt-1">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    user.role === 'admin' ? 'bg-red-100 text-red-700' : 
-                    user.role === 'seller' ? 'bg-blue-100 text-blue-700' :
-                    'bg-green-100 text-green-700'
-                  }`}>
-                    {user.role === 'admin' ? 'Admin' : 
-                     user.role === 'seller' ? 'Seller' : 'User'}
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin' ? 'bg-red-100 text-red-700' :
+                      user.role === 'seller' ? 'bg-blue-100 text-blue-700' :
+                        'bg-green-100 text-green-700'
+                    }`}>
+                    {user.role === 'admin' ? 'Admin' :
+                      user.role === 'seller' ? 'Seller' : 'User'}
                   </span>
-                  
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    user.active === true ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
+
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${user.active === true ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
                     {user.active === true ? 'Active' : 'Inactive'}
                   </span>
                 </div>
@@ -168,7 +176,7 @@ const Navbar = () => {
               >
                 <span>👤</span> My Profile
               </button>
-              
+
               <button
                 onClick={() => handleMenuNavigation("/my-orders")}
                 className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 transition-colors"
@@ -205,7 +213,7 @@ const Navbar = () => {
               >
                 <span>🚪</span> Logout
               </button>
-              
+
               <button
                 onClick={handleLogoutAll}
                 className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-red-600 transition-colors"
@@ -248,15 +256,13 @@ const Navbar = () => {
 
               {/* Mobile User Info */}
               <div className="flex items-center gap-3 py-2">
-                <img
-                  src={
-                    user.avatar ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=10b981&color=fff&size=32`
-                  }
-                  className="w-8 h-8 rounded-full"
+               <img
+                  src={getAvatarUrl(32)} 
+                  className="w-8 h-8 rounded-full object-cover"
                   alt="Profile"
                   onError={(e) => {
-                    e.target.src = assets.profile_icon;
+                    const name = user?.name || user?.email || 'User';
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=32`;
                   }}
                 />
                 <div>

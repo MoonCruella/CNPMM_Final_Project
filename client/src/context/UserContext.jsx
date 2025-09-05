@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import userService from '../services/user.service.js';
+import avatarService from '../services/avatarService.js';
 import { toast } from 'sonner';
 
 const UserContext = createContext();
@@ -21,30 +22,30 @@ export const UserContextProvider = ({ children }) => {
 
   // ✅ Load user from localStorage on init
   useEffect(() => {
-  const savedUser = userService.getUserFromStorage();
-  if (savedUser) {
-    setUser(savedUser);
-  } else {
-    // ✅ Nếu không có user trong storage, thử load từ server
-    const loadUserFromServer = async () => {
-      try {
-        const response = await userService.getCurrentUser();
-        if (response.success) {
-          setUser(response.user);
-          userService.saveUserToStorage(response.user);
+    const savedUser = userService.getUserFromStorage();
+    if (savedUser) {
+      setUser(savedUser);
+    } else {
+      // ✅ Nếu không có user trong storage, thử load từ server
+      const loadUserFromServer = async () => {
+        try {
+          const response = await userService.getCurrentUser();
+          if (response.success) {
+            setUser(response.user);
+            userService.saveUserToStorage(response.user);
+          }
+        } catch (error) {
+          console.error('Auto load user failed:', error);
         }
-      } catch (error) {
-        console.error('Auto load user failed:', error);
+      };
+
+      // Chỉ load nếu có token
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        loadUserFromServer();
       }
-    };
-    
-    // Chỉ load nếu có token
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      loadUserFromServer();
     }
-  }
-}, []);
+  }, []);
 
   // ✅ Update user in context and localStorage
   const updateUserData = useCallback((newUserData) => {
@@ -58,12 +59,12 @@ export const UserContextProvider = ({ children }) => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const response = await userService.getCurrentUser();
-      
+
       if (response.success) {
         setUser(response.user);
-        console.log('UserL: '+ response.user)
+        console.log('UserL: ' + response.user)
         userService.saveUserToStorage(response.user);
         return response.user;
       } else {
@@ -86,7 +87,7 @@ export const UserContextProvider = ({ children }) => {
       setError(null);
 
       const response = await userService.updateUserProfile(updateData);
-      
+
       if (response.success) {
         updateUserData(response.data.user);
         toast.success(response.message || 'Cập nhật thông tin thành công!');
@@ -110,22 +111,68 @@ export const UserContextProvider = ({ children }) => {
       setIsUploadingAvatar(true);
       setError(null);
 
-      const response = await userService.uploadAvatar(avatarFile);
-      
-      if (response.success) {
-        // Update user avatar in context
-        updateUserData({ 
-          avatar: response.data.url
-        });
-        toast.success(response.message || 'Upload avatar thành công!');
-        return response;
-      } else {
-        throw new Error(response.message || 'Upload avatar thất bại');
+      // Validate file using avatarService
+      avatarService.validateAvatarFile(avatarFile);
+
+      // Upload avatar using avatarService
+      const uploadResponse = await avatarService.uploadAvatar(avatarFile);
+
+      console.log('🔍 Upload response:', uploadResponse); // Debug log
+
+      // ✅ FIX: Response structure is correct, check properly
+      if (!uploadResponse || !uploadResponse.success) {
+        throw new Error(uploadResponse?.message || 'Upload avatar thất bại');
       }
+
+      // ✅ Extract data correctly
+      const avatarData = uploadResponse.data;
+      const avatarUrl = avatarData.url;
+      const publicId = avatarData.publicId;
+
+      console.log('🔍 Avatar data:', { avatarUrl, publicId }); // Debug log
+
+      // ✅ Update user profile với avatar URL mới
+      const updateResponse = await userService.updateUserProfile({
+        avatar: avatarUrl,
+        avatar_public_id: publicId
+      });
+
+      console.log('🔍 Profile update response:', updateResponse); // Debug log
+
+      if (updateResponse.success) {
+        // Update user avatar in context
+        updateUserData({
+          avatar: avatarUrl,
+          avatar_public_id: publicId
+        });
+
+        toast.success('Upload avatar thành công!');
+        return {
+          success: true,
+          data: avatarData,
+          message: 'Upload avatar thành công!'
+        };
+      } else {
+        throw new Error(updateResponse.message || 'Không thể cập nhật avatar trong profile');
+      }
+
     } catch (error) {
-      console.error('Upload avatar error:', error);
+      console.error('❌ Upload avatar error:', error);
+      console.error('❌ Error stack:', error.stack);
+
       setError(error.message);
-      toast.error(error.message || 'Có lỗi xảy ra khi upload avatar');
+
+      // Show appropriate error message
+      if (error.message.includes('Chỉ chấp nhận file ảnh') ||
+        error.message.includes('Kích thước file quá lớn') ||
+        error.message.includes('Vui lòng chọn file ảnh')) {
+        toast.error(error.message);
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error(error.message || 'Có lỗi xảy ra khi upload avatar');
+      }
+
       throw error;
     } finally {
       setIsUploadingAvatar(false);
@@ -136,13 +183,50 @@ export const UserContextProvider = ({ children }) => {
   const updateUserWithAvatar = async (updateData, avatarFile = null) => {
     try {
       setIsUpdating(true);
+      setIsUploadingAvatar(!!avatarFile);
       setError(null);
 
-      const response = await userService.updateUserWithAvatar(updateData, avatarFile);
-      
+      let finalUpdateData = { ...updateData };
+
+      // Upload avatar first if provided
+      if (avatarFile) {
+        try {
+          // Validate file using avatarService
+          avatarService.validateAvatarFile(avatarFile);
+
+          // Upload avatar using avatarService
+          const uploadResponse = await avatarService.uploadAvatar(avatarFile);
+
+          console.log('🔍 Avatar upload in updateUserWithAvatar:', uploadResponse); // Debug
+
+          if (uploadResponse.success) {
+            // ✅ FIX: Extract data correctly
+            const avatarData = uploadResponse.data;
+            finalUpdateData.avatar = avatarData.url;
+            finalUpdateData.avatar_public_id = avatarData.publicId;
+          } else {
+            throw new Error(uploadResponse.message || 'Upload avatar thất bại');
+          }
+        } catch (uploadError) {
+          console.error('Avatar upload failed:', uploadError);
+          toast.error(uploadError.message || 'Upload avatar thất bại');
+          throw uploadError;
+        }
+      }
+
+      console.log('🔍 Final update data:', finalUpdateData); // Debug
+
+      // Update user profile với data (bao gồm avatar nếu có)
+      const response = await userService.updateUserProfile(finalUpdateData);
+
       if (response.success) {
         updateUserData(response.data.user);
-        toast.success(response.message || 'Cập nhật thông tin thành công!');
+
+        const successMessage = avatarFile
+          ? 'Cập nhật thông tin và avatar thành công!'
+          : 'Cập nhật thông tin thành công!';
+        toast.success(successMessage);
+
         return response;
       } else {
         throw new Error(response.message || 'Cập nhật thất bại');
@@ -150,10 +234,66 @@ export const UserContextProvider = ({ children }) => {
     } catch (error) {
       console.error('Update user with avatar error:', error);
       setError(error.message);
-      toast.error(error.message || 'Có lỗi xảy ra khi cập nhật');
+
+      if (!error.message.includes('Upload avatar') && !error.message.includes('Chỉ chấp nhận')) {
+        toast.error(error.message || 'Có lỗi xảy ra khi cập nhật');
+      }
+
       throw error;
     } finally {
       setIsUpdating(false);
+      setIsUploadingAvatar(false);
+    }
+  };
+  // ✅ Delete avatar - Using avatarService
+  const deleteAvatar = async () => {
+    try {
+      setIsUploadingAvatar(true);
+      setError(null);
+
+      // Get current avatar public_id
+      const publicId = user?.avatar_public_id;
+
+      if (!publicId) {
+        toast.error('Không có avatar để xóa');
+        return;
+      }
+
+      // ✅ Delete from Cloudinary using avatarService
+      const deleteResponse = await avatarService.deleteAvatar(publicId);
+
+      if (deleteResponse.success) {
+        // ✅ Update user profile to remove avatar
+        const updateResponse = await userService.updateUserProfile({
+          avatar: null,
+          avatar_public_id: null
+        });
+
+        if (updateResponse.success) {
+          updateUserData({
+            avatar: null,
+            avatar_public_id: null
+          });
+
+          toast.success('Xóa avatar thành công!');
+          return {
+            success: true,
+            message: 'Xóa avatar thành công!'
+          };
+        } else {
+          throw new Error(updateResponse.message || 'Không thể cập nhật profile sau khi xóa avatar');
+        }
+      } else {
+        throw new Error(deleteResponse.message || 'Xóa avatar thất bại');
+      }
+
+    } catch (error) {
+      console.error('Delete avatar error:', error);
+      setError(error.message);
+      toast.error(error.message || 'Có lỗi xảy ra khi xóa avatar');
+      throw error;
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -164,15 +304,31 @@ export const UserContextProvider = ({ children }) => {
     userService.removeUserFromStorage();
   };
 
+
+
   // ✅ Computed values using userService helpers
   const getUserDisplayName = () => userService.getUserDisplayName(user);
-  const getUserAvatarUrl = (size = 200) => userService.getUserAvatarUrl(user, size);
   const isActiveUser = () => userService.isActiveUser(user);
   const isAdmin = () => userService.isAdmin(user);
   const formatAddress = () => userService.formatAddress(user?.address);
 
   // ✅ Form helpers for address
   const createAddressObject = (addressForm) => userService.createAddressObject(addressForm);
+
+  const getUserAvatarUrl = (size = 200) => {
+    if (user?.avatar) {
+      
+        const serviceUrl = avatarService.getOptimizedAvatarUrl(user.avatar, size);
+        console.log('✅ Using avatarService URL:', serviceUrl);
+        return serviceUrl;
+      
+    }
+
+    const name = user?.name || user?.email || 'User';
+    const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=${size}`;
+    console.log('✅ Using fallback UI Avatar:', fallbackUrl);
+    return fallbackUrl;
+  };
 
   const value = {
     // State
@@ -181,7 +337,7 @@ export const UserContextProvider = ({ children }) => {
     isUpdating,
     isUploadingAvatar,
     error,
-    
+
     // Actions
     updateUserData,
     refreshUserData,
@@ -189,14 +345,14 @@ export const UserContextProvider = ({ children }) => {
     uploadAvatar,
     updateUserWithAvatar,
     clearUser,
-    
+
     // Computed values
     getUserDisplayName,
     getUserAvatarUrl,
     isActiveUser,
     isAdmin,
     formatAddress,
-    
+
     // Helpers
     createAddressObject,
     isAuthenticated: !!user,
