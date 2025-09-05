@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
-import { toast, Toaster } from "sonner";
-import authService from "../services/authService";
+import { toast } from "sonner";
 import { useAppContext } from "@/context/AppContext";
-import { fa } from "zod/v4/locales";
 
 const loginSchema = z.object({
   email: z
@@ -25,39 +23,31 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { setUser, setIsSeller, navigate } = useAppContext();
+  const { login, navigate } = useAppContext();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    
     try {
       loginSchema.parse({ email, password });
       setIsLoading(true);
 
-      const res = await authService.login(email, password);
-      setIsLoading(false);
+      await login(email, password);
+      navigate("/");
+      
 
-      if (res.data.status && res.data.data.user) {
-        localStorage.setItem("accessToken", res.data.data.accessToken);
-        setUser({
-          id: res.data.data.user._id,
-          name: res.data.data.user.name,
-          email: res.data.data.user.email,
-        });
-        setIsSeller(false);
-        navigate("/");
-      } else {
-        toast.error("Sai email hoặc mật khẩu");
-      }
     } catch (error) {
-      setIsLoading(false);
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
+      } else if (error.response?.status === 401) {
+        toast.error("Email hoặc mật khẩu không đúng");
       } else if (error.response) {
         toast.error(error.response.data.message || "Đăng nhập thất bại!");
       } else {
-        console.log(error.message);
         toast.error("Lỗi kết nối tới server!");
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -145,7 +135,7 @@ const LoginPage = () => {
             {/* Button */}
             <button
               type="submit"
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-md"
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-md disabled:opacity-50"
               disabled={isLoading}
             >
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}

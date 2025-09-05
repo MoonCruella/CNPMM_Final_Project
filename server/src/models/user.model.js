@@ -42,6 +42,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    avatar_public_id: {
+      type: String,
+      default: null
+    },
     date_of_birth: {
       type: Date
     },
@@ -55,7 +59,16 @@ const userSchema = new mongoose.Schema(
     },
     last_login: {
       type: Date
-    }
+    },
+    refresh_tokens: [{
+      token: String,
+      created_at: {
+        type: Date,
+        default: Date.now
+      },
+      expires_at: Date,
+      device_info: String
+    }]
   },
   {
     timestamps: true,
@@ -88,6 +101,36 @@ userSchema.methods.updateLastLogin = function() {
   this.last_login = new Date();
   return this.save();
 };
+userSchema.methods.addRefreshToken = function(refreshToken, deviceInfo = '') {
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7); // 7 ngày
+  
+  this.refresh_tokens.push({
+    token: refreshToken,
+    expires_at: expiresAt,
+    device_info: deviceInfo
+  });
+  
+  // Giới hạn số lượng refresh token (tối đa 5 thiết bị)
+  if (this.refresh_tokens.length > 5) {
+    this.refresh_tokens = this.refresh_tokens.slice(-5);
+  }
+  
+  return this.save();
+};
 
+// Method để xóa refresh token
+userSchema.methods.removeRefreshToken = function(refreshToken) {
+  this.refresh_tokens = this.refresh_tokens.filter(
+    item => item.token !== refreshToken
+  );
+  return this.save();
+};
+
+// Method để xóa tất cả refresh token (logout all devices)
+userSchema.methods.removeAllRefreshTokens = function() {
+  this.refresh_tokens = [];
+  return this.save();
+};
 const User = mongoose.model("User", userSchema);
 export default User;

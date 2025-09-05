@@ -6,6 +6,7 @@ import sendMail from "../utils/sendMail.js";
 import redisClient from "../utils/redisClient.js";
 import response from "../helpers/response.js";
 import { config } from "../config/env.js";
+import { generateTokenPair, verifyRefreshToken } from "../utils/jwt.js";
 
 import * as authMethod from "../method/auth.method.js";
 
@@ -107,23 +108,171 @@ export const Login = async (req, res, next) => {
         );
       }
 
-      const dataForAccessToken = {
-        id: user._id,
-        email: email,
+
+      const payload = {
+        userId: user._id,
+        email: user.email,
+        role: user.role,
+        active: user.active,
+        name: user.name,
+        phone: user.phone,
+        address: user.address,
+        gender: user.gender,
+        date_of_birth: user.date_of_birth,
+        avatar:user.avatar_public_id
+
       };
-      const accessToken = authMethod.generateJwt(dataForAccessToken);
-      // let refreshToken = randToken.generate()
-      return response.sendSuccess(res, {
-        accessToken,
-        user,
-      });
+
+      const { accessToken, refreshToken } = generateTokenPair(payload);
+
+      // Lưu refresh token vào database
+      const userDoc = await userModel.findById(user._id);
+      const deviceInfo = req.get("User-Agent") || "Unknown Device";
+      await userDoc.addRefreshToken(refreshToken, deviceInfo);
+
+      // Cập nhật last login
+      await userDoc.updateLastLogin();
+
+      return response.sendSuccess(
+        res,
+        {
+          user: {
+            userId: user._id,
+            email: user.email,
+            role: user.role,
+            name: user.name,
+            active: user.active,
+            address: user.address,
+            phone: user.phone,
+            gender: user.gender,
+            date_of_birth: user.date_of_birth,
+            avatar:user.avatar_public_id
+          },
+          accessToken,
+          refreshToken,
+        },
+        "Đăng nhập thành công",
+        200
+      );
     }
   } catch (error) {
     console.log("Error", error);
     next(error);
   }
 };
+// Refresh Token
+export const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
 
+    if (!refreshToken) {
+      return response.sendError(res, "Refresh token không được cung cấp", 400);
+    }
+
+    // Verify refresh token
+    const decoded = verifyRefreshToken(refreshToken);
+
+    // Tìm user
+    const user = await userModel.findById(decoded.userId);
+    if (!user) {
+      return response.sendError(res, "User không tồn tại", 401);
+    }
+
+    // Kiểm tra refresh token có trong database không
+    const tokenExists = user.refresh_tokens.find(
+      (item) => item.token === refreshToken
+    );
+    if (!tokenExists) {
+      return response.sendError(res, "Refresh token không hợp lệ", 401);
+    }
+
+    // Kiểm tra token hết hạn
+    if (new Date() > tokenExists.expires_at) {
+      await user.removeRefreshToken(refreshToken);
+      return response.sendError(res, "Refresh token đã hết hạn", 401);
+    }
+
+    // Generate new tokens
+    const payload = {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+      active: user.active,
+      address: user.address,
+      phone: user.phone,
+      gender: user.gender,
+      date_of_birth: user.date_of_birth,
+      avatar:user.avatar_public_id
+    };
+
+    const { accessToken, refreshToken: newRefreshToken } =
+      generateTokenPair(payload);
+
+    // Remove old refresh token và add new
+    await user.removeRefreshToken(refreshToken);
+    const deviceInfo = req.get("User-Agent") || "Unknown Device";
+    await user.addRefreshToken(newRefreshToken, deviceInfo);
+
+    return response.sendSuccess(
+      res,
+      {
+        accessToken,
+        refreshToken: newRefreshToken,
+      },
+      "Token đã được làm mới",
+      200
+    );
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    return response.sendError(
+      res,
+      "Refresh token không hợp lệ",
+      401,
+      error.message
+    );
+  }
+};
+// Logout
+export const logout = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return response.sendError(res, "Refresh token không được cung cấp", 400);
+    }
+
+    const user = await userModel.findById(req.user.userId);
+    if (user) {
+      await user.removeRefreshToken(refreshToken);
+    }
+
+    return response.sendSuccess(res, null, "Đăng xuất thành công", 200);
+  } catch (error) {
+    console.error("Logout error:", error);
+    return response.sendError(res, "Đăng xuất thất bại", 500, error.message);
+  }
+};
+// Logout All Devices
+export const logoutAll = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user.userId);
+
+    if (user) {
+      await user.removeAllRefreshTokens();
+    }
+
+    return response.sendSuccess(
+      res,
+      null,
+      "Đăng xuất khỏi tất cả thiết bị thành công",
+      200
+    );
+  } catch (error) {
+    console.error("Logout all error:", error);
+    return response.sendError(res, "Đăng xuất thất bại", 500, error.message);
+  }
+};
 export const resetPassword = async (req, res) => {
   try {
     const { email, newPassword } = req.body;
