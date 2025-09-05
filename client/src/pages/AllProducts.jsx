@@ -1,4 +1,5 @@
-import React, { useState, useEffect} from "react";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import productService from "../services/productService.js";
 import categoryService from "../services/categoryService.js";
@@ -6,24 +7,28 @@ import ProductCard from "../components/ProductCard.jsx";
 
 const AllProducts = () => {
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [displayProducts, setDisplayProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [searchQuery, setSearchQuery] = useState({});
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sortOption, setSortOption] = useState("default");
+
   const [currentPage, setCurrentPage] = useState(1);
-  const [productsPerPage] = useState(9);
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = filteredProducts.slice(
-    indexOfFirstProduct,
-    indexOfLastProduct
-  );
-  const showingFrom = indexOfFirstProduct + 1;
-  const showingTo = Math.min(indexOfLastProduct, filteredProducts.length);
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const productsPerPage = 9;
+
+  const location = useLocation();
+  const categoryIdFromState = location.state?.categoryId || null;
 
   useEffect(() => {
-    const fetchProductsAndCategories = async () => {
+    if (categoryIdFromState) {
+      setActiveCategory(categoryIdFromState);
+    }
+  }, [categoryIdFromState]);
+
+  // Fetch data
+  useEffect(() => {
+    const fetchData = async () => {
       try {
         const productRes = await productService.getAll();
         if (productRes.success) {
@@ -32,12 +37,13 @@ const AllProducts = () => {
             primary_image: p.images.find((img) => img.is_primary)?.image_url,
           }));
           setProducts(formatted);
-          setFilteredProducts(formatted);
+          setDisplayProducts(formatted);
         }
 
         const categoryRes = await categoryService.getAll();
-        console.log("API categories:", categoryRes);
-        setCategories(categoryRes.data);
+        if (categoryRes.success) {
+          setCategories(categoryRes.data);
+        }
       } catch (err) {
         console.error("Error fetching data:", err);
       } finally {
@@ -45,29 +51,51 @@ const AllProducts = () => {
       }
     };
 
-    fetchProductsAndCategories();
+    fetchData();
   }, []);
 
-  // Lọc sản phẩm theo searchQuery
+  // Filter logic (category + search)
   useEffect(() => {
-    if (searchQuery && Object.keys(searchQuery).length > 0) {
-      const filtered = products.filter((prod) =>
-        Object.entries(searchQuery).every(([key, value]) =>
-          prod[key]
-            ?.toString()
-            .toLowerCase()
-            .includes(value.toString().toLowerCase())
-        )
-      );
-      setFilteredProducts(filtered);
-    } else {
-      setFilteredProducts(products);
+    let filtered = [...products];
+
+    if (activeCategory) {
+      filtered = filtered.filter((p) => p.category_id === activeCategory);
     }
-  }, [products, searchQuery]);
+
+    if (searchInput.trim() !== "") {
+      filtered = filtered.filter((p) =>
+        p.name.toLowerCase().includes(searchInput.toLowerCase())
+      );
+    }
+
+    if (sortOption === "lowToHigh") {
+      filtered.sort(
+        (a, b) => (a.sale_price || a.price) - (b.sale_price || b.price)
+      );
+    } else if (sortOption === "highToLow") {
+      filtered.sort(
+        (a, b) => (b.sale_price || b.price) - (a.sale_price || a.price)
+      );
+    }
+
+    setDisplayProducts(filtered);
+    setCurrentPage(1);
+  }, [products, activeCategory, searchInput, sortOption]);
+
+  // Pagination
+  const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = displayProducts.slice(
+    indexOfFirstProduct,
+    indexOfLastProduct
+  );
+  const showingFrom = indexOfFirstProduct + 1;
+  const showingTo = Math.min(indexOfLastProduct, displayProducts.length);
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   useEffect(() => {
     window.scrollTo({ top: 500, behavior: "smooth" });
-  }, [currentPage]);
+  }, [currentPage, displayProducts, activeCategory]);
 
   if (loading) return <p className="text-center">Đang tải sản phẩm...</p>;
 
@@ -82,7 +110,7 @@ const AllProducts = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center">
-          <h1 className="text-5xl font-bold mb-4">All Products</h1>
+          <h1 className="text-5xl font-bold mb-4">Tất cả sản phẩm</h1>
           <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full">
             <a href="/" className="hover:underline">
               Home
@@ -97,7 +125,6 @@ const AllProducts = () => {
       <div className="min-h-screen bg-white p-24">
         <div className="flex gap-6">
           {/* Sidebar */}
-          {/* Sidebar */}
           <div className="w-84 flex flex-col gap-6">
             {/* Search Box */}
             <div className="bg-yellow-50 p-4 rounded-xl">
@@ -105,21 +132,44 @@ const AllProducts = () => {
                 <input
                   type="text"
                   placeholder="Keywords"
-                  onChange={(e) => setSearchQuery({ name: e.target.value })}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="w-full bg-transparent focus:outline-none px-2"
                 />
-                <button className="bg-yellow-400 p-2 rounded-lg">🔍</button>
+                <button
+                  onClick={() => setSearchInput("")}
+                  className="bg-yellow-400 p-2 rounded-lg cursor-pointer"
+                >
+                  ❌
+                </button>
               </div>
             </div>
+
 
             {/* Categories */}
             <div className="bg-yellow-50 p-4 rounded-xl">
               <h2 className="font-semibold mb-3">All Category</h2>
               <ul className="space-y-2">
+                {/* Nút All Products */}
+                <li
+                  onClick={() => setActiveCategory(null)}
+                  className={`flex justify-between items-center py-2 border-b cursor-pointer hover:text-green-600 ${
+                    activeCategory === null ? "text-green-600 font-bold" : ""
+                  }`}
+                >
+                  All Products <span>↻</span>
+                </li>
+
+                {/* Danh sách categories */}
                 {categories.map((cat) => (
                   <li
                     key={cat._id}
-                    className="flex justify-between items-center py-2 border-b cursor-pointer hover:text-green-600"
+                    onClick={() => setActiveCategory(cat._id)}
+                    className={`flex justify-between items-center py-2 border-b cursor-pointer hover:text-green-600 ${
+                      activeCategory === cat._id
+                        ? "text-green-600 font-bold"
+                        : ""
+                    }`}
                   >
                     {cat.name} <span>→</span>
                   </li>
@@ -132,13 +182,17 @@ const AllProducts = () => {
           <div className="flex-1">
             <div className="flex justify-between items-center mb-4">
               <span className="bg-green-700 text-white px-4 py-2 rounded-lg ml-5">
-                Showing {showingFrom}-{showingTo} of {filteredProducts.length}{" "}
+                Showing {showingFrom}-{showingTo} of {displayProducts.length}{" "}
                 Results
               </span>
-              <select className="border rounded-lg px-3 py-2 mr-5">
-                <option>Default Sorting</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
+              <select
+                className="border rounded-lg px-3 py-2 mr-5 cursor-pointer"
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value)}
+              >
+                <option value="default">Default Sorting</option>
+                <option value="lowToHigh">Price: Low to High</option>
+                <option value="highToLow">Price: High to Low</option>
               </select>
             </div>
 
@@ -147,19 +201,19 @@ const AllProducts = () => {
                 <ProductCard key={product._id} product={product} />
               ))}
             </div>
+
+            {/* Pagination */}
             <div className="flex justify-center mt-6 space-x-2">
               {Array.from(
-                {
-                  length: Math.ceil(filteredProducts.length / productsPerPage),
-                },
+                { length: Math.ceil(displayProducts.length / productsPerPage) },
                 (_, i) => (
                   <button
                     key={i + 1}
                     onClick={() => paginate(i + 1)}
                     className={`px-4 py-2 rounded-lg ${
                       currentPage === i + 1
-                        ? "bg-green-700 text-white"
-                        : "bg-gray-200 text-gray-700"
+                        ? "bg-green-700 text-white "
+                        : "bg-gray-200 text-gray-700 cursor-pointer"
                     }`}
                   >
                     {i + 1}

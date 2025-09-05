@@ -16,6 +16,7 @@ const ProductDetails = () => {
   const [thumbnail, setThumbnail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [categoryName, setCategoryName] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
   const formatCurrency = (value) =>
     value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
@@ -32,44 +33,42 @@ const ProductDetails = () => {
 
   // Fetch product by id
   useEffect(() => {
-  const fetchProduct = async () => {
-    try {
-      setLoading(true);
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
 
-      // 1️⃣ Fetch product
-      const res = await productService.getById(id);
-      if (!res.success) return;
-      const prod = res.data;
-      setProduct(prod);
-      setThumbnail(prod.images[0]);
+        // 1️⃣ Fetch product
+        const res = await productService.getById(id);
+        if (!res.success) return;
+        const prod = res.data;
+        setProduct(prod);
+        setThumbnail(prod.images[0]);
 
-      // 2️⃣ Fetch category dựa trên category_id
-      if (prod.category_id) {
-        const categoryRes = await categoryService.getById(prod.category_id);
-        if (categoryRes.success) {
-          setCategoryName(categoryRes.data.name);
+        // 2️⃣ Fetch category dựa trên category_id
+        if (prod.category_id) {
+          const categoryRes = await categoryService.getById(prod.category_id);
+          if (categoryRes.success) {
+            setCategoryName(categoryRes.data.name);
+          }
         }
-      }
 
-      // 3️⃣ Fetch related products
-      const relatedRes = await productService.getAll(); // hoặc API lấy theo category
-      if (relatedRes.success) {
-        const related = relatedRes.data
-          .filter(
-            (p) => p._id !== prod._id && p.category === prod.category
-          )
-          .slice(0, 5);
-        setRelatedProducts(related);
+        // 3️⃣ Fetch related products
+        const relatedRes = await productService.getAll(); // hoặc API lấy theo category
+        if (relatedRes.success) {
+          const related = relatedRes.data
+            .filter((p) => p._id !== prod._id && p.category === prod.category)
+            .slice(0, 5);
+          setRelatedProducts(related);
+        }
+      } catch (err) {
+        console.error("Error fetching product:", err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Error fetching product:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  fetchProduct();
-}, [id]);
+    fetchProduct();
+  }, [id]);
 
   const sliderSettings = {
     dots: true,
@@ -99,7 +98,7 @@ const ProductDetails = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center">
-          <h1 className="text-5xl font-bold mb-4">Product Details</h1>
+          <h1 className="text-5xl font-bold mb-4">Chi tiết sản phẩm</h1>
           <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full">
             <a href="/" className="hover:underline">
               Home
@@ -162,16 +161,38 @@ const ProductDetails = () => {
 
           <p className="text-gray-600 mt-6">{product.description}</p>
 
-          <div className="flex gap-4 mt-10">
+          <div className="flex items-center gap-4 mt-10">
+            {/* Bộ tăng giảm số lượng (chiều rộng cố định) */}
+            <div className="flex items-center border rounded-lg overflow-hidden w-32 justify-between">
+              <button
+                onClick={() => setQuantity((prev) => Math.max(prev - 1, 1))}
+                className="w-10 py-2 bg-gray-100 hover:bg-gray-200 text-lg font-semibold"
+              >
+                -
+              </button>
+              <span className="flex-1 text-center text-lg font-medium">
+                {quantity}
+              </span>
+              <button
+                onClick={() => setQuantity((prev) => prev + 1)}
+                className="w-10 py-2 bg-gray-100 hover:bg-gray-200 text-lg font-semibold"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Add to Cart */}
             <button
               onClick={handleAddToCart}
-              className="flex-1 py-3.5 font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition rounded"
+              className="flex-1 py-3.5 font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition rounded-lg shadow-sm"
             >
               Add To Cart
             </button>
+
+            {/* Buy Now */}
             <button
               onClick={() => navigate("/checkout")}
-              className="flex-1 py-3.5 font-medium bg-green-700 text-white hover:bg-green-800 transition rounded"
+              className="flex-1 py-3.5 font-medium bg-green-700 text-white hover:bg-green-800 transition rounded-lg shadow-sm"
             >
               Buy Now
             </button>
