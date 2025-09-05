@@ -237,7 +237,7 @@ export const AppContextProvider = ({ children }) => {
     // Utils
     isActiveUser,
     isAdmin,
-    navigate
+    navigate,
     searchQuery,
     setSearchQuery,
   };
