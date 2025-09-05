@@ -118,7 +118,8 @@ export const Login = async (req, res, next) => {
         phone: user.phone,
         address: user.address,
         gender: user.gender,
-        date_of_birth: user.date_of_birth
+        date_of_birth: user.date_of_birth,
+        avatar:user.avatar_public_id
 
       };
 
@@ -141,11 +142,11 @@ export const Login = async (req, res, next) => {
             role: user.role,
             name: user.name,
             active: user.active,
-            avatar: user.avatar,
             address: user.address,
             phone: user.phone,
             gender: user.gender,
-            date_of_birth: user.date_of_birth
+            date_of_birth: user.date_of_birth,
+            avatar:user.avatar_public_id
           },
           accessToken,
           refreshToken,
@@ -198,11 +199,11 @@ export const refreshToken = async (req, res) => {
       role: user.role,
       name: user.name,
       active: user.active,
-      avatar: user.avatar,
       address: user.address,
       phone: user.phone,
       gender: user.gender,
-      date_of_birth: user.date_of_birth
+      date_of_birth: user.date_of_birth,
+      avatar:user.avatar_public_id
     };
 
     const { accessToken, refreshToken: newRefreshToken } =

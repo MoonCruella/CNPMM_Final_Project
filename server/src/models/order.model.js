@@ -42,9 +42,22 @@ const orderSchema = new mongoose.Schema({
     name: String,
     phone: String,
     address: String
-  }
+  },
+  notes: String,
+  tracking_number: String,
+  cancel_reason: String,
+  
+
+  confirmed_at: Date,
+  shipped_at: Date,
+  delivered_at: Date,
+  cancelled_at: Date,
+  payment_date: Date
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
+orderSchema.index({ user_id: 1, status: 1 });
+orderSchema.index({ order_number: 1 });
+orderSchema.index({ created_at: -1 });
 
 export default mongoose.model('Order', orderSchema);

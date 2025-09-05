@@ -1,197 +1,176 @@
-import api from './api.js';
+import api from "./api.js";
 
 class UserService {
-  
   // ✅ Storage management
   saveUserToStorage = (userData) => {
     try {
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem("user", JSON.stringify(userData));
     } catch (error) {
-      console.error('Error saving user to storage:', error);
+      console.error("Error saving user to storage:", error);
     }
   };
 
   getUserFromStorage = () => {
     try {
-      const userData = localStorage.getItem('user');
+      const userData = localStorage.getItem("user");
       return userData ? JSON.parse(userData) : null;
     } catch (error) {
-      console.error('Error getting user from storage:', error);
+      console.error("Error getting user from storage:", error);
       return null;
     }
   };
 
   removeUserFromStorage = () => {
     try {
-      localStorage.removeItem('user');
+      localStorage.removeItem("user");
     } catch (error) {
-      console.error('Error removing user from storage:', error);
+      console.error("Error removing user from storage:", error);
     }
   };
 
   // ✅ Get current user from server
   getCurrentUser = async () => {
     try {
-      const response = await api.get('/api/auth/get-user');
+      const response = await api.get("/api/auth/get-user");
       if (response.data.status) {
-              console.log(response.data.user)
+        console.log(response.data.user);
 
         return {
           success: true,
           data: response.data,
-          user: response.data.user
+          user: response.data.user,
         };
       } else {
-        throw new Error('Không thể lấy thông tin user');
+        throw new Error("Không thể lấy thông tin user");
       }
     } catch (error) {
-      console.error('Get current user error:', error);
+      console.error("Get current user error:", error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Không thể lấy thông tin user',
-        error: error.message
+        message:
+          error.response?.data?.message || "Không thể lấy thông tin user",
+        error: error.message,
       };
     }
   };
 
   // ✅ Update user profile
+
+  // updateUserProfile = async (updateData) => {
+  //   try {
+  //     // Validate required fields
+  //     if (!updateData.name?.trim()) {
+  //       throw new Error('Tên không được để trống');
+  //     }
+
+  //     // Validate phone if provided
+  //     if (updateData.phone && !/^\d{10,11}$/.test(updateData.phone.trim())) {
+  //       throw new Error('Số điện thoại không hợp lệ (10-11 số)');
+  //     }
+
+  //     // Validate email if provided
+  //     if (updateData.email) {
+  //       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  //       if (!emailRegex.test(updateData.email)) {
+  //         throw new Error('Email không hợp lệ');
+  //       }
+  //     }
+
+  //     // Clean up data - match với user model schema
+  //     const cleanData = {
+  //       name: updateData.name.trim(),
+  //       username: updateData.username?.trim() || null,
+  //       phone: updateData.phone?.trim() || null,
+  //       date_of_birth: updateData.date_of_birth || null,
+  //       gender: updateData.gender || null,
+  //       address: updateData.address ? {
+  //         street: updateData.address.street || '',
+  //         ward: updateData.address.ward || '',
+  //         district: updateData.address.district || '',
+  //         province: updateData.address.province || '', // ✅ Sử dụng province như trong model
+  //         full_address: updateData.address.full_address || ''
+  //       } : null
+  //     };
+
+  //     const response = await api.put('/api/users/profile/update', cleanData);
+
+  //     if (response.data.success) {
+  //       return {
+  //         success: true,
+  //         data: response.data.data,
+  //         message: response.data.message || 'Cập nhật thành công'
+  //       };
+  //     } else {
+  //       throw new Error(response.data.message || 'Cập nhật thất bại');
+  //     }
+  //   } catch (error) {
+  //     console.error('Update user profile error:', error);
+  //     throw new Error(error.response?.data?.message || error.message || 'Có lỗi xảy ra khi cập nhật');
+  //   }
+  // };
   updateUserProfile = async (updateData) => {
     try {
-      // Validate required fields
-      if (!updateData.name?.trim()) {
-        throw new Error('Tên không được để trống');
+      // ✅ Basic validation
+      if (!updateData || typeof updateData !== "object") {
+        throw new Error("Dữ liệu không hợp lệ");
       }
 
-      // Validate phone if provided
-      if (updateData.phone && !/^\d{10,11}$/.test(updateData.phone.trim())) {
-        throw new Error('Số điện thoại không hợp lệ (10-11 số)');
+      // ✅ Validate only key fields
+      if (updateData.name && !updateData.name.trim()) {
+        throw new Error("Tên không được để trống");
       }
 
-      // Validate email if provided
-      if (updateData.email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(updateData.email)) {
-          throw new Error('Email không hợp lệ');
-        }
+      if (
+        updateData.email &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updateData.email)
+      ) {
+        throw new Error("Email không hợp lệ");
       }
 
-      // Clean up data - match với user model schema
-      const cleanData = {
-        name: updateData.name.trim(),
-        username: updateData.username?.trim() || null,
-        phone: updateData.phone?.trim() || null,
-        date_of_birth: updateData.date_of_birth || null,
-        gender: updateData.gender || null,
-        address: updateData.address ? {
-          street: updateData.address.street || '',
-          ward: updateData.address.ward || '',
-          district: updateData.address.district || '',
-          province: updateData.address.province || '', // ✅ Sử dụng province như trong model
-          full_address: updateData.address.full_address || ''
-        } : null
-      };
-
-      const response = await api.put('/api/users/profile/update', cleanData);
-      
-      if (response.data.success) {
-        return {
-          success: true,
-          data: response.data.data,
-          message: response.data.message || 'Cập nhật thành công'
-        };
-      } else {
-        throw new Error(response.data.message || 'Cập nhật thất bại');
-      }
-    } catch (error) {
-      console.error('Update user profile error:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Có lỗi xảy ra khi cập nhật');
-    }
-  };
-
-  // ✅ Upload avatar using upload API
-  uploadAvatar = async (avatarFile) => {
-    try {
-      if (!avatarFile) {
-        throw new Error('File avatar là bắt buộc');
+      if (
+        updateData.phone &&
+        !/^(0|\+84)[0-9]{8,10}$/.test(updateData.phone.trim())
+      ) {
+        throw new Error("Số điện thoại không hợp lệ");
       }
 
-      // Validate file
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(avatarFile.type)) {
-        throw new Error('File không hợp lệ. Chỉ chấp nhận JPEG, PNG, GIF, WebP');
-      }
+      // ✅ Clean data - Remove sensitive fields, keep everything else
+      const { password, refresh_tokens, role, ...cleanData } = updateData;
 
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (avatarFile.size > maxSize) {
-        throw new Error('File quá lớn. Tối đa 5MB');
-      }
+      // Trim string fields
+      if (cleanData.name) cleanData.name = cleanData.name.trim();
+      if (cleanData.email)
+        cleanData.email = cleanData.email.trim().toLowerCase();
+      if (cleanData.username) cleanData.username = cleanData.username.trim();
+      if (cleanData.phone) cleanData.phone = cleanData.phone.trim();
 
-      // Create FormData for upload
-      const formData = new FormData();
-      formData.append('avatar', avatarFile);
+      console.log("📤 Updating profile:", cleanData);
 
-      // Upload to backend using existing upload route
-      const response = await api.post('/api/upload/avatar', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      // ✅ API call
+      const response = await api.put("/api/users/profile/update", cleanData);
 
       if (response.data.success) {
         return {
           success: true,
           data: response.data.data,
-          message: response.data.message || 'Upload avatar thành công'
+          message: response.data.message || "Cập nhật thành công",
         };
       } else {
-        throw new Error(response.data.message || 'Upload avatar thất bại');
+        throw new Error(response.data.message || "Cập nhật thất bại");
       }
     } catch (error) {
-      console.error('Upload avatar error:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Có lỗi xảy ra khi upload avatar');
-    }
-  };
+      console.error("❌ Update profile error:", error);
 
-  // ✅ Update user profile with avatar
-  updateUserWithAvatar = async (updateData, avatarFile = null) => {
-    try {
-      let avatarData = {};
-      
-      // Upload avatar first if provided
-      if (avatarFile) {
-        const uploadResult = await this.uploadAvatar(avatarFile);
-        if (uploadResult.success) {
-          avatarData = {
-            avatar: uploadResult.data.url,
-            avatarPublicId: uploadResult.data.publicId
-          };
-        }
-      }
-
-      // Combine profile data with avatar data
-      const combinedData = {
-        ...updateData,
-        ...avatarData
-      };
-
-      // Update profile
-      return await this.updateUserProfile(combinedData);
-    } catch (error) {
-      console.error('Update user with avatar error:', error);
-      throw error;
+      // ✅ Simple error handling
+      const errorMessage =
+        error.response?.data?.message || error.message || "Có lỗi khi cập nhật";
+      throw new Error(errorMessage);
     }
   };
 
   // ✅ Get user display name
   getUserDisplayName = (user) => {
-    return user?.name || user?.username || user?.email?.split('@')[0] || 'User';
-  };
-
-  // ✅ Get user avatar URL with fallback
-  getUserAvatarUrl = (user, size = 200) => {
-    if (user?.avatar) return user.avatar;
-    const name = this.getUserDisplayName(user);
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=${size}`;
+    return user?.name || user?.username || user?.email?.split("@")[0] || "User";
   };
 
   // ✅ Check if user is active
@@ -201,35 +180,35 @@ class UserService {
 
   // ✅ Check if user is admin
   isAdmin = (user) => {
-    return user?.role === 'admin';
+    return user?.role === "admin";
   };
 
   // ✅ Format address for display
   formatAddress = (address) => {
-    if (!address) return '';
-    
+    if (!address) return "";
+
     if (address.full_address) return address.full_address;
-    
+
     const parts = [
       address.street,
       address.ward,
       address.district,
-      address.province
+      address.province,
     ].filter(Boolean);
-    
-    return parts.join(', ');
+
+    return parts.join(", ");
   };
 
   // ✅ Create address object from form data
   createAddressObject = (addressForm) => {
     if (!addressForm) return null;
-    
+
     return {
-      street: addressForm.street || '',
-      ward: addressForm.ward || '',
-      district: addressForm.district || '',
-      province: addressForm.province || '', // ✅ Sử dụng province
-      full_address: addressForm.full_address || ''
+      street: addressForm.street || "",
+      ward: addressForm.ward || "",
+      district: addressForm.district || "",
+      province: addressForm.province || "", // ✅ Sử dụng province
+      full_address: addressForm.full_address || "",
     };
   };
 }

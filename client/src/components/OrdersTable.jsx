@@ -1,29 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import OrderItemRow from "./OrderItemRow";
 
 const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading }) => {
-  const [sortBy, setSortBy] = useState('created_at'); // created_at, total_amount, status
-  const [sortOrder, setSortOrder] = useState('desc'); // asc, desc
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
 
-  // Sort orders
-  const sortedOrders = [...orders].sort((a, b) => {
-    let aValue = a[sortBy];
-    let bValue = b[sortBy];
+  // ✅ Memoize sorted orders để tránh re-sort mỗi render
+  const sortedOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    
+    return [...orders].sort((a, b) => {
+      let aValue = a[sortBy];
+      let bValue = b[sortBy];
 
-    if (sortBy === 'created_at') {
-      aValue = new Date(aValue);
-      bValue = new Date(bValue);
-    } else if (sortBy === 'total_amount') {
-      aValue = Number(aValue) || 0;
-      bValue = Number(bValue) || 0;
-    }
+      if (sortBy === 'created_at') {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      } else if (sortBy === 'total_amount') {
+        aValue = Number(aValue) || 0;
+        bValue = Number(bValue) || 0;
+      }
 
-    if (sortOrder === 'asc') {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  }, [orders, sortBy, sortOrder]); // ✅ Chỉ re-compute khi dependencies thay đổi
 
   const handleSort = (field) => {
     if (sortBy === field) {
@@ -75,7 +79,7 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading }) => {
           </tr>
         </thead>
         <tbody>
-          {Array.isArray(sortedOrders) && sortedOrders.length > 0 ? (
+          {sortedOrders.length > 0 ? (
             sortedOrders.map((order) => (
               <OrderItemRow
                 key={order._id}
@@ -86,10 +90,7 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading }) => {
             ))
           ) : (
             <tr>
-              <td
-                colSpan="5"
-                className="py-12 text-center text-gray-500"
-              >
+              <td colSpan="5" className="py-12 text-center text-gray-500">
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                     📦
@@ -116,4 +117,4 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading }) => {
   );
 };
 
-export default OrdersTable;
+export default React.memo(OrdersTable);
