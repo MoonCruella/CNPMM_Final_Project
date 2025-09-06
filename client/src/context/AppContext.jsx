@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import authService from "../services/authService";
 import { toast } from "sonner";
@@ -7,22 +13,23 @@ export const AppContext = createContext();
 
 export const AppContextProvider = ({ children }) => {
   const navigate = useNavigate();
-  
+
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSeller, setIsSeller] = useState(false);
   const [showUserLogin, setShowUserLogin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState({});
 
   // Sync auth state from user data
   const syncAuthState = useCallback((userData = null) => {
     const token = authService.getAccessToken();
     const currentUser = userData || authService.getUser();
-    
+
     if (token && currentUser && currentUser._id) {
       setUser(currentUser);
       setIsAuthenticated(true);
-      setIsSeller(currentUser.role === 'seller');
+      setIsSeller(currentUser.role === "seller");
     } else {
       setUser(null);
       setIsAuthenticated(false);
@@ -35,7 +42,7 @@ export const AppContextProvider = ({ children }) => {
     const initAuth = async () => {
       try {
         const token = authService.getAccessToken();
-        
+
         if (token) {
           if (!authService.isTokenExpired(token)) {
             // Token valid, try to get current user
@@ -45,14 +52,14 @@ export const AppContextProvider = ({ children }) => {
               syncAuthState(userData);
             } catch (error) {
               // API call failed, try refresh or fallback to stored data
-              console.error('getCurrentUser failed during init:', error);
-              
+              console.error("getCurrentUser failed during init:", error);
+
               try {
                 await authService.refreshToken();
                 const userData = authService.getUser();
                 syncAuthState(userData);
               } catch (refreshError) {
-                console.error('Token refresh failed:', refreshError);
+                console.error("Token refresh failed:", refreshError);
                 authService.removeTokens();
               }
             }
@@ -63,13 +70,13 @@ export const AppContextProvider = ({ children }) => {
               const userData = authService.getUser();
               syncAuthState(userData);
             } catch (error) {
-              console.error('Token refresh failed:', error);
+              console.error("Token refresh failed:", error);
               authService.removeTokens();
             }
           }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error("Auth initialization error:", error);
         authService.removeTokens();
       } finally {
         setLoading(false);
@@ -84,18 +91,18 @@ export const AppContextProvider = ({ children }) => {
     try {
       // authService.login now calls getCurrentUser internally
       const response = await authService.login(email, password);
-      
+
       if (response.data.success) {
         // Get user data that was fetched by authService.login
         const userData = authService.getUser();
         syncAuthState(userData);
         setShowUserLogin(false);
-        toast.success('Đăng nhập thành công!');
+        toast.success("Đăng nhập thành công!");
       }
-      
+
       return response;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       throw error;
     }
   };
@@ -108,7 +115,7 @@ export const AppContextProvider = ({ children }) => {
       syncAuthState(userData);
       return userData;
     } catch (error) {
-      console.error('Refresh user data error:', error);
+      console.error("Refresh user data error:", error);
       throw error;
     }
   };
@@ -123,7 +130,7 @@ export const AppContextProvider = ({ children }) => {
         syncAuthState(updatedUser);
       }
     } catch (error) {
-      console.error('Update user error:', error);
+      console.error("Update user error:", error);
       throw error;
     }
   };
@@ -131,7 +138,7 @@ export const AppContextProvider = ({ children }) => {
   const register = async (userData) => {
     const response = await authService.register(userData);
     if (response.data.success) {
-      toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.');
+      toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.");
     }
     return response;
   };
@@ -142,9 +149,10 @@ export const AppContextProvider = ({ children }) => {
     } catch (error) {
       // Silent fail
     } finally {
+      setUser(null);
       syncAuthState();
-      navigate('/');
-      toast.success('Đăng xuất thành công!');
+      navigate("/");
+      toast.success("Đăng xuất thành công!");
     }
   };
 
@@ -155,8 +163,8 @@ export const AppContextProvider = ({ children }) => {
       // Silent fail
     } finally {
       syncAuthState();
-      navigate('/');
-      toast.success('Đã đăng xuất khỏi tất cả thiết bị!');
+      navigate("/");
+      toast.success("Đã đăng xuất khỏi tất cả thiết bị!");
     }
   };
 
@@ -164,7 +172,7 @@ export const AppContextProvider = ({ children }) => {
   const verifyOTP = async (email, otp) => {
     const response = await authService.verifyOtpRegister(email, otp);
     if (response.data.success) {
-      toast.success('Xác nhận OTP thành công!');
+      toast.success("Xác nhận OTP thành công!");
     }
     return response;
   };
@@ -172,7 +180,7 @@ export const AppContextProvider = ({ children }) => {
   const resendOTP = async (email) => {
     const response = await authService.resendOtpRegister(email);
     if (response.data.success) {
-      toast.success('Đã gửi lại mã OTP!');
+      toast.success("Đã gửi lại mã OTP!");
     }
     return response;
   };
@@ -180,7 +188,7 @@ export const AppContextProvider = ({ children }) => {
   const forgotPassword = async (email) => {
     const response = await authService.sendOtpForgotPassword(email);
     if (response.data.success) {
-      toast.success('Đã gửi mã OTP đến email của bạn!');
+      toast.success("Đã gửi mã OTP đến email của bạn!");
     }
     return response;
   };
@@ -188,7 +196,7 @@ export const AppContextProvider = ({ children }) => {
   const verifyForgotPasswordOTP = async (email, otp) => {
     const response = await authService.verifyOtpForgotPassword(email, otp);
     if (response.data.success) {
-      toast.success('Xác nhận OTP thành công!');
+      toast.success("Xác nhận OTP thành công!");
     }
     return response;
   };
@@ -196,14 +204,14 @@ export const AppContextProvider = ({ children }) => {
   const resetPassword = async (email, newPassword) => {
     const response = await authService.resetPassword(email, newPassword);
     if (response.data.success) {
-      toast.success('Đặt lại mật khẩu thành công!');
+      toast.success("Đặt lại mật khẩu thành công!");
     }
     return response;
   };
 
   // Utility functions
   const isActiveUser = () => user?.active === true;
-  const isAdmin = () => user?.role === 'admin';
+  const isAdmin = () => user?.role === "admin";
 
   const openLogin = () => setShowUserLogin(true);
   const closeLogin = () => setShowUserLogin(false);
@@ -215,7 +223,7 @@ export const AppContextProvider = ({ children }) => {
     isSeller,
     loading,
     showUserLogin,
-    
+
     // Methods
     login,
     register,
@@ -228,15 +236,17 @@ export const AppContextProvider = ({ children }) => {
     forgotPassword,
     verifyForgotPasswordOTP,
     resetPassword,
-    
+
     // UI
     openLogin,
     closeLogin,
-    
+
     // Utils
     isActiveUser,
     isAdmin,
-    navigate
+    navigate,
+    searchQuery,
+    setSearchQuery,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -245,7 +255,7 @@ export const AppContextProvider = ({ children }) => {
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useAppContext must be used within AppContextProvider');
+    throw new Error("useAppContext must be used within AppContextProvider");
   }
   return context;
 };

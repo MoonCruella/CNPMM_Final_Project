@@ -47,10 +47,10 @@ const Categories = () => {
               <div
                 key={item._id}
                 onClick={() => {
-                  navigate(`/products/${item.slug?.toLowerCase()}`);
+                  navigate("/products", { state: { categoryId: item._id } });
                   window.scrollTo(0, 0);
                 }}
-                className="w-36 h-40 p-5 rounded-2xl flex flex-col items-center justify-between transform transition duration-300 hover:scale-105 hover:shadow-lg"
+                className="w-36 h-40 p-5 rounded-2xl flex flex-col items-center justify-between transform transition duration-300 cursor-pointer hover:scale-105 hover:shadow-lg"
                 style={{ backgroundColor: style.bgColor }}
               >
                 {/* Khung ảnh tròn */}

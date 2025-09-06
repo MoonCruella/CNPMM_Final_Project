@@ -2,9 +2,13 @@ import React from "react";
 import { assets } from "@/assets/assets";
 import { useCartContext } from "@/context/CartContext";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useAppContext } from "@/context/AppContext";
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCartContext();
+  const { user } = useAppContext();
+  const navigate = useNavigate();
 
   // Định dạng tiền tệ VNĐ
   const formatCurrency = (value) =>
@@ -13,8 +17,12 @@ const ProductCard = ({ product }) => {
   // Xử lý thêm vào giỏ
   const handleAddToCart = async () => {
     try {
-      await addToCart(product._id, 1);
-      toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
+      if (!user) {
+        toast.info("Vui lòng đăng nhập!");
+      } else {
+        await addToCart(product._id, 1);
+        toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Thêm vào giỏ hàng thất bại!");
@@ -22,7 +30,7 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group p-5 bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 min-w-[220px]">
+    <div className="group p-5 mx-4 my-2 bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 min-w-[220px]">
       {/* Thumbnail */}
       <div className="relative overflow-hidden">
         <img
@@ -40,7 +48,7 @@ const ProductCard = ({ product }) => {
         <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
           <button
             onClick={handleAddToCart}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow hover:bg-green-100 transition"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow cursor-pointer hover:bg-green-100 transition"
           >
             <img
               src={assets.add_to_cart_icon}
@@ -48,7 +56,10 @@ const ProductCard = ({ product }) => {
               alt="Add to cart"
             />
           </button>
-          <button className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow hover:bg-green-100 transition">
+          <button
+            onClick={() => navigate(`/products/${product._id}`)}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow cursor-pointer hover:bg-green-100 transition"
+          >
             <img src={assets.view_icon} className="w-5 h-5" alt="View" />
           </button>
         </div>

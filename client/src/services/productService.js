@@ -24,6 +24,11 @@ const productService = {
     const res = await api.get("api/products/discounts?limit=4");
     return res.data;
   },
+
+  getById: async (id) => {
+    const res = await api.get(`api/products/${id}`);
+    return res.data;
+  },
 };
 
 export default productService;

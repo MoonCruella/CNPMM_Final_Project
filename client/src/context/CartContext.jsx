@@ -1,14 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import cartService from "@/services/cartService";
+import { useAppContext } from "./AppContext"; // lấy AppContext để get user
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
+  const { user } = useAppContext(); // ✅ destructure đúng user
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Load giỏ hàng từ API
+  // Load giỏ hàng từ API (chỉ khi đã login)
   const loadCart = async () => {
+    if (!user) {
+      setItems([]); // nếu chưa login hoặc logout thì giỏ rỗng
+      return;
+    }
     try {
       setLoading(true);
       const res = await cartService.getCart();
@@ -22,21 +28,21 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  // Thêm sản phẩm
   const addToCart = async (product_id, quantity = 1) => {
+    if (!user) return; // không cho thêm khi chưa login
     try {
       const res = await cartService.addToCart(product_id, quantity);
       if (res.success) {
         setItems((prev) => {
           const exist = prev.find((item) => item._id === res.data._id);
           if (exist) {
-            // Cộng dồn quantity nếu đã có
             return prev.map((item) =>
               item._id === res.data._id
                 ? { ...item, quantity: res.data.quantity }
                 : item
             );
           }
-          // Nếu chưa có, thêm vào mảng
           return [...prev, res.data];
         });
       }
@@ -47,6 +53,7 @@ export const CartProvider = ({ children }) => {
 
   // Cập nhật số lượng
   const updateQuantity = async (cartItem_id, quantity) => {
+    if (!user) return;
     try {
       const res = await cartService.updateCartItem(cartItem_id, quantity);
       if (res.success) {
@@ -65,6 +72,7 @@ export const CartProvider = ({ children }) => {
 
   // Xóa sản phẩm
   const removeFromCart = async (cartItem_id) => {
+    if (!user) return;
     try {
       const res = await cartService.removeFromCart(cartItem_id);
       if (res.success) {
@@ -77,6 +85,7 @@ export const CartProvider = ({ children }) => {
 
   // Xóa toàn bộ giỏ
   const clearCart = async () => {
+    if (!user) return;
     try {
       const res = await cartService.clearCart();
       if (res.success) {
@@ -87,9 +96,10 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  // 🔑 Load lại giỏ mỗi khi user thay đổi (login/logout)
   useEffect(() => {
     loadCart();
-  }, []);
+  }, [user]);
 
   return (
     <CartContext.Provider
