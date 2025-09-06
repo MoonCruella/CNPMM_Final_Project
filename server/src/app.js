@@ -70,4 +70,7 @@ app.use("/api/orders", orderRoutes);
 //Addresses
 app.use("/api/addresses", addressRoutes);
 
+// VNPay
+app.use("/api/vnpay", vnpayRoutes);
+
 export default app;
