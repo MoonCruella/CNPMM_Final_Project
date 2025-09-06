@@ -3,9 +3,11 @@ import { assets } from "@/assets/assets";
 import { useCartContext } from "@/context/CartContext";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useAppContext } from "@/context/AppContext";
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCartContext();
+  const { user } = useAppContext();
   const navigate = useNavigate();
 
   // Định dạng tiền tệ VNĐ
@@ -15,8 +17,12 @@ const ProductCard = ({ product }) => {
   // Xử lý thêm vào giỏ
   const handleAddToCart = async () => {
     try {
-      await addToCart(product._id, 1);
-      toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
+      if (!user) {
+        toast.info("Vui lòng đăng nhập!");
+      } else {
+        await addToCart(product._id, 1);
+        toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Thêm vào giỏ hàng thất bại!");

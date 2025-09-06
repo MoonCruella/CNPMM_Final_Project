@@ -7,8 +7,10 @@ import productService from "../services/productService.js";
 import ProductCard from "../components/item/ProductCard.jsx";
 import categoryService from "../services/categoryService.js";
 import { useCartContext } from "@/context/CartContext";
+import { useAppContext } from "@/context/AppContext";
 
 const ProductDetails = () => {
+  const { user } = useAppContext();
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCartContext();
@@ -25,8 +27,12 @@ const ProductDetails = () => {
   // Xử lý thêm vào giỏ
   const handleAddToCart = async () => {
     try {
-      await addToCart(product._id, quantity);
-      toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
+      if (!user) {
+        toast.info("Vui lòng đăng nhập!");
+      } else {
+        await addToCart(product._id, quantity);
+        toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Thêm vào giỏ hàng thất bại!");

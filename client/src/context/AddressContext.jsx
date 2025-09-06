@@ -1,12 +1,12 @@
 // context/AddressContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import addressService from "@/services/addressService";
-import { useUserContext } from "./UserContext";
+import { useAppContext } from "./AppContext";
 
 const AddressContext = createContext();
 
 export const AddressProvider = ({ children }) => {
-  const { user } = useUserContext();
+  const { user } = useAppContext();
 
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null); // lưu object
