@@ -8,6 +8,7 @@ import orderRoutes from "./routes/order.route.js";
 import cartRoutes from "./routes/cart.route.js";
 import addressRoutes from "./routes/address.route.js";
 import userRoutes from "./routes/user.route.js";
+import vnpayRoutes from "./routes/vnpay.route.js";
 
 import cors from "cors";
 import {

@@ -101,6 +101,10 @@ export const CartProvider = ({ children }) => {
     loadCart();
   }, [user]);
 
+  const refreshCart = async () => {
+    await loadCart();
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -111,6 +115,7 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         clearCart,
         loadCart,
+        refreshCart,
       }}
     >
       {children}

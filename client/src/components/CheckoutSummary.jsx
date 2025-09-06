@@ -3,7 +3,7 @@ import ItemRow from "./item/ItemRow";
 import orderService from "@/services/order.service";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCartContext } from "@/context/CartContext";
-import vnpayService from "@/services/vnpayService";
+import vnpayService from "@/services/vnpay.service";
 
 const CheckoutSummary = ({
   cartItems,
