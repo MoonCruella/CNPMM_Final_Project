@@ -1,59 +1,57 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useUserContext } from "../context/UserContext.jsx";
 import { toast } from "sonner";
+import { useCartContext } from "@/context/CartContext.jsx";
 import avatarService from "@/services/avatarService.js";
+import ca from "zod/v4/locales/ca.js";
 
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
-  const {
-    user,
-    isAuthenticated,
-    navigate,
-    logout,
-    logoutAll,
-    openLogin,
-  } = useAppContext();
+  const { user, isAuthenticated, navigate, logout, logoutAll, openLogin } =
+    useAppContext();
   const { getUserAvatarUrl } = useUserContext();
   const getAvatarUrl = (size = 40) => {
     if (getUserAvatarUrl) {
       return getUserAvatarUrl(size);
     }
-    
-    // Fallback if getUserAvatarUrl is not available
-    const name = user?.name || user?.email || 'User';
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=${size}`;
-  };
 
+    // Fallback if getUserAvatarUrl is not available
+    const name = user?.name || user?.email || "User";
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      name
+    )}&background=10b981&color=fff&size=${size}`;
+  };
 
   // Logout handlers
   const handleLogout = async () => {
     try {
-      const loadingToast = toast.loading('Đang đăng xuất...');
+      const loadingToast = toast.loading("Đang đăng xuất...");
       await logout();
       toast.dismiss(loadingToast);
 
       setOpen(false);
       setIsUserMenuOpen(false);
     } catch (error) {
-      toast.error('Có lỗi xảy ra khi đăng xuất');
+      toast.error("Có lỗi xảy ra khi đăng xuất");
     }
   };
 
   const handleLogoutAll = async () => {
     try {
-      const loadingToast = toast.loading('Đang đăng xuất khỏi tất cả thiết bị...');
+      const loadingToast = toast.loading(
+        "Đang đăng xuất khỏi tất cả thiết bị..."
+      );
       await logoutAll();
       toast.dismiss(loadingToast);
       setOpen(false);
       setIsUserMenuOpen(false);
     } catch (error) {
-      toast.error('Có lỗi xảy ra khi đăng xuất');
+      toast.error("Có lỗi xảy ra khi đăng xuất");
     }
-
   };
 
   const handleLoginClick = () => {
@@ -65,6 +63,12 @@ const Navbar = () => {
     navigate(path);
     setIsUserMenuOpen(false);
   };
+
+  const { items, refreshCart } = useCartContext();
+
+  useEffect(() => {
+    refreshCart(); // luôn sync lại khi load Navbar
+  }, []);
 
   return (
     <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-b border-gray-300 bg-white relative transition-all">
@@ -101,7 +105,7 @@ const Navbar = () => {
             className="w-6 opacity-80"
           />
           <button className="absolute -top-2 -right-3 text-xs text-white btn-primary w-[18px] h-[18px] rounded-full">
-            3
+            {items.length}
           </button>
         </div>
 
@@ -122,49 +126,74 @@ const Navbar = () => {
             {/* User Avatar with Status Indicator */}
             <div className="relative cursor-pointer">
               <img
-                src={
-                  getAvatarUrl(40)
-                }
+                src={getAvatarUrl(40)}
                 className="w-10 h-10 rounded-full border-2 border-gray-200 hover:border-green-500 transition-colors"
                 alt="Profile"
                 onError={(e) => {
-                  console.error('Avatar load error:', e.target.src);
+                  console.error("Avatar load error:", e.target.src);
                   // ✅ Better fallback handling
-                  const name = user?.name || user?.email || 'User';
-                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=40`;
+                  const name = user?.name || user?.email || "User";
+                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    name
+                  )}&background=10b981&color=fff&size=40`;
                 }}
               />
 
               {/* Active Status Indicator */}
-              <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${user.active === true ? 'bg-green-500' : 'bg-red-500'
-                }`}></div>
+              <div
+                className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
+                  user.active === true ? "bg-green-500" : "bg-red-500"
+                }`}
+              ></div>
             </div>
 
             {/* ✅ Dropdown Menu with proper positioning and transitions */}
-            <div className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${isUserMenuOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'
-              }`}>
+            <div
+              className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${
+                isUserMenuOpen
+                  ? "opacity-100 visible translate-y-0"
+                  : "opacity-0 invisible -translate-y-2"
+              }`}
+            >
               {/* User Info Header */}
               <div className="px-4 py-2 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <div>
-                    <p className="font-medium text-gray-800 truncate">{user.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                    <p className="font-medium text-gray-800 truncate">
+                      {user.name}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {user.email}
+                    </p>
                   </div>
                 </div>
 
                 {/* Status Badge */}
                 <div className="flex gap-1 mt-1">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin' ? 'bg-red-100 text-red-700' :
-                      user.role === 'seller' ? 'bg-blue-100 text-blue-700' :
-                        'bg-green-100 text-green-700'
-                    }`}>
-                    {user.role === 'admin' ? 'Admin' :
-                      user.role === 'seller' ? 'Seller' : 'User'}
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      user.role === "admin"
+                        ? "bg-red-100 text-red-700"
+                        : user.role === "seller"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
+                  >
+                    {user.role === "admin"
+                      ? "Admin"
+                      : user.role === "seller"
+                      ? "Seller"
+                      : "User"}
                   </span>
 
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${user.active === true ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                    {user.active === true ? 'Active' : 'Inactive'}
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      user.active === true
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {user.active === true ? "Active" : "Inactive"}
                   </span>
                 </div>
               </div>
@@ -185,7 +214,7 @@ const Navbar = () => {
               </button>
 
               {/* Admin Link */}
-              {user.role === 'admin' && (
+              {user.role === "admin" && (
                 <button
                   onClick={() => handleMenuNavigation("/admin")}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-purple-600 transition-colors"
@@ -195,7 +224,7 @@ const Navbar = () => {
               )}
 
               {/* Seller Dashboard */}
-              {user.role === 'seller' && (
+              {user.role === "seller" && (
                 <button
                   onClick={() => handleMenuNavigation("/seller")}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-blue-600 transition-colors"
@@ -256,21 +285,28 @@ const Navbar = () => {
 
               {/* Mobile User Info */}
               <div className="flex items-center gap-3 py-2">
-               <img
-                  src={getAvatarUrl(32)} 
+                <img
+                  src={getAvatarUrl(32)}
                   className="w-8 h-8 rounded-full object-cover"
                   alt="Profile"
                   onError={(e) => {
-                    const name = user?.name || user?.email || 'User';
-                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=32`;
+                    const name = user?.name || user?.email || "User";
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                      name
+                    )}&background=10b981&color=fff&size=32`;
                   }}
                 />
                 <div>
                   <p className="font-medium text-gray-800">{user.name}</p>
                   <div className="flex gap-1">
-                    <span className={`px-1.5 py-0.5 rounded text-xs ${user.active === true ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                      {user.active === true ? 'Active' : 'Inactive'}
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-xs ${
+                        user.active === true
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {user.active === true ? "Active" : "Inactive"}
                     </span>
                   </div>
                 </div>
@@ -284,14 +320,22 @@ const Navbar = () => {
                 📦 My Orders
               </NavLink>
 
-              {user.role === 'admin' && (
-                <NavLink to="/admin" onClick={() => setOpen(false)} className="text-purple-600">
+              {user.role === "admin" && (
+                <NavLink
+                  to="/admin"
+                  onClick={() => setOpen(false)}
+                  className="text-purple-600"
+                >
                   ⚙️ Admin Panel
                 </NavLink>
               )}
 
-              {user.role === 'seller' && (
-                <NavLink to="/seller" onClick={() => setOpen(false)} className="text-blue-600">
+              {user.role === "seller" && (
+                <NavLink
+                  to="/seller"
+                  onClick={() => setOpen(false)}
+                  className="text-blue-600"
+                >
                   🏪 Seller Dashboard
                 </NavLink>
               )}
