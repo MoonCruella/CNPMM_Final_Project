@@ -41,14 +41,24 @@ const CartPage = () => {
 
       {/* Cart Section */}
       <section className="py-16 container mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 flex flex-col">
           <CartTable
             cartItems={cartItems}
             updateQuantity={updateQuantity}
             removeFromCart={removeFromCart}
           />
+
+          <div className="mt-5 flex justify-end">
+            <Link
+              to="/products"
+              className="hover:underline font-medium text-primary"
+            >
+              Continue Shopping
+            </Link>
+          </div>
         </div>
-        <CartTotals subtotal={subtotal} />
+
+        <CartTotals subtotal={subtotal} cartItems={cartItems} />
       </section>
     </main>
   );

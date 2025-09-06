@@ -18,6 +18,7 @@ import CartPage from "./pages/CartPage";
 import AllProducts from "./pages/AllProducts";
 import MyOrdersPage from "./pages/MyOrderPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import AddressForm from "./components/AddressForm";
 
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");

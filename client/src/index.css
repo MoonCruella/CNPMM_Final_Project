@@ -253,3 +253,40 @@ body {
     );
   background-size: 50px 50px;
 }
+
+/* Scrollbar nhỏ, bo tròn, giữ màu mặc định */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px; /* bề rộng thanh cuộn */
+  height: 6px; /* nếu scroll ngang */
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 10px; /* bo tròn */
+  background-color: rgba(0, 0, 0, 0.3); /* màu xám nhạt, gần giống mặc định */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  border-radius: 10px; /* bo tròn track */
+  background: transparent; /* giữ màu nền trong suốt */
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}

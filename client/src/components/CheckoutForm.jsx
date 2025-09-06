@@ -1,156 +1,125 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { assets } from "@/assets/assets";
+import { useAddressContext } from "@/context/AddressContext";
+import AddressModal from "./modal/AddressModal";
+import AddressItem from "./item/AddressItem";
 
 const CheckoutForm = () => {
-  const [payment, setPayment] = useState("cod");
-  const [addresses, setAddresses] = useState([]);
-  const [newAddress, setNewAddress] = useState("");
-  const [selectedAddress, setSelectedAddress] = useState("");
+  const {
+    addresses,
+    loadAddresses,
+    addAddress,
+    updateAddress,
+    removeAddress,
+    selectedAddress,
+    setSelectedAddress,
+    paymentMethod,
+    setPaymentMethod,
+  } = useAddressContext();
 
-  const handleAddAddress = (e) => {
-    e.preventDefault();
-    if (newAddress.trim() === "") return;
-    setAddresses([...addresses, newAddress]);
-    setSelectedAddress(newAddress);
-    setNewAddress("");
-  };
+  const [showModal, setShowModal] = useState(false);
+  const [editAddress, setEditAddress] = useState(null);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!selectedAddress) {
-      alert("Vui lòng chọn hoặc nhập địa chỉ giao hàng!");
-      return;
+  // load danh sách địa chỉ khi mở trang
+  useEffect(() => {
+    loadAddresses();
+  }, []);
+
+  // Lưu địa chỉ (thêm hoặc sửa)
+  const handleSaveAddress = async (data) => {
+    if (editAddress) {
+      await updateAddress(editAddress._id, data);
+    } else {
+      await addAddress(data);
     }
-    alert(`Thanh toán bằng: ${payment}\nGiao hàng đến: ${selectedAddress}`);
+    setShowModal(false);
+    setEditAddress(null);
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2 className="text-2xl font-extrabold mb-6 text-green-800">
-        Billing Details
-      </h2>
-
+    <div>
       {/* Payment Method */}
       <div>
-        <h3 className="text-xl font-semibold mb-4">Payment Method</h3>
-        <div className="space-y-3">
-          {/* COD */}
-          <label className="flex items-center gap-3 border rounded-lg p-3 cursor-pointer hover:bg-gray-50">
-            <input
-              type="radio"
-              name="payment"
-              value="cod"
-              checked={payment === "cod"}
-              onChange={(e) => setPayment(e.target.value)}
-              className="w-5 h-5 accent-green-600"
-            />
-            <img src={assets.cod_icon} alt="COD" className="w-8 h-8" />
-            <span>Cash on Delivery (COD)</span>
-          </label>
-
-          {/* VNPAY */}
-          <label className="flex items-center gap-3 border rounded-lg p-3 cursor-pointer hover:bg-gray-50">
-            <input
-              type="radio"
-              name="payment"
-              value="vnpay"
-              checked={payment === "vnpay"}
-              onChange={(e) => setPayment(e.target.value)}
-              className="w-5 h-5 accent-green-600"
-            />
-            <img src={assets.vnpay_icon} alt="VNPAY" className="w-8 h-8" />
-            <span>VNPAY</span>
-          </label>
-
-          {/* ZaloPay */}
-          <label className="flex items-center gap-3 border rounded-lg p-3 cursor-pointer hover:bg-gray-50">
-            <input
-              type="radio"
-              name="payment"
-              value="zalopay"
-              checked={payment === "zalopay"}
-              onChange={(e) => setPayment(e.target.value)}
-              className="w-5 h-5 accent-green-600"
-            />
-            <img src={assets.zalo_pay} alt="ZaloPay" className="w-8 h-8" />
-            <span>ZaloPay</span>
-          </label>
+        <h4 className="text-xl font-semibold mb-4">Phương thức thanh toán</h4>
+        <div className="space-y-3 w-full sm:w-2/3">
+          {[
+            {
+              value: "cod",
+              label: "Thanh toán khi nhận hàng (COD)",
+              icon: assets.cod_icon,
+            },
+            { value: "vnpay", label: "VNPAY", icon: assets.vnpay_icon },
+            { value: "zalopay", label: "ZaloPay", icon: assets.zalo_pay },
+          ].map((method) => (
+            <label
+              key={method.value}
+              className="flex items-center gap-3 border rounded-lg p-3 cursor-pointer hover:bg-gray-50"
+            >
+              <input
+                type="radio"
+                name="payment"
+                value={method.value}
+                checked={paymentMethod === method.value}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-5 h-5 accent-green-600"
+              />
+              <img src={method.icon} alt={method.label} className="w-8 h-8" />
+              <span>{method.label}</span>
+            </label>
+          ))}
         </div>
       </div>
 
       {/* Shipping Address */}
-      <h3 className="text-lg font-semibold mt-8 mb-4">Shipping Address</h3>
+      <h4 className="text-lg font-semibold mt-8 mb-4">Địa chỉ nhận hàng</h4>
       <div className="space-y-3">
-        {addresses.length > 0 ? (
-          <>
-            {addresses.map((addr, idx) => (
-              <label
-                key={idx}
-                className="flex items-center gap-3 border rounded-xl p-3 cursor-pointer hover:shadow"
-              >
-                <input
-                  type="radio"
-                  name="address"
-                  value={addr}
-                  checked={selectedAddress === addr}
-                  onChange={(e) => setSelectedAddress(e.target.value)}
-                  className="w-5 h-5 accent-green-600"
-                />
-                <span>{addr}</span>
-              </label>
-            ))}
-
-            {/* Thêm địa chỉ mới */}
-            <div className="mt-3">
-              <input
-                type="text"
-                value={newAddress}
-                onChange={(e) => setNewAddress(e.target.value)}
-                placeholder="Nhập địa chỉ mới"
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none mb-2"
-              />
-              <button
-                onClick={handleAddAddress}
-                className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
-              >
-                + Lưu địa chỉ
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <input
-              type="text"
-              value={newAddress}
-              onChange={(e) => setNewAddress(e.target.value)}
-              placeholder="Nhập địa chỉ giao hàng"
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none mb-2"
-              required
-            />
-            <button
-              onClick={handleAddAddress}
-              className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
-            >
-              + Lưu địa chỉ
-            </button>
-          </>
+        {addresses.length === 0 && (
+          <p className="text-gray-500">
+            Chưa có địa chỉ nào, vui lòng thêm mới.
+          </p>
         )}
+
+        {addresses.map((addr) => (
+          <AddressItem
+            key={addr._id}
+            address={addr}
+            selected={selectedAddress?._id === addr._id} // thêm ? để tránh lỗi null
+            onSelect={() => setSelectedAddress(addr)} // set toàn bộ object
+            onEdit={(a) => {
+              setEditAddress(a);
+              setShowModal(true);
+            }}
+            onDelete={removeAddress}
+            isDefault={addr.is_default}
+          />
+        ))}
+
+        {/* Nút mở modal thêm địa chỉ */}
+        <button
+          type="button"
+          onClick={() => {
+            setEditAddress(null);
+            setShowModal(true);
+          }}
+          className="px-4 py-2 mt-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+        >
+          + Thêm địa chỉ mới
+        </button>
       </div>
 
-      {/* Terms */}
-      <div className="mt-6">
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            className="w-4 h-4 accent-green-600 focus:ring-0"
-            required
-          />
-          <span className="ml-2 text-sm text-gray-600">
-            I have read and agree to the Terms and Conditions.
-          </span>
-        </label>
-      </div>
-    </form>
+      {/* Modal Form */}
+      {showModal && (
+        <AddressModal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            setEditAddress(null);
+          }}
+          onSubmit={handleSaveAddress}
+          addressToEdit={editAddress}
+        />
+      )}
+    </div>
   );
 };
 

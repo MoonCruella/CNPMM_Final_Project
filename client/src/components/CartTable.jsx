@@ -1,5 +1,5 @@
 import React from "react";
-import CartItemRow from "./CartItemRow";
+import CartItemRow from "./item/CartItemRow";
 
 const CartTable = ({ cartItems, updateQuantity, removeFromCart }) => {
   return (

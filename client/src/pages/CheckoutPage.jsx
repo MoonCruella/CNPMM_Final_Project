@@ -1,10 +1,24 @@
 import React from "react";
-import CartSummary from "@/components/CardSummary";
+import CheckoutSummary from "@/components/CheckoutSummary";
 import CheckoutForm from "@/components/CheckoutForm";
 import { Link } from "react-router-dom";
 import { assets } from "@/assets/assets";
+import { useCartContext } from "@/context/CartContext";
+import { useAddressContext } from "@/context/AddressContext";
+import { toast } from "sonner";
 
 const Checkout = () => {
+  const { selectedAddress, paymentMethod } = useAddressContext();
+  const { items: cartItems = [] } = useCartContext();
+  const subtotal = Array.isArray(cartItems)
+    ? cartItems.reduce((total, item) => {
+        const price =
+          Number(item.product_id?.sale_price || item.product_id?.price) || 0;
+        const quantity = Number(item.quantity) || 0;
+        return total + price * quantity;
+      }, 0)
+    : 0;
+
   return (
     <main className="bg-gray-50 min-h-screen">
       {/* Banner */}
@@ -31,7 +45,12 @@ const Checkout = () => {
 
           {/* Cart bên phải */}
           <div className="flex-1 border rounded-2xl shadow bg-white p-6">
-            <CartSummary />
+            <CheckoutSummary
+              cartItems={cartItems}
+              subtotal={subtotal}
+              selectedAddress={selectedAddress}
+              paymentMethod={paymentMethod}
+            />
           </div>
         </div>
       </div>

@@ -1,46 +1,46 @@
 import React, { useState, useMemo } from "react";
-import OrderItemRow from "./OrderItemRow";
+import OrderItemRow from "./item/OrderItemRow";
 
 const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading }) => {
-  const [sortBy, setSortBy] = useState('created_at');
-  const [sortOrder, setSortOrder] = useState('desc');
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState("desc");
 
-  // ✅ Memoize sorted orders để tránh re-sort mỗi render
+  // Memoize sorted orders để tránh re-sort mỗi render
   const sortedOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
-    
+
     return [...orders].sort((a, b) => {
       let aValue = a[sortBy];
       let bValue = b[sortBy];
 
-      if (sortBy === 'created_at') {
+      if (sortBy === "created_at") {
         aValue = new Date(aValue);
         bValue = new Date(bValue);
-      } else if (sortBy === 'total_amount') {
+      } else if (sortBy === "total_amount") {
         aValue = Number(aValue) || 0;
         bValue = Number(bValue) || 0;
       }
 
-      if (sortOrder === 'asc') {
+      if (sortOrder === "asc") {
         return aValue > bValue ? 1 : -1;
       } else {
         return aValue < bValue ? 1 : -1;
       }
     });
-  }, [orders, sortBy, sortOrder]); // ✅ Chỉ re-compute khi dependencies thay đổi
+  }, [orders, sortBy, sortOrder]); // Chỉ re-compute khi dependencies thay đổi
 
   const handleSort = (field) => {
     if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortBy(field);
-      setSortOrder('desc');
+      setSortOrder("desc");
     }
   };
 
   const getSortIcon = (field) => {
-    if (sortBy !== field) return '↕️';
-    return sortOrder === 'asc' ? '↑' : '↓';
+    if (sortBy !== field) return "↕️";
+    return sortOrder === "asc" ? "↑" : "↓";
   };
 
   if (isLoading) {
@@ -57,22 +57,22 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading }) => {
       <table className="w-full text-left">
         <thead className="bg-green-700">
           <tr>
-            <th 
+            <th
               className="py-3 px-4 text-white cursor-pointer hover:bg-green-800 transition"
-              onClick={() => handleSort('created_at')}
+              onClick={() => handleSort("created_at")}
             >
               <div className="flex items-center gap-2">
-                Đơn hàng {getSortIcon('created_at')}
+                Đơn hàng {getSortIcon("created_at")}
               </div>
             </th>
             <th className="py-3 px-4 text-white">Sản phẩm</th>
             <th className="py-3 px-4 text-white">Trạng thái</th>
-            <th 
+            <th
               className="py-3 px-4 text-white text-right cursor-pointer hover:bg-green-800 transition"
-              onClick={() => handleSort('total_amount')}
+              onClick={() => handleSort("total_amount")}
             >
               <div className="flex items-center justify-end gap-2">
-                Tổng tiền {getSortIcon('total_amount')}
+                Tổng tiền {getSortIcon("total_amount")}
               </div>
             </th>
             <th className="py-3 px-4 text-white text-center">Thao tác</th>
@@ -101,8 +101,8 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading }) => {
                       Hãy bắt đầu mua sắm để tạo đơn hàng đầu tiên
                     </p>
                   </div>
-                  <button 
-                    onClick={() => window.location.href = '/products'}
+                  <button
+                    onClick={() => (window.location.href = "/products")}
                     className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
                   >
                     Khám phá sản phẩm

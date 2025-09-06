@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { assets } from "@/assets/assets";
 import productService from "../services/productService.js";
 import categoryService from "../services/categoryService.js";
-import ProductCard from "../components/ProductCard.jsx";
+import ProductCard from "../components/item/ProductCard.jsx";
 
 const AllProducts = () => {
   const [products, setProducts] = useState([]);
