@@ -4,13 +4,14 @@ import Slider from "react-slick";
 import { assets } from "@/assets/assets";
 import { toast } from "sonner";
 import productService from "../services/productService.js";
-import ProductCard from "../components/ProductCard.jsx";
+import ProductCard from "../components/item/ProductCard.jsx";
 import categoryService from "../services/categoryService.js";
+import { useCartContext } from "@/context/CartContext";
 
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-
+  const { addToCart } = useCartContext();
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [thumbnail, setThumbnail] = useState(null);
@@ -21,9 +22,10 @@ const ProductDetails = () => {
   const formatCurrency = (value) =>
     value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
+  // Xử lý thêm vào giỏ
   const handleAddToCart = async () => {
     try {
-      await productService.addToCart(product._id, 1);
+      await addToCart(product._id, quantity);
       toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
     } catch (err) {
       console.error(err);

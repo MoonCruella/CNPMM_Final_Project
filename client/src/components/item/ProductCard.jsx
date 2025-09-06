@@ -24,7 +24,7 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group p-5 bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 min-w-[220px]">
+    <div className="group p-5 mx-4 my-2 bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 min-w-[220px]">
       {/* Thumbnail */}
       <div className="relative overflow-hidden">
         <img
@@ -50,7 +50,10 @@ const ProductCard = ({ product }) => {
               alt="Add to cart"
             />
           </button>
-          <button onClick={() => navigate(`/products/${product._id}`)} className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow cursor-pointer hover:bg-green-100 transition">
+          <button
+            onClick={() => navigate(`/products/${product._id}`)}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow cursor-pointer hover:bg-green-100 transition"
+          >
             <img src={assets.view_icon} className="w-5 h-5" alt="View" />
           </button>
         </div>
