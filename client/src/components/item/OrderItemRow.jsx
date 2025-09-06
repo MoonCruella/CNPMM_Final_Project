@@ -1,53 +1,52 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
-import OrderDetailModal from "./modal/OrderDetailModal";
+import OrderDetailModal from "../modal/OrderDetailModal";
 const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
   const [showDetails, setShowDetails] = useState(false);
-  const [showModal, setShowModal] = useState(false); 
-   
+  const [showModal, setShowModal] = useState(false);
 
   // ✅ Memoize computed values
   const computedValues = useMemo(() => {
     // Helper functions
     const formatDate = (dateString) => {
-      return new Date(dateString).toLocaleDateString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
+      return new Date(dateString).toLocaleDateString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
       });
     };
 
     const formatCurrency = (amount) => {
-      return Number(amount).toLocaleString('vi-VN') + '₫';
+      return Number(amount).toLocaleString("vi-VN") + "₫";
     };
 
     const getStatusColor = (status) => {
       const colors = {
-        pending: 'bg-yellow-100 text-yellow-800',
-        processing: 'bg-blue-100 text-blue-800',
-        shipped: 'bg-purple-100 text-purple-800',
-        delivered: 'bg-green-100 text-green-800',
-        cancelled: 'bg-red-100 text-red-800'
+        pending: "bg-yellow-100 text-yellow-800",
+        processing: "bg-blue-100 text-blue-800",
+        shipped: "bg-purple-100 text-purple-800",
+        delivered: "bg-green-100 text-green-800",
+        cancelled: "bg-red-100 text-red-800",
       };
-      return colors[status] || 'bg-gray-100 text-gray-800';
+      return colors[status] || "bg-gray-100 text-gray-800";
     };
 
     const getStatusText = (status) => {
       const texts = {
-        pending: 'Chờ xác nhận',
-        processing: 'Đang xử lý',
-        shipped: 'Đang giao',
-        delivered: 'Đã giao',
-        cancelled: 'Đã hủy'
+        pending: "Chờ xác nhận",
+        processing: "Đang xử lý",
+        shipped: "Đang giao",
+        delivered: "Đã giao",
+        cancelled: "Đã hủy",
       };
       return texts[status] || status;
     };
 
     // Check capabilities
-    const canCancel = ['pending', 'processing'].includes(order.status);
-    const canReorder = ['delivered', 'cancelled'].includes(order.status);
+    const canCancel = ["pending", "processing"].includes(order.status);
+    const canReorder = ["delivered", "cancelled"].includes(order.status);
 
     return {
       formatDate,
@@ -55,24 +54,35 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
       getStatusColor,
       getStatusText,
       canCancel,
-      canReorder
+      canReorder,
     };
   }, [order.status]);
 
-  const { formatDate, formatCurrency, getStatusColor, getStatusText, canCancel, canReorder } = computedValues;
+  const {
+    formatDate,
+    formatCurrency,
+    getStatusColor,
+    getStatusText,
+    canCancel,
+    canReorder,
+  } = computedValues;
 
   // ✅ Memoize image getter function
   const getPrimaryImage = useCallback((item) => {
     const images = item.product_id?.images;
-    if (!images || !Array.isArray(images)) return '/placeholder-product.jpg';
-    
-    const primaryImage = images.find(img => img.is_primary);
-    return primaryImage?.image_url || images[0]?.image_url || '/placeholder-product.jpg';
+    if (!images || !Array.isArray(images)) return "/placeholder-product.jpg";
+
+    const primaryImage = images.find((img) => img.is_primary);
+    return (
+      primaryImage?.image_url ||
+      images[0]?.image_url ||
+      "/placeholder-product.jpg"
+    );
   }, []);
 
   // ✅ Memoize handlers
   const handleToggleDetails = useCallback(() => {
-    setShowDetails(prev => !prev);
+    setShowDetails((prev) => !prev);
   }, []);
 
   const handleCancelOrder = useCallback(() => {
@@ -97,13 +107,17 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
         {/* Order Info */}
         <td className="py-4 px-4">
           <div>
-            <p className="font-medium text-gray-800">#{order.order_number || order._id?.slice(-8)}</p>
-            <p className="text-sm text-gray-500">{formatDate(order.created_at)}</p>
+            <p className="font-medium text-gray-800">
+              #{order.order_number || order._id?.slice(-8)}
+            </p>
+            <p className="text-sm text-gray-500">
+              {formatDate(order.created_at)}
+            </p>
             <button
               onClick={handleToggleDetails}
               className="text-xs text-green-600 hover:text-green-700 mt-1 flex items-center gap-1"
             >
-              {showDetails ? '▼' : '▶'} Chi tiết
+              {showDetails ? "▼" : "▶"} Chi tiết
             </button>
           </div>
         </td>
@@ -113,21 +127,24 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
           <div className="space-y-1">
             {order.items?.slice(0, 2).map((item, index) => {
               const imageUrl = getPrimaryImage(item);
-              
+
               return (
-                <div key={`${item._id || index}-${item.product_id?._id}`} className="flex items-center gap-2">
+                <div
+                  key={`${item._id || index}-${item.product_id?._id}`}
+                  className="flex items-center gap-2"
+                >
                   <img
                     src={imageUrl}
-                    alt={item.product_id?.name || 'Product'}
+                    alt={item.product_id?.name || "Product"}
                     className="w-8 h-8 rounded object-cover"
                     loading="lazy"
                     onError={(e) => {
-                      e.target.src = '/placeholder-product.jpg';
+                      e.target.src = "/placeholder-product.jpg";
                     }}
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">
-                      {item.product_id?.name || 'Sản phẩm'}
+                      {item.product_id?.name || "Sản phẩm"}
                     </p>
                     <p className="text-xs text-gray-500">
                       SL: {item.quantity} × {formatCurrency(item.price)}
@@ -146,7 +163,11 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
 
         {/* Status */}
         <td className="py-4 px-4">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+              order.status
+            )}`}
+          >
             {getStatusText(order.status)}
           </span>
           {order.tracking_number && (
@@ -177,7 +198,7 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
             >
               👁️ Xem
             </Link>
-            
+
             {canCancel && (
               <button
                 onClick={handleCancelOrder}
@@ -186,7 +207,7 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
                 ❌ Hủy
               </button>
             )}
-            
+
             {canReorder && (
               <button
                 onClick={handleReorder}
@@ -213,7 +234,9 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               {/* Shipping Address */}
               <div>
-                <h4 className="font-medium text-gray-800 mb-2">📍 Địa chỉ giao hàng</h4>
+                <h4 className="font-medium text-gray-800 mb-2">
+                  📍 Địa chỉ giao hàng
+                </h4>
                 <div className="text-gray-600">
                   <p>{order.shipping_info?.name}</p>
                   <p>{order.shipping_info?.phone}</p>
@@ -223,10 +246,12 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
 
               {/* Payment Info */}
               <div>
-                <h4 className="font-medium text-gray-800 mb-2">💳 Thanh toán</h4>
+                <h4 className="font-medium text-gray-800 mb-2">
+                  💳 Thanh toán
+                </h4>
                 <div className="text-gray-600">
                   <p>Phương thức: {order.payment_method}</p>
-                  <p>Trạng thái: {order.payment_status || 'pending'}</p>
+                  <p>Trạng thái: {order.payment_status || "pending"}</p>
                   {order.payment_date && (
                     <p>Ngày TT: {formatDate(order.payment_date)}</p>
                   )}

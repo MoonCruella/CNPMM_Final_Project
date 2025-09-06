@@ -105,7 +105,7 @@ export const removeFromCart = async (req, res) => {
 // 5. Xóa toàn bộ giỏ vẫn dựa vào user_id
 export const clearCart = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     await CartItem.deleteMany({ user_id: userId });
 
     res.json({ success: true, message: "Cart cleared" });
