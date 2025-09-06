@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "dayjs": "^1.11.18",
-    "moment": "^2.30.1",
-    "vnpay": "^2.4.1"
-  }
-}

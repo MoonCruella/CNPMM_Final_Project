@@ -45,7 +45,6 @@ export const CartProvider = ({ children }) => {
           }
           return [...prev, res.data];
         });
-        await refreshCart();
       }
     } catch (err) {
       console.error("Error adding to cart:", err);
@@ -65,7 +64,6 @@ export const CartProvider = ({ children }) => {
               : item
           )
         );
-        await refreshCart();
       }
     } catch (err) {
       console.error("Error updating cart:", err);
@@ -79,7 +77,6 @@ export const CartProvider = ({ children }) => {
       const res = await cartService.removeFromCart(cartItem_id);
       if (res.success) {
         setItems((prev) => prev.filter((item) => item._id !== cartItem_id));
-        await refreshCart();
       }
     } catch (err) {
       console.error("Error removing cart item:", err);
@@ -93,7 +90,6 @@ export const CartProvider = ({ children }) => {
       const res = await cartService.clearCart();
       if (res.success) {
         setItems([]);
-        await refreshCart();
       }
     } catch (err) {
       console.error("Error clearing cart:", err);
@@ -105,10 +101,6 @@ export const CartProvider = ({ children }) => {
     loadCart();
   }, [user]);
 
-  const refreshCart = async () => {
-    await loadCart();
-  };
-
   return (
     <CartContext.Provider
       value={{
@@ -119,7 +111,6 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         clearCart,
         loadCart,
-        refreshCart,
       }}
     >
       {children}

@@ -1,9 +1,9 @@
-import { React, useState, useEffect } from "react";
+import { React, useState } from "react";
 import ItemRow from "./item/ItemRow";
 import orderService from "@/services/order.service";
-import { useNavigate, useLocation } from "react-router-dom";
+import cartService from "@/services/cartService";
+import { useNavigate } from "react-router-dom";
 import { useCartContext } from "@/context/CartContext";
-import vnpayService from "@/services/vnpayService";
 
 const CheckoutSummary = ({
   cartItems,
@@ -15,44 +15,15 @@ const CheckoutSummary = ({
   const [loading, setLoading] = useState(false);
   const { clearCart } = useCartContext();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  // Xử lý kết quả từ VNPay redirect
-  useEffect(() => {
-    const query = new URLSearchParams(location.search);
-    const success = query.get("success");
-    const orderId = query.get("orderId");
-
-    if (success) {
-      if (success === "true" && orderId) {
-        // Lấy lại orderData từ localStorage
-        const orderData = JSON.parse(localStorage.getItem("pendingOrderData"));
-        if (orderData) {
-          setLoading(true);
-          orderService.createOrder(orderData).then(async (res) => {
-            if (res.success) {
-              alert("Thanh toán VNPay thành công và đơn hàng đã được lưu!");
-              await clearCart();
-              localStorage.removeItem("pendingOrderData");
-              navigate("/my-orders");
-            } else {
-              alert("Lưu đơn hàng thất bại: " + res.message);
-            }
-            setLoading(false);
-          });
-        }
-      } else {
-        alert("Thanh toán VNPay thất bại hoặc bị hủy!");
-        localStorage.removeItem("pendingOrderData");
-      }
-    }
-  }, [location]);
-
   const handlePayNow = async () => {
+    console.log("Địa chỉ:" + selectedAddress.full_address);
+    console.log("PTTT:" + paymentMethod);
+
     if (!selectedAddress) return alert("Vui lòng chọn địa chỉ");
     if (!paymentMethod) return alert("Vui lòng chọn phương thức thanh toán");
-
     try {
+      setLoading(true);
+
       const orderData = {
         items: cartItems.map((item) => ({
           product_id: item.product_id._id,
@@ -63,60 +34,27 @@ const CheckoutSummary = ({
           phone: selectedAddress.phone,
           address: selectedAddress.full_address,
         },
-        payment_method: paymentMethod,
+        payment_method: paymentMethod, // ví dụ "cod"
         notes: "",
       };
 
-      if (paymentMethod === "vnpay") {
-        setLoading(true);
-        const tempOrderId = new Date().getTime(); // ví dụ dùng timestamp làm id tạm
-        orderData.orderId = tempOrderId;
-        // Lưu orderData tạm để khi return về còn dùng
-        localStorage.setItem("pendingOrderData", JSON.stringify(orderData));
-
-        const { success, url, message } = await vnpayService.createPayment(
-          orderData.orderId,
-          subtotal
-        );
-
-        if (success) {
-          window.location.href = url; // redirect sang VNPay
-        } else {
-          setLoading(false);
-          alert("Tạo thanh toán thất bại: " + message);
-        }
+      const res = await orderService.createOrder(orderData);
+      if (res.success) {
+        alert("Đặt hàng thành công!");
+        await clearCart();
+        navigate("/");
       } else {
-        // COD -> tạo order trực tiếp
-        setLoading(true);
-        const res = await orderService.createOrder(orderData);
-        if (res.success) {
-          alert("Đặt hàng thành công!");
-          await clearCart();
-          navigate("/my-orders");
-        } else {
-          alert("Đặt hàng thất bại: " + res.message);
-        }
-        setLoading(false);
+        alert("Đặt hàng thất bại: " + res.message);
       }
     } catch (err) {
       console.error("Create order error:", err);
       alert("Đặt hàng thất bại: " + err.message);
+    } finally {
       setLoading(false);
     }
   };
-
   return (
     <div>
-      {loading && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow text-center">
-            <div className="animate-spin border-4 border-green-600 border-t-transparent rounded-full w-10 h-10 mx-auto"></div>
-            <p className="mt-3 text-gray-700 font-medium">
-              Đang xử lý thanh toán...
-            </p>
-          </div>
-        </div>
-      )}
       <div>
         <h3 className="text-lg font-semibold mb-4">Review your cart</h3>
         <div className="overflow-y-auto max-h-[500px] shadow rounded-xl bg-white custom-scrollbar">
