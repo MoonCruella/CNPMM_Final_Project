@@ -89,15 +89,11 @@ export const Login = async (req, res, next) => {
 
     const user = await userModel.findOne({ email }).lean().exec();
     if (!user) {
-      return response.sendError(res, "User not found", 404);
+      return response.sendError(res, "Email không tồn tại!", 404);
     } else {
       console.log(bcrypt.compareSync(password, user.password));
       if (!bcrypt.compareSync(password, user.password)) {
-        return response.sendError(
-          res,
-          "Password or username is incorrect",
-          401
-        );
+        return response.sendError(res, "Email hoặc mật khẩu không đúng!", 401);
       }
       // Thêm kiểm tra active
       if (!user.active) {
@@ -107,7 +103,6 @@ export const Login = async (req, res, next) => {
           401
         );
       }
-
 
       const payload = {
         userId: user._id,
@@ -119,8 +114,7 @@ export const Login = async (req, res, next) => {
         address: user.address,
         gender: user.gender,
         date_of_birth: user.date_of_birth,
-        avatar:user.avatar_public_id
-
+        avatar: user.avatar_public_id,
       };
 
       const { accessToken, refreshToken } = generateTokenPair(payload);
@@ -146,7 +140,7 @@ export const Login = async (req, res, next) => {
             phone: user.phone,
             gender: user.gender,
             date_of_birth: user.date_of_birth,
-            avatar:user.avatar_public_id
+            avatar: user.avatar_public_id,
           },
           accessToken,
           refreshToken,
@@ -203,7 +197,7 @@ export const refreshToken = async (req, res) => {
       phone: user.phone,
       gender: user.gender,
       date_of_birth: user.date_of_birth,
-      avatar:user.avatar_public_id
+      avatar: user.avatar_public_id,
     };
 
     const { accessToken, refreshToken: newRefreshToken } =

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import authService from "../services/authService";
+import authService from "../../services/authService";
 import { toast } from "sonner";
 import { z } from "zod";
 

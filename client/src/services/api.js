@@ -11,16 +11,16 @@ let isRefreshing = false;
 let refreshSubscribers = [];
 
 // Helper functions cho token management
-const getAccessToken = () => localStorage.getItem('accessToken');
-const getRefreshToken = () => localStorage.getItem('refreshToken');
+const getAccessToken = () => localStorage.getItem("accessToken");
+const getRefreshToken = () => localStorage.getItem("refreshToken");
 const setTokens = (accessToken, refreshToken) => {
-  localStorage.setItem('accessToken', accessToken);
-  localStorage.setItem('refreshToken', refreshToken);
+  localStorage.setItem("accessToken", accessToken);
+  localStorage.setItem("refreshToken", refreshToken);
 };
 const removeTokens = () => {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('user');
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("user");
 };
 
 // Thêm subscriber vào queue khi đang refresh token
@@ -30,7 +30,7 @@ const addSubscriber = (callback) => {
 
 // Thực hiện tất cả request đang chờ sau khi refresh token thành công
 const processSubscribers = (token) => {
-  refreshSubscribers.forEach(callback => callback(token));
+  refreshSubscribers.forEach((callback) => callback(token));
   refreshSubscribers = [];
 };
 
@@ -75,9 +75,9 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = getRefreshToken();
-        
+
         if (!refreshToken) {
-          throw new Error('No refresh token available');
+          throw new Error("No refresh token available");
         }
 
         // Call refresh token API
@@ -85,38 +85,45 @@ api.interceptors.response.use(
           `${import.meta.env.VITE_API_BASE_URL}/api/auth/refresh-token`,
           { refreshToken },
           {
-            headers: { 'Content-Type': 'application/json' }
+            headers: { "Content-Type": "application/json" },
           }
         );
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-        
+        const { accessToken, refreshToken: newRefreshToken } =
+          response.data.data;
+
         // Lưu token mới
         setTokens(accessToken, newRefreshToken);
-        
+
         // Cập nhật header cho request gốc
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        
+
         // Thực hiện tất cả request đang chờ
         processSubscribers(accessToken);
-        
+
         isRefreshing = false;
-        
+
         // Retry request gốc
         return api(originalRequest);
-
       } catch (refreshError) {
         isRefreshing = false;
         processSubscribers(null);
-        
+
         // Refresh token thất bại, xóa tokens và redirect login
         removeTokens();
-        
-        // Redirect to login page
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
+
+        const authType = localStorage.getItem("authType") || "user";
+
+        if (authType === "seller") {
+          if (window.location.pathname !== "/seller") {
+            window.location.href = "/seller";
+          }
+        } else {
+          if (window.location.pathname !== "/login") {
+            window.location.href = "/login";
+          }
         }
-        
+
         return Promise.reject(refreshError);
       }
     }
