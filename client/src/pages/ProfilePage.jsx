@@ -330,11 +330,11 @@ const ProfilePage = () => {
               <p className="text-gray-600 text-sm sm:text-base">{user.email}</p>
 
               {/* Address Display */}
-              {formatAddress() && (
+              {/* {formatAddress() && (
                 <p className="text-gray-500 text-sm mt-1">
                   📍 {formatAddress()}
                 </p>
-              )}
+              )} */}
 
               {/* Badges */}
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-2">
@@ -530,95 +530,6 @@ const ProfilePage = () => {
               </select>
             </div>
           </div>
-
-          {/*
-
-          <div className="mt-6">
-            <h3 className="text-md font-medium text-gray-800 mb-3">Địa chỉ</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Đường/Số nhà
-                </label>
-                <input
-                  type="text"
-                  name="address.street"
-                  value={formData.address.street}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
-                  placeholder="Nhập số nhà, tên đường"
-                />
-              </div>
-
-     
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phường/Xã
-                </label>
-                <input
-                  type="text"
-                  name="address.ward"
-                  value={formData.address.ward}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
-                  placeholder="Nhập phường/xã"
-                />
-              </div>
-
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quận/Huyện
-                </label>
-                <input
-                  type="text"
-                  name="address.district"
-                  value={formData.address.district}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
-                  placeholder="Nhập quận/huyện"
-                />
-              </div>
-
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tỉnh/Thành phố
-                </label>
-                <input
-                  type="text"
-                  name="address.province"
-                  value={formData.address.province}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
-                  placeholder="Nhập tỉnh/thành phố"
-                />
-              </div>
-
-           
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Địa chỉ đầy đủ
-                </label>
-                <textarea
-                  name="address.full_address"
-                  value={formData.address.full_address}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  rows="2"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
-                  placeholder="Nhập địa chỉ đầy đủ (tùy chọn)"
-                />
-              </div>
-            </div>
-          </div>
-          */}
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6 mt-5">
           {/* Shipping Address */}

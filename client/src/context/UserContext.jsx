@@ -20,13 +20,13 @@ export const UserContextProvider = ({ children }) => {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [error, setError] = useState(null);
 
-  // ✅ Load user from localStorage on init
+  // Load user from localStorage on init
   useEffect(() => {
     const savedUser = userService.getUserFromStorage();
     if (savedUser) {
       setUser(savedUser);
     } else {
-      // ✅ Nếu không có user trong storage, thử load từ server
+      // Nếu không có user trong storage, thử load từ server
       const loadUserFromServer = async () => {
         try {
           const response = await userService.getCurrentUser();
@@ -47,14 +47,14 @@ export const UserContextProvider = ({ children }) => {
     }
   }, []);
 
-  // ✅ Update user in context and localStorage
+  // Update user in context and localStorage
   const updateUserData = useCallback((newUserData) => {
     const updatedUser = { ...user, ...newUserData };
     setUser(updatedUser);
     userService.saveUserToStorage(updatedUser);
   }, [user]);
 
-  // ✅ Refresh user data from server
+  //  Refresh user data from server
   const refreshUserData = async () => {
     try {
       setIsLoading(true);
@@ -80,7 +80,7 @@ export const UserContextProvider = ({ children }) => {
     }
   };
 
-  // ✅ Update user profile only
+  // Update user profile only
   const updateUserProfile = async (updateData) => {
     try {
       setIsUpdating(true);
@@ -105,7 +105,7 @@ export const UserContextProvider = ({ children }) => {
     }
   };
 
-  // ✅ Upload avatar only
+  // Upload avatar only
   const uploadAvatar = async (avatarFile) => {
     try {
       setIsUploadingAvatar(true);
@@ -117,21 +117,19 @@ export const UserContextProvider = ({ children }) => {
       // Upload avatar using avatarService
       const uploadResponse = await avatarService.uploadAvatar(avatarFile);
 
-      console.log('🔍 Upload response:', uploadResponse); // Debug log
 
       // ✅ FIX: Response structure is correct, check properly
       if (!uploadResponse || !uploadResponse.success) {
         throw new Error(uploadResponse?.message || 'Upload avatar thất bại');
       }
 
-      // ✅ Extract data correctly
+      // Extract data correctly
       const avatarData = uploadResponse.data;
       const avatarUrl = avatarData.url;
       const publicId = avatarData.publicId;
 
-      console.log('🔍 Avatar data:', { avatarUrl, publicId }); // Debug log
 
-      // ✅ Update user profile với avatar URL mới
+      // Update user profile với avatar URL mới
       const updateResponse = await userService.updateUserProfile({
         avatar: avatarUrl,
         avatar_public_id: publicId
@@ -157,8 +155,7 @@ export const UserContextProvider = ({ children }) => {
       }
 
     } catch (error) {
-      console.error('❌ Upload avatar error:', error);
-      console.error('❌ Error stack:', error.stack);
+      
 
       setError(error.message);
 
@@ -179,7 +176,7 @@ export const UserContextProvider = ({ children }) => {
     }
   };
 
-  // ✅ Update user profile with optional avatar
+  // Update user profile with optional avatar
   const updateUserWithAvatar = async (updateData, avatarFile = null) => {
     try {
       setIsUpdating(true);
@@ -214,7 +211,6 @@ export const UserContextProvider = ({ children }) => {
         }
       }
 
-      console.log('🔍 Final update data:', finalUpdateData); // Debug
 
       // Update user profile với data (bao gồm avatar nếu có)
       const response = await userService.updateUserProfile(finalUpdateData);
@@ -245,7 +241,7 @@ export const UserContextProvider = ({ children }) => {
       setIsUploadingAvatar(false);
     }
   };
-  // ✅ Delete avatar - Using avatarService
+  // Delete avatar - Using avatarService
   const deleteAvatar = async () => {
     try {
       setIsUploadingAvatar(true);
@@ -259,7 +255,7 @@ export const UserContextProvider = ({ children }) => {
         return;
       }
 
-      // ✅ Delete from Cloudinary using avatarService
+      // Delete from Cloudinary using avatarService
       const deleteResponse = await avatarService.deleteAvatar(publicId);
 
       if (deleteResponse.success) {
@@ -297,7 +293,7 @@ export const UserContextProvider = ({ children }) => {
     }
   };
 
-  // ✅ Clear user data (logout)
+  // Clear user data (logout)
   const clearUser = () => {
     setUser(null);
     setError(null);
@@ -306,27 +302,26 @@ export const UserContextProvider = ({ children }) => {
 
 
 
-  // ✅ Computed values using userService helpers
+  // Computed values using userService helpers
   const getUserDisplayName = () => userService.getUserDisplayName(user);
   const isActiveUser = () => userService.isActiveUser(user);
   const isAdmin = () => userService.isAdmin(user);
   const formatAddress = () => userService.formatAddress(user?.address);
 
-  // ✅ Form helpers for address
+  // Form helpers for address
   const createAddressObject = (addressForm) => userService.createAddressObject(addressForm);
 
   const getUserAvatarUrl = (size = 200) => {
     if (user?.avatar) {
       
         const serviceUrl = avatarService.getOptimizedAvatarUrl(user.avatar, size);
-        console.log('✅ Using avatarService URL:', serviceUrl);
         return serviceUrl;
       
     }
 
     const name = user?.name || user?.email || 'User';
     const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=${size}`;
-    console.log('✅ Using fallback UI Avatar:', fallbackUrl);
+  
     return fallbackUrl;
   };
 

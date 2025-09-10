@@ -2,7 +2,7 @@ import apiClient from './api';
 
 class AvatarService {
   
-  // ✅ Upload avatar to server
+  // Upload avatar to server
   async uploadAvatar(file) {
     try {
       const formData = new FormData();
@@ -21,7 +21,7 @@ class AvatarService {
     }
   }
 
-  // ✅ Delete avatar from server
+  // Delete avatar from server
   async deleteAvatar(publicId) {
     try {
       const response = await apiClient.delete('/api/upload', {
@@ -35,7 +35,7 @@ class AvatarService {
     }
   }
 
-  // ✅ Get optimized avatar URL
+  // Get optimized avatar URL
   getOptimizedAvatarUrl(publicId, size = 200) {
     if (!publicId) return null;
     
@@ -47,16 +47,10 @@ class AvatarService {
     
     const optimizedUrl = `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_${size},h_${size},q_auto,f_auto/${cleanPublicId}`;
     
-    console.log('🔍 AvatarService - Creating URL:', {
-      publicId,
-      cleanPublicId,
-      cloudName,
-      optimizedUrl
-    });
     
     return optimizedUrl;
   }
-  // ✅ Helper: Create avatar URL from any format
+  // Helper: Create avatar URL from any format
   createAvatarUrl(avatarData, size = 200) {
     // If it's already a full URL
     if (typeof avatarData === 'string' && avatarData.startsWith('http')) {
@@ -81,7 +75,7 @@ class AvatarService {
     return null;
   }
 
-  // ✅ Validate avatar file
+  // Validate avatar file
   validateAvatarFile(file) {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     const maxSize = 5 * 1024 * 1024; // 5MB
