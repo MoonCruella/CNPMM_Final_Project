@@ -4,7 +4,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast, Toaster } from "sonner";
-import authService from "../services/authService";
+import authService from "../../services/authService";
 
 // Schema validate
 const formSchema = z

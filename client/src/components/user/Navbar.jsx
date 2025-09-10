@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { assets } from "@/assets/assets";
-import { useAppContext } from "../context/AppContext.jsx";
-import { useUserContext } from "../context/UserContext.jsx";
+import { useAppContext } from "../../context/AppContext.jsx";
+import { useUserContext } from "../../context/UserContext.jsx";
 import { toast } from "sonner";
 import { useCartContext } from "@/context/CartContext.jsx";
 import avatarService from "@/services/avatarService.js";
@@ -32,7 +32,7 @@ const Navbar = () => {
       const loadingToast = toast.loading("Đang đăng xuất...");
       await logout();
       toast.dismiss(loadingToast);
-
+      navigate("/");
       setOpen(false);
       setIsUserMenuOpen(false);
     } catch (error) {

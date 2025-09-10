@@ -2,8 +2,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import { useCartContext } from "@/context/CartContext";
-import CartTable from "@/components/CartTable";
-import CartTotals from "@/components/CartTotals";
+import CartTable from "@/components/user/CartTable";
+import CartTotals from "@/components/user/CartTotals";
 
 const CartPage = () => {
   const {
