@@ -4,6 +4,8 @@ import orderService from "@/services/order.service";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCartContext } from "@/context/CartContext";
 import vnpayService from "@/services/vnpay.service";
+import zalopayService from "@/services/zalopay.service";
+import { da } from "zod/v4/locales";
 
 const CheckoutSummary = ({
   cartItems,
@@ -20,30 +22,67 @@ const CheckoutSummary = ({
   // Xử lý kết quả từ VNPay redirect
   useEffect(() => {
     const query = new URLSearchParams(location.search);
+    console.log("CheckoutSummary query params:", query.toString());
+
+    // VNPay
     const success = query.get("success");
     const orderId = query.get("orderId");
+    if (success === "false" && orderId) {
+      alert("Thanh toán VNPay thất bại hoặc bị hủy!");
+      localStorage.removeItem("pendingOrderData");
+      navigate("/checkout");
+      setLoading(false);
+      return;
+    } else if (success === "true" && orderId) {
+      const orderData = JSON.parse(localStorage.getItem("pendingOrderData"));
+      if (orderData) {
+        setLoading(true);
+        orderService.createOrder(orderData).then(async (res) => {
+          if (res.success) {
+            alert("Thanh toán VNPay thành công và đơn hàng đã được lưu!");
+            await clearCart();
+            localStorage.removeItem("pendingOrderData");
+            navigate("/my-orders");
+          } else {
+            alert("Lưu đơn hàng thất bại: " + res.message);
+          }
+          setLoading(false);
+        });
+      }
+      return; // exit early, don't continue to ZaloPay
+    }
 
-    if (success) {
-      if (success === "true" && orderId) {
-        // Lấy lại orderData từ localStorage
-        const orderData = JSON.parse(localStorage.getItem("pendingOrderData"));
-        if (orderData) {
-          setLoading(true);
-          orderService.createOrder(orderData).then(async (res) => {
+    // ZaloPay
+    const appTransId = query.get("apptransid");
+    console.log("ZaloPay appTransId:", appTransId);
+    if (appTransId) {
+      const pendingOrderData = JSON.parse(
+        localStorage.getItem("pendingOrderData")
+      );
+      if (pendingOrderData) {
+        setLoading(true);
+        zalopayService.queryStatus(appTransId).then(async (statusRes) => {
+          if (statusRes.success && statusRes.data?.return_code === 1) {
+            const res = await orderService.createOrder(pendingOrderData);
             if (res.success) {
-              alert("Thanh toán VNPay thành công và đơn hàng đã được lưu!");
+              alert("Thanh toán ZaloPay thành công!");
               await clearCart();
               localStorage.removeItem("pendingOrderData");
               navigate("/my-orders");
             } else {
-              alert("Lưu đơn hàng thất bại: " + res.message);
+              alert("Thanh toán thành công nhưng lưu đơn thất bại!");
             }
-            setLoading(false);
-          });
-        }
+          } else {
+            alert("Thanh toán ZaloPay thất bại!");
+            localStorage.removeItem("pendingOrderData");
+          }
+          setLoading(false);
+        });
       } else {
-        alert("Thanh toán VNPay thất bại hoặc bị hủy!");
+        alert("Thanh toán ZaloPay đã bị hủy!");
         localStorage.removeItem("pendingOrderData");
+        navigate("/checkout");
+        setLoading(false);
       }
     }
   }, [location]);
@@ -84,6 +123,32 @@ const CheckoutSummary = ({
         } else {
           setLoading(false);
           alert("Tạo thanh toán thất bại: " + message);
+        }
+      } else if (paymentMethod === "zalopay") {
+        setLoading(true);
+        const tempOrderId = new Date().getTime();
+        orderData.orderId = tempOrderId;
+        localStorage.setItem("pendingOrderData", JSON.stringify(orderData));
+
+        const { success, data, message } = await zalopayService.createPayment(
+          orderData.orderId,
+          subtotal,
+          "Thanh toan don hang qua ZaloPay"
+        );
+
+        console.log("ZaloPay createPayment response:", {
+          success,
+          data,
+          message,
+        });
+
+        if (success) {
+          localStorage.setItem("zaloAppTransId", data.appTransId);
+          window.location.href = data.paymentUrl;
+        } else {
+          setLoading(false);
+          alert("Tạo thanh toán thất bại: " + message);
+          localStorage.removeItem("pendingOrderData");
         }
       } else {
         // COD -> tạo order trực tiếp
