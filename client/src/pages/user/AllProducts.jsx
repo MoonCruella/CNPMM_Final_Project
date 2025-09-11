@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { assets } from "@/assets/assets";
-import productService from "../services/productService.js";
-import categoryService from "../services/categoryService.js";
-import ProductCard from "../components/item/ProductCard.jsx";
+import productService from "../../services/productService.js";
+import categoryService from "../../services/categoryService.js";
+import ProductCard from "../../components/user/item/ProductCard.jsx";
 
 const AllProducts = () => {
   const [products, setProducts] = useState([]);
@@ -144,7 +144,6 @@ const AllProducts = () => {
                 </button>
               </div>
             </div>
-
 
             {/* Categories */}
             <div className="bg-yellow-50 p-4 rounded-xl">

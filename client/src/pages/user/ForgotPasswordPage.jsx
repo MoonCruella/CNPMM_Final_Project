@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { z } from "zod";
 import { toast, Toaster } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
-import authService from "../services/authService";
+import authService from "../../services/authService";
 const forgotPasswordSchema = z.object({
   email: z
     .string()

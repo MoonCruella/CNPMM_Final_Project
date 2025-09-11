@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Slider from "react-slick";
 import ProductCard from "./item/ProductCard";
-import productService from "../services/productService.js";
+import productService from "../../services/productService.js";
 
 const ProductDisplay = ({ layout = "grid", type = "all" }) => {
   const [products, setProducts] = useState([]);

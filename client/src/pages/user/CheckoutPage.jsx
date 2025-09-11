@@ -1,6 +1,6 @@
 import React from "react";
-import CheckoutSummary from "@/components/CheckoutSummary";
-import CheckoutForm from "@/components/CheckoutForm";
+import CheckoutSummary from "@/components/user/CheckoutSummary";
+import CheckoutForm from "@/components/user/CheckoutForm";
 import { Link } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import { useCartContext } from "@/context/CartContext";

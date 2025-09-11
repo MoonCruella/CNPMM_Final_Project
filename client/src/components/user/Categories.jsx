@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useAppContext } from "../context/AppContext.jsx";
+import { useAppContext } from "../../context/AppContext.jsx";
 import { categoriesColors } from "@/assets/assets.js";
-import categoryService from "../services/categoryService.js";
+import categoryService from "../../services/categoryService.js";
 const Categories = () => {
   const { navigate } = useAppContext();
   const [categories, setCategories] = useState([]);

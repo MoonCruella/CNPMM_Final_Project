@@ -86,21 +86,24 @@ export const AppContextProvider = ({ children }) => {
     initAuth();
   }, [syncAuthState]);
 
-  // ✅ Login - Let authService handle getCurrentUser
   const login = async (email, password) => {
     try {
-      // authService.login now calls getCurrentUser internally
       const response = await authService.login(email, password);
 
       if (response.data.success) {
-        // Get user data that was fetched by authService.login
         const userData = authService.getUser();
-        syncAuthState(userData);
-        setShowUserLogin(false);
-        toast.success("Đăng nhập thành công!");
-      }
 
-      return response;
+        if (userData.role === "user") {
+          syncAuthState(userData);
+          setShowUserLogin(false);
+          return response.data;
+        } else {
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("user");
+          return { success: false, message: "Đăng nhập thất bại!" };
+        }
+      }
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -151,7 +154,6 @@ export const AppContextProvider = ({ children }) => {
     } finally {
       setUser(null);
       syncAuthState();
-      navigate("/");
       toast.success("Đăng xuất thành công!");
     }
   };
@@ -208,10 +210,33 @@ export const AppContextProvider = ({ children }) => {
     }
     return response;
   };
+  const loginSeller = async (email, password) => {
+    try {
+      const response = await authService.login(email, password);
+
+      if (response.data.success) {
+        const userData = authService.getUser();
+
+        if (userData.role === "seller") {
+          syncAuthState(userData);
+          setShowUserLogin(false);
+          return response.data;
+        } else {
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("user");
+          return { success: false, message: "Đăng nhập thất bại!" };
+        }
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    }
+  };
 
   // Utility functions
   const isActiveUser = () => user?.active === true;
-  const isAdmin = () => user?.role === "admin";
+  const isActiveSeller = () => user?.role === "seller";
 
   const openLogin = () => setShowUserLogin(true);
   const closeLogin = () => setShowUserLogin(false);
@@ -226,6 +251,7 @@ export const AppContextProvider = ({ children }) => {
 
     // Methods
     login,
+    loginSeller,
     register,
     logout,
     logoutAll,
@@ -243,7 +269,7 @@ export const AppContextProvider = ({ children }) => {
 
     // Utils
     isActiveUser,
-    isAdmin,
+    isActiveSeller,
     navigate,
     searchQuery,
     setSearchQuery,

@@ -27,15 +27,18 @@ const LoginPage = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
+
     try {
       loginSchema.parse({ email, password });
       setIsLoading(true);
-
-      await login(email, password);
-      navigate("/");
-      
-
+      localStorage.setItem("authType", "user");
+      const result = await login(email, password);
+      if (result.success) {
+        toast.success("Đăng nhập thành công!");
+        navigate("/");
+      } else {
+        toast.error(result?.message || "Đăng nhập thất bại!");
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
