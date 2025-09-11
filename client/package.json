@@ -11,9 +11,13 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
+    "@mantine/core": "^8.3.1",
+    "@mantine/hooks": "^8.3.1",
+    "@mantinex/mantine-logo": "^2.0.0",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@reduxjs/toolkit": "^2.8.2",
+    "@tabler/icons-react": "^3.34.1",
     "@tailwindcss/vite": "^4.1.12",
     "axios": "^1.11.0",
     "class-variance-authority": "^0.7.1",

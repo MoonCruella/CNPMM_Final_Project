@@ -290,3 +290,63 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
+
+/*Navbar cho SellerLayout*/
+.navbar {
+  height: 100vh;
+  width: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  background-color: #0d8646;
+}
+
+.header {
+  padding-bottom: 24px;
+  margin-bottom: 36px;
+  border-bottom: 1px solid #0d8646;
+}
+
+.footer {
+  padding-top: 24px;
+  margin-top: 24px;
+  border-top: 1px solid #0d8646;
+}
+
+.version {
+  background-color: #0d8646;
+  color: #fff;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  font-size: 14px;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.link:hover {
+  background-color: #0d8646;
+  color: #fff;
+}
+
+.linkIcon {
+  color: #a5d8ff;
+  margin-right: 16px;
+  width: 25px;
+  height: 25px;
+}
+
+.link[data-active] {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background-color: #fff;
+  color: #136531;
+}
+
+.link[data-active] .linkIcon {
+  color: #06722d;
+}

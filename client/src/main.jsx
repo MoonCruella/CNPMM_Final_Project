@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { AppContextProvider } from "./context/AppContext";
 import { CartProvider } from "./context/CartContext";
 import { AddressProvider } from "./context/AddressContext";
+import { MantineProvider } from "@mantine/core";
 
 createRoot(document.getElementById("root")).render(
   <BrowserRouter>

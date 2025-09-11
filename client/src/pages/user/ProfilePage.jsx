@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useUserContext } from "../context/UserContext.jsx";
+import { useUserContext } from "../../context/UserContext.jsx";
 import { toast } from "sonner";
 import { useAddressContext } from "@/context/AddressContext";
-import AddressModal from "@/components/modal/AddressModal.jsx";
-import AddressItem from "@/components/item/AddressItem.jsx";
+import AddressModal from "@/components/user/modal/AddressModal.jsx";
+import AddressItem from "@/components/user/item/AddressItem.jsx";
 const ProfilePage = () => {
   const {
     user,

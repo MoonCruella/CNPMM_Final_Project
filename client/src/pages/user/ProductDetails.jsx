@@ -3,9 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import Slider from "react-slick";
 import { assets } from "@/assets/assets";
 import { toast } from "sonner";
-import productService from "../services/productService.js";
-import ProductCard from "../components/item/ProductCard.jsx";
-import categoryService from "../services/categoryService.js";
+import productService from "../../services/productService.js";
+import ProductCard from "../../components/user/item/ProductCard.jsx";
+import categoryService from "../../services/categoryService.js";
 import { useCartContext } from "@/context/CartContext";
 import { useAppContext } from "@/context/AppContext";
 
