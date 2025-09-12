@@ -13,7 +13,15 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    enum: [
+      'pending',
+      'confirmed' ,
+      'processing', 
+      'shipped', 
+      'delivered', 
+      'cancelled',
+      'cancel_request'],
+      
     default: 'pending'
   },
   items: [{
@@ -47,6 +55,11 @@ const orderSchema = new mongoose.Schema({
   tracking_number: String,
   cancel_reason: String,
   
+  history: [{
+    status: String,
+    date: Date,
+    note: String
+  }],
 
   confirmed_at: Date,
   shipped_at: Date,

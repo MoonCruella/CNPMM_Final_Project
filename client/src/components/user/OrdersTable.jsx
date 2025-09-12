@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import OrderItemRow from "./item/OrderItemRow";
 
-const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading }) => {
+const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading, onUpdateShippingStatus, user }) => {
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
 
@@ -76,7 +76,10 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading }) => {
               </div>
             </th>
             <th className="py-3 px-4 text-white text-center">Thao tác</th>
-          </tr>
+            {user?.role === "seller" && (
+              <th className="py-3 px-4 text-center">Cập nhật trạng thái</th>
+            )}          
+            </tr>
         </thead>
         <tbody>
           {sortedOrders.length > 0 ? (
@@ -86,6 +89,7 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading }) => {
                 order={order}
                 onCancelOrder={onCancelOrder}
                 onReorder={onReorder}
+                onUpdateShippingStatus={onUpdateShippingStatus}
               />
             ))
           ) : (

@@ -1,10 +1,28 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import OrderDetailModal from "../modal/OrderDetailModal";
-const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
+import { useUserContext } from "@/context/UserContext";
+const statusOptions = [
+  { value: "pending", label: "Chờ xác nhận" },
+  { value: "confirmed", label: "Đã xác nhận" },
+  { value: "processing", label: "Đang xử lý" },
+  { value: "shipped", label: "Đang giao hàng" },
+  { value: "delivered", label: "Đã giao thành công" },
+  { value: "cancelled", label: "Đã hủy" },
+  { value: "cancel_request", label: "Yêu cầu hủy" }
+];
+
+const OrderItemRow = ({ order, onCancelOrder, onReorder, onUpdateShippingStatus }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [newStatus, setNewStatus] = useState(order.status);
+  const { user } = useUserContext();
 
+  const handleUpdateStatus = () => {
+    if (newStatus !== order.status) {
+      onUpdateShippingStatus(order._id, newStatus);
+    }
+  };
   // ✅ Memoize computed values
   const computedValues = useMemo(() => {
     // Helper functions
@@ -199,7 +217,7 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
               👁️ Xem
             </Link>
 
-            {canCancel && (
+            {user?.role === "user" && canCancel && (
               <button
                 onClick={handleCancelOrder}
                 className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition"
@@ -208,7 +226,7 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
               </button>
             )}
 
-            {canReorder && (
+            {user?.role === "user" && canReorder && (
               <button
                 onClick={handleReorder}
                 className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition"
@@ -218,6 +236,28 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
             )}
           </div>
         </td>
+        <td className="py-4 px-4 text-center">
+            {user?.role === "seller" && (
+              <>
+                <select
+                  value={newStatus}
+                  onChange={e => setNewStatus(e.target.value)}
+                  className="border rounded px-2 py-1"
+                >
+                  {statusOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleUpdateStatus}
+                  className="ml-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                  disabled={newStatus === order.status}
+                >
+                  Cập nhật
+                </button>
+              </>
+            )}
+          </td>
       </tr>
       <OrderDetailModal
         order={order}
@@ -268,7 +308,7 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
                   )}
                   {order.shipped_at && (
                     <p>Giao hàng: {formatDate(order.shipped_at)}</p>
-                  )}
+                  )} 
                   {order.delivered_at && (
                     <p>Hoàn thành: {formatDate(order.delivered_at)}</p>
                   )}
@@ -284,7 +324,9 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder }) => {
               </div>
             )}
           </td>
+          
         </tr>
+        
       )}
     </>
   );

@@ -34,6 +34,65 @@ class OrderService {
       };
     }
   };
+  getAllOrder = async (status = "all", page = 1, limit = 10) => {
+    try {
+      const params = new URLSearchParams();
+      if (status && status !== "all") params.append("status", status);
+      params.append("page", page);
+      params.append("limit", limit);
+      const response = await privateApi.get(
+        `/api/orders/all?${params.toString()}`
+      );
+      if (response.data.success) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message,
+        };
+      } else {
+        throw new Error(
+          response.data.message || "Không thể lấy danh sách đơn hàng"
+        );
+      }
+    } catch (error) {
+      console.error("Get user orders error:", error);
+      return {
+        success: false,
+        message:
+          error.response?.data?.message || "Có lỗi xảy ra khi lấy đơn hàng",
+        error: error.message,
+      };
+    }
+  };
+  updateShippingStatus = async (orderId, newStatus) => {
+    try {
+      const response = await privateApi.put(`/api/orders/${orderId}/shipping`, {
+        shipping_status: newStatus,
+      });
+      if (response.data.success) {
+        return {
+          success: true,
+          data: response.data.data,
+          message:
+            response.data.message ||
+            "Cập nhật trạng thái vận chuyển thành công",
+        };
+      } else {
+        throw new Error(
+          response.data.message || "Không thể cập nhật trạng thái vận chuyển"
+        );
+      }
+    } catch (error) {
+      console.error("Update shipping status error:", error);
+      return {
+        success: false,
+        message:
+          error.response?.data?.message ||
+          "Có lỗi xảy ra khi cập nhật trạng thái vận chuyển",
+        error: error.message,
+      };
+    }
+  };
 
   // ✅ Get order by ID
   getOrderById = async (orderId) => {
