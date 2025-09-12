@@ -30,7 +30,7 @@ export const authenticateToken = async (req, res, next) => {
 // Middleware kiểm tra role admin
 export const requireAdmin = async (req, res, next) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'seller') {
       return response.sendError(res, 'Không có quyền truy cập. Cần role admin', 403);
     }
     next();
@@ -44,7 +44,7 @@ export const requireOwnerOrAdmin = async (req, res, next) => {
   try {
     const resourceUserId = req.params.userId || req.body.userId;
     
-    if (req.user.role === 'admin' || req.user.userId === resourceUserId) {
+    if (req.user.role === 'seller' || req.user.userId === resourceUserId) {
       next();
     } else {
       return response.sendError(res, 'Không có quyền truy cập tài nguyên này', 403);
