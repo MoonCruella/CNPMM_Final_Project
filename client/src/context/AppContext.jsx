@@ -8,6 +8,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import authService from "../services/authService";
 import { toast } from "sonner";
+import { setAuthHeader } from "../services/api";
 
 export const AppContext = createContext();
 

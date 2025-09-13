@@ -53,8 +53,8 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading, onUpdateShip
   }
 
   return (
-    <div className="overflow-x-auto shadow rounded-xl bg-white">
-      <table className="w-full text-left">
+     <div className="overflow-x-auto shadow rounded-xl bg-white">
+      <table className="w-full text-left bg-green-700">
         <thead className="bg-green-700">
           <tr>
             <th
@@ -65,10 +65,10 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading, onUpdateShip
                 Đơn hàng {getSortIcon("created_at")}
               </div>
             </th>
-            <th className="py-3 px-4 text-white">Sản phẩm</th>
-            <th className="py-3 px-4 text-white">Trạng thái</th>
+            <th className="py-3 px-4 text-white text-center">Sản phẩm</th>
+            <th className="py-3 px-4 text-white text-center">Trạng thái</th>
             <th
-              className="py-3 px-4 text-white text-right cursor-pointer hover:bg-green-800 transition"
+              className="py-3 px-4 text-white text-center cursor-pointer hover:bg-green-800 transition"
               onClick={() => handleSort("total_amount")}
             >
               <div className="flex items-center justify-end gap-2">
@@ -77,11 +77,11 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading, onUpdateShip
             </th>
             <th className="py-3 px-4 text-white text-center">Thao tác</th>
             {user?.role === "seller" && (
-              <th className="py-3 px-4 text-center">Cập nhật trạng thái</th>
-            )}          
-            </tr>
+              <th className="py-3 px-4 text-white text-center">Cập nhật trạng thái</th>
+            )}
+          </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white">
           {sortedOrders.length > 0 ? (
             sortedOrders.map((order) => (
               <OrderItemRow
@@ -94,7 +94,10 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading, onUpdateShip
             ))
           ) : (
             <tr>
-              <td colSpan="5" className="py-12 text-center text-gray-500">
+              <td 
+                colSpan={user?.role === "seller" ? "6" : "5"} 
+                className="py-12 text-center text-gray-500 bg-white"
+              >
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                     📦
