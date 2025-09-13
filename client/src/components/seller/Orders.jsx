@@ -6,6 +6,7 @@ import orderService from "@/services/order.service";
 import { toast } from "sonner";
 import { assets } from "@/assets/assets";
 import { useUserContext } from "@/context/UserContext";
+import OrderSearchForm from "../order/OrderSearch";
 
 
 const Orders = () => {
@@ -15,7 +16,7 @@ const Orders = () => {
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
 
 
   useEffect(() => {
@@ -32,7 +33,18 @@ const Orders = () => {
     shipped: 0,
     delivered: 0,
     cancelled: 0,
+    cancel_request: 0
   });
+  const handleSearch = async (searchParams) => {
+    const response = await orderService.searchOrders({
+      ...searchParams,
+      status: filter === "all" ? undefined : filter
+    }, false); // false = admin search
+    if (response.success) {
+      setOrders(response.data.orders);
+      setTotalPages(response.data.pagination.total_pages);
+    }
+  };
 
   const loadOrders = async () => {
     try {
@@ -107,13 +119,14 @@ const Orders = () => {
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
           <div className="flex flex-wrap gap-2 justify-center md:justify-start">
             {[
-              { key: "all", label: "Tất cả", count: orderStats.total, icon: "📦" },
-              { key: "pending", label: "Chờ xác nhận", count: orderStats.pending, icon: "⏰" },
-              { key: "confirmed", label: "Đã xác nhận", count: orderStats.confirmed, icon: "✔️" },
-              { key: "processing", label: "Đang xử lý", count: orderStats.processing, icon: "🛒" },
-              { key: "shipped", label: "Đang giao", count: orderStats.shipped, icon: "🚚" },
-              { key: "delivered", label: "Đã giao", count: orderStats.delivered, icon: "✅" },
-              { key: "cancelled", label: "Đã hủy", count: orderStats.cancelled, icon: "❌" },
+              { key: "all", label: "Tất cả", count: orderStats.total },
+              { key: "pending", label: "Chờ xác nhận", count: orderStats.pending },
+              { key: "confirmed", label: "Đã xác nhận", count: orderStats.confirmed },
+              { key: "processing", label: "Đang xử lý", count: orderStats.processing },
+              { key: "shipped", label: "Đang giao", count: orderStats.shipped },
+              { key: "delivered", label: "Đã giao", count: orderStats.delivered },
+              { key: "cancel_request", label: "Yêu cầu huỷ đơn", count: orderStats.cancel_request },
+              { key: "cancelled", label: "Đã hủy", count: orderStats.cancelled },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -148,7 +161,10 @@ const Orders = () => {
               <p className="text-gray-600">Đang tải đơn hàng...</p>
             </div>
           ) : (
-            <>
+            <>{
+              filter === "all" && (
+                <OrderSearchForm onSearch={handleSearch} userRole="seller" />
+              )}
               <OrdersTable
                 orders={orders}
                 isLoading={isLoading}

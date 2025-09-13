@@ -50,11 +50,15 @@ export const getUserOrders = async (req, res) => {
       total: allUserOrders.length,
       pending: allUserOrders.filter((order) => order.status === "pending")
         .length,
+      confirmed: allUserOrders.filter((order) => order.status == "confirmed")
+        .length,
       processing: allUserOrders.filter((order) => order.status === "processing")
         .length,
       shipped: allUserOrders.filter((order) => order.status === "shipped")
         .length,
       delivered: allUserOrders.filter((order) => order.status === "delivered")
+        .length,
+      cancel_request: allUserOrders.filter((o) => o.status === "cancel_request")
         .length,
       cancelled: allUserOrders.filter((order) => order.status === "cancelled")
         .length,
@@ -494,7 +498,7 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// ✅ Get order statistics
+// Get order statistics
 export const getOrderStats = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -567,23 +571,61 @@ export const updateShippingInfo = async (req, res) => {
       return response.sendError(res, "Không tìm thấy đơn hàng", 404);
     }
 
-    // Không cho phép cập nhật nếu đã hủy hoặc yêu cầu hủy
-    if (["cancelled", "cancel_request"].includes(order.status)) {
-      return response.sendError(res, "Đơn hàng đã hủy hoặc đang yêu cầu hủy, không thể cập nhật vận chuyển", 400);
+    // Không cho phép cập nhật nếu đã hủy
+    if (order.status === "cancelled") {
+      return response.sendError(res, "Đơn hàng đã hủy, không thể cập nhật vận chuyển", 400);
+    }
+    // ✅ Trường hợp đặc biệt: duyệt yêu cầu hủy (cancel_request → cancelled)
+    if (order.status === "cancel_request") {
+      if (shipping_status === "cancelled") {
+        order.status = "cancelled";
+        order.cancelled_at = new Date();
+        order.history = order.history || [];
+        order.history.push({
+          status: "cancelled",
+          date: new Date(),
+          note: note || "Shop đã chấp nhận yêu cầu hủy đơn"
+        });
+        await order.save();
+        return response.sendSuccess(
+          res,
+          { shipping: order },
+            "Đã chấp nhận hủy đơn hàng",
+          200
+        );
+      } else if (shipping_status) {
+        return response.sendError(
+          res,
+          "Chỉ có thể chuyển từ yêu cầu hủy sang trạng thái 'cancelled'",
+          400
+        );
+      }
+      // Nếu không gửi shipping_status mà chỉ cập nhật carrier / tracking_number thì cũng không hợp lệ
+      return response.sendError(
+        res,
+        "Đơn đang yêu cầu hủy, chỉ có thể xác nhận hủy",
+        400
+      );
     }
 
     // Quy định thứ tự trạng thái
-    const statusOrder = ["pending", "confirmed", "processing", "shipped", "delivered"];
+    const statusOrder = [
+      "pending",
+      "confirmed",
+      "processing",
+      "shipped",
+      "delivered",
+    ];
     const currentIndex = statusOrder.indexOf(order.status);
     const nextIndex = statusOrder.indexOf(shipping_status);
 
-    if(shipping_status && !statusOrder.includes(shipping_status)){
+    if (shipping_status && !statusOrder.includes(shipping_status)) {
       return response.sendError(res, "Trạng thái không hợp lệ", 400);
     }
     // Chỉ cho phép chuyển sang trạng thái tiếp theo
     if (
       shipping_status &&
-      (nextIndex === currentIndex + 1 || (shipping_status === order.status))
+      (nextIndex === currentIndex + 1 || shipping_status === order.status)
     ) {
       order.status = shipping_status;
       // Ghi nhận thời gian cho từng trạng thái
@@ -599,9 +641,17 @@ export const updateShippingInfo = async (req, res) => {
         note,
       });
     } else if (shipping_status && nextIndex > currentIndex + 1) {
-      return response.sendError(res, "Không thể bỏ qua các bước trạng thái", 400);
+      return response.sendError(
+        res,
+        "Không thể bỏ qua các bước trạng thái",
+        400
+      );
     } else if (shipping_status && nextIndex < currentIndex) {
-      return response.sendError(res, "Không thể quay lại trạng thái trước", 400);
+      return response.sendError(
+        res,
+        "Không thể quay lại trạng thái trước",
+        400
+      );
     }
 
     if (carrier) order.carrier = carrier;
@@ -660,13 +710,14 @@ export const getAllOrders = async (req, res) => {
     const allOrders = await Order.find({}).lean();
     const stats = {
       total: allOrders.length,
-      pending: allOrders.filter(o => o.status === "pending").length,
-      confirmed: allOrders.filter(o => o.status === "confirmed").length,
-      processing: allOrders.filter(o => o.status === "processing").length,
-      shipped: allOrders.filter(o => o.status === "shipped").length,
-      delivered: allOrders.filter(o => o.status === "delivered").length,
-      cancelled: allOrders.filter(o => o.status === "cancelled").length,
-      cancel_request: allOrders.filter(o => o.status === "cancel_request").length,
+      pending: allOrders.filter((o) => o.status === "pending").length,
+      confirmed: allOrders.filter((o) => o.status === "confirmed").length,
+      processing: allOrders.filter((o) => o.status === "processing").length,
+      shipped: allOrders.filter((o) => o.status === "shipped").length,
+      delivered: allOrders.filter((o) => o.status === "delivered").length,
+      cancelled: allOrders.filter((o) => o.status === "cancelled").length,
+      cancel_request: allOrders.filter((o) => o.status === "cancel_request")
+        .length,
       totalAmount: allOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0),
     };
     return response.sendSuccess(
@@ -679,7 +730,7 @@ export const getAllOrders = async (req, res) => {
           total_orders: totalOrders,
           per_page: parseInt(limit),
         },
-        stats
+        stats,
       },
       "Lấy danh sách đơn hàng thành công",
       200
@@ -688,6 +739,229 @@ export const getAllOrders = async (req, res) => {
     return response.sendError(
       res,
       "Có lỗi xảy ra khi lấy danh sách đơn hàng",
+      500,
+      error.message
+    );
+  }
+};
+export const searchOrders = async (req, res) => {
+  try {
+    const {
+      q,                    // từ khóa chung
+      order_number,         // mã đơn hàng
+      customer_name,        // tên khách hàng
+      customer_phone,       // SĐT khách hàng
+      customer_email,       // email khách hàng
+      product_name,         // tên sản phẩm
+      status,              // trạng thái đơn hàng
+      payment_method,      // phương thức thanh toán
+      payment_status,      // trạng thái thanh toán
+      date_from,           // từ ngày (YYYY-MM-DD)
+      date_to,             // đến ngày (YYYY-MM-DD)
+      min_amount,          // giá trị đơn tối thiểu
+      max_amount,          // giá trị đơn tối đa
+      page = 1,
+      limit = 10,
+      sort = "created_at",
+      order = "desc"
+    } = req.query;
+
+    // Build search filter
+    const filter = {};
+    const andConditions = [];
+
+    // Tìm kiếm theo mã đơn hàng
+    if (req.user.role === "user") {
+      filter.user_id = req.user.userId;
+    }
+    if (order_number) {
+      filter.order_number = { $regex: order_number, $options: 'i' };
+    }
+
+    // Tìm kiếm theo thông tin khách hàng
+    if (customer_name) {
+      andConditions.push({
+        $or: [
+          { "shipping_info.name": { $regex: customer_name, $options: 'i' } },
+          { "billing_info.name": { $regex: customer_name, $options: 'i' } }
+        ]
+      });
+    }
+
+    if (customer_phone) {
+      andConditions.push({
+        $or: [
+          { "shipping_info.phone": { $regex: customer_phone, $options: 'i' } },
+          { "billing_info.phone": { $regex: customer_phone, $options: 'i' } }
+        ]
+      });
+    }
+
+    if (customer_email) {
+      andConditions.push({
+        $or: [
+          { "shipping_info.email": { $regex: customer_email, $options: 'i' } },
+          { "billing_info.email": { $regex: customer_email, $options: 'i' } }
+        ]
+      });
+    }
+
+    // Trạng thái
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    if (payment_method) {
+      filter.payment_method = payment_method;
+    }
+
+    if (payment_status) {
+      filter.payment_status = payment_status;
+    }
+
+    // Khoảng thời gian
+    if (date_from || date_to) {
+      filter.created_at = {};
+      if (date_from) {
+        filter.created_at.$gte = new Date(date_from);
+      }
+      if (date_to) {
+        const endDate = new Date(date_to);
+        endDate.setHours(23, 59, 59, 999); // cuối ngày
+        filter.created_at.$lte = endDate;
+      }
+    }
+
+    // Khoảng giá
+    if (min_amount || max_amount) {
+      filter.total_amount = {};
+      if (min_amount) filter.total_amount.$gte = parseFloat(min_amount);
+      if (max_amount) filter.total_amount.$lte = parseFloat(max_amount);
+    }
+
+    // Tìm kiếm chung (q) - tìm trong nhiều field
+    if (q) {
+      const searchRegex = { $regex: q, $options: 'i' };
+      andConditions.push({
+        $or: [
+          { order_number: searchRegex },
+          { "shipping_info.name": searchRegex },
+          { "shipping_info.phone": searchRegex },
+          { "shipping_info.email": searchRegex },
+          { "shipping_info.address": searchRegex },
+          { notes: searchRegex }
+        ]
+      });
+    }
+
+    // Tìm kiếm theo tên sản phẩm (cần populate)
+    let productFilter = {};
+    if (product_name) {
+      // Tìm products có tên chứa từ khóa
+      const products = await Product.find(
+        { name: { $regex: product_name, $options: 'i' } },
+        { _id: 1 }
+      );
+      const productIds = products.map(p => p._id);
+      
+      if (productIds.length > 0) {
+        filter["items.product_id"] = { $in: productIds };
+      } else {
+        // Không tìm thấy sản phẩm nào -> return empty
+        return response.sendSuccess(res, {
+          orders: [],
+          pagination: {
+            current_page: parseInt(page),
+            total_pages: 0,
+            total_orders: 0,
+            per_page: parseInt(limit)
+          },
+          search_params: req.query
+        }, "Không tìm thấy đơn hàng nào", 200);
+      }
+    }
+
+    // Combine conditions
+    if (andConditions.length > 0) {
+      filter.$and = andConditions;
+    }
+
+    // Sorting
+    const sortObj = {};
+    sortObj[sort] = order === "desc" ? -1 : 1;
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Execute search
+    const orders = await Order.find(filter)
+      .populate({
+        path: "items.product_id",
+        select: "name images price category brand"
+      })
+      .populate({
+        path: "user_id",
+        select: req.user.role === "user" ? "name" : "name email phone"
+      })
+      .sort(sortObj)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    const totalOrders = await Order.countDocuments(filter);
+    const totalPages = Math.ceil(totalOrders / parseInt(limit));
+
+    // Search statistics
+    const searchStats = await Order.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          total_orders: { $sum: 1 },
+          total_amount: { $sum: "$total_amount" },
+          avg_amount: { $avg: "$total_amount" },
+          statuses: {
+            $push: "$status"
+          }
+        }
+      }
+    ]);
+
+    const statusBreakdown = {};
+    if (searchStats.length > 0) {
+      const statuses = searchStats[0].statuses;
+      ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "cancel_request"].forEach(status => {
+        statusBreakdown[status] = statuses.filter(s => s === status).length;
+      });
+    }
+
+    return response.sendSuccess(
+      res,
+      {
+        orders,
+        pagination: {
+          current_page: parseInt(page),
+          total_pages: totalPages,
+          total_orders: totalOrders,
+          per_page: parseInt(limit)
+        },
+        search_params: req.query,
+        statistics: searchStats.length > 0 ? {
+          total_orders: searchStats[0].total_orders,
+          total_amount: searchStats[0].total_amount,
+          avg_amount: Math.round(searchStats[0].avg_amount || 0),
+          status_breakdown: statusBreakdown
+        } : null
+      },
+      `Tìm thấy ${totalOrders} đơn hàng`,
+      200
+    );
+
+  } catch (error) {
+    console.error("Search orders error:", error);
+    return response.sendError(
+      res,
+      "Có lỗi xảy ra khi tìm kiếm đơn hàng",
       500,
       error.message
     );

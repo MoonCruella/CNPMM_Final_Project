@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import { useUserContext } from "@/context/UserContext";
@@ -10,8 +10,55 @@ import { toast } from "sonner";
 const MyOrdersPage = () => {
   const { user, isAuthenticated } = useUserContext();
   const [orders, setOrders] = useState([]);
+  const [allOrders, setAllOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [filter, setFilter] = useState("all"); // all, pending, processing, shipped, delivered, cancelled
+  const [filter, setFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState(""); 
+  const searchInputRef = useRef(null);
+  const [orderStats, setOrderStats] = useState({
+      total: 0,
+      pending: 0,
+      confirmed: 0,
+      processing: 0,
+      shipped: 0,
+      delivered: 0,
+      cancelled: 0,
+      cancel_request:0
+    });
+
+   const filteredOrdersByStatus = useMemo(() => {
+    if (!Array.isArray(allOrders)) return [];
+    
+    if (filter === "all") {
+      return allOrders;
+    }
+    return allOrders.filter(order => order.status === filter);
+  }, [allOrders, filter]);
+
+  // Search orders by product name using useMemo
+  const searchedOrders = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return filteredOrdersByStatus;
+    }
+
+    const searchLower = searchTerm.toLowerCase().trim();
+    
+    return filteredOrdersByStatus.filter(order => {
+      // Search in product names
+      const hasMatchingProduct = order.items?.some(item => 
+        item.product_id?.name?.toLowerCase().includes(searchLower)
+      );
+      
+      // Optional: search in order number too
+      const matchesOrderNumber = order.order_number?.toLowerCase().includes(searchLower);
+      
+      return hasMatchingProduct || matchesOrderNumber;
+    });
+  }, [filteredOrdersByStatus, searchTerm]);
+
+   useEffect(() => {
+    setOrders(searchedOrders);
+  }, [searchedOrders]);
 
   // Load orders on component mount
   useEffect(() => {
@@ -28,6 +75,7 @@ const MyOrdersPage = () => {
 
       if (response.success) {
         setOrders(response.data.orders || []);
+        setOrderStats(response.data.stats || {});
       } else {
         toast.error(response.message || "Không thể tải danh sách đơn hàng");
       }
@@ -37,6 +85,25 @@ const MyOrdersPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ✅ Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // ✅ Clear search
+  const handleClearSearch = () => {
+    setSearchTerm("");
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  // ✅ Handle filter change (also clears search)
+  const handleFilterChange = (newFilter) => {
+    setFilter(newFilter);
+    setSearchTerm(""); // Clear search when changing filter
   };
 
   // Cancel order
@@ -76,19 +143,7 @@ const MyOrdersPage = () => {
     }
   };
 
-  // Calculate order statistics
-  const orderStats = {
-    total: orders.length,
-    pending: orders.filter((order) => order.status === "pending").length,
-    processing: orders.filter((order) => order.status === "processing").length,
-    shipped: orders.filter((order) => order.status === "shipped").length,
-    delivered: orders.filter((order) => order.status === "delivered").length,
-    cancelled: orders.filter((order) => order.status === "cancelled").length,
-    totalAmount: orders.reduce(
-      (sum, order) => sum + (order.total_amount || 0),
-      0
-    ),
-  };
+  
 
   if (!isAuthenticated) {
     return (
@@ -128,51 +183,102 @@ const MyOrdersPage = () => {
           <li className="font-medium">/ My Orders</li>
         </ul>
       </section>
+      <section className="container mx-auto px-4 pt-8">
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 relative">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                placeholder="Tìm kiếm theo tên sản phẩm hoặc mã đơn hàng..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+              />
+              {searchTerm && (
+                <button
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  ❌
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>🔍</span>
+              <span>{orders.length} kết quả</span>
+            </div>
+          </div>
+          
+          {/* ✅ Search results info */}
+          {searchTerm && (
+            <div className="mt-3 text-sm text-blue-600">
+              🔍 Tìm kiếm: "<strong>{searchTerm}</strong>" - 
+              Tìm thấy <strong>{orders.length}</strong> đơn hàng
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Filter Tabs */}
       <section className="container mx-auto px-4 pt-8">
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
           <div className="flex flex-wrap gap-2 justify-center md:justify-start">
             {[
-              { key: "all", label: "Tất cả", count: orderStats.total },
+              { key: "all", label: "Tất cả", count: orderStats.total, icon: "📦" },
               {
                 key: "pending",
                 label: "Chờ xác nhận",
                 count: orderStats.pending,
+                 icon: "⏰"
+              },
+              {
+                key: "confirmed",
+                label: "Đã xác nhận",
+                count: orderStats.confirmed,
+                icon: "✔️"
               },
               {
                 key: "processing",
                 label: "Đang xử lý",
                 count: orderStats.processing,
+                icon: "🛒"
               },
-              { key: "shipped", label: "Đang giao", count: orderStats.shipped },
+              { key: "shipped", label: "Đang giao", count: orderStats.shipped,icon: "🚚" },
               {
                 key: "delivered",
                 label: "Đã giao",
                 count: orderStats.delivered,
+                icon: "✅"
+              },
+              {
+                key: "cancel_request",
+                label: "Yêu cầu huỷ",
+                count: orderStats.cancel_request,
+                icon: "✅"
               },
               {
                 key: "cancelled",
                 label: "Đã hủy",
                 count: orderStats.cancelled,
+                icon: "❌"
               },
             ].map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setFilter(tab.key)}
-                className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${
-                  filter === tab.key
+                className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${filter === tab.key
                     ? "bg-green-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+                  }`}
               >
+                <span className="text-xl">{tab.icon}</span>
                 {tab.label}
                 <span
-                  className={`px-2 py-1 rounded-full text-xs ${
-                    filter === tab.key
+                  className={`px-2 py-1 rounded-full text-xs ${filter === tab.key
                       ? "bg-white text-green-600"
                       : "bg-gray-300 text-gray-600"
-                  }`}
+                    }`}
                 >
                   {tab.count}
                 </span>

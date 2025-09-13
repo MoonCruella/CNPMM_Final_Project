@@ -22,8 +22,11 @@ export const authenticateToken = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
-    return response.sendError(res, 'Token không hợp lệ hoặc đã hết hạn', 403, error.message);
+    if (error.name === 'TokenExpiredError') {
+      return response.sendError(res, 'jwt expired', 401); // để client interceptor refresh
+    }
+    return response.sendError(res, 'Token không hợp lệ', 401, error.message);
+  
   }
 };
 

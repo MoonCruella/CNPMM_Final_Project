@@ -7,7 +7,8 @@ import {
   createOrder,
   getOrderStats,
   updateShippingInfo,
-  getAllOrders
+  getAllOrders,
+  searchOrders
 } from '../controllers/order.controller.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 const router = express.Router();
@@ -24,7 +25,8 @@ router.get('/stats', getOrderStats);
 // Admin lấy tất cả đơn hàng với filter & pagination
 // GET /api/orders/all?status=pending&page=1&limit=10&sort=created_at&order=desc
 router.get('/all', requireAdmin, getAllOrders);
-
+router.get("/my-orders/search", authenticateToken, searchOrders);
+router.get("/search", authenticateToken, requireAdmin, searchOrders);
 // ✅ Get specific order by ID
 // GET /api/orders/:orderId
 router.get('/:orderId', getOrderById);
