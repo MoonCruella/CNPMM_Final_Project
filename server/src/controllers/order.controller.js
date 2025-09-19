@@ -458,7 +458,7 @@ export const createOrder = async (req, res) => {
     }
 
     // Calculate shipping fee (you can implement your logic here)
-    const shippingFee = totalAmount >= 500000 ? 0 : 30000; // Free shipping for orders >= 500k
+    const shippingFee = 30000;
     totalAmount += shippingFee;
 
     // Create order
@@ -573,7 +573,11 @@ export const updateShippingInfo = async (req, res) => {
 
     // Không cho phép cập nhật nếu đã hủy
     if (order.status === "cancelled") {
-      return response.sendError(res, "Đơn hàng đã hủy, không thể cập nhật vận chuyển", 400);
+      return response.sendError(
+        res,
+        "Đơn hàng đã hủy, không thể cập nhật vận chuyển",
+        400
+      );
     }
     // ✅ Trường hợp đặc biệt: duyệt yêu cầu hủy (cancel_request → cancelled)
     if (order.status === "cancel_request") {
@@ -584,13 +588,13 @@ export const updateShippingInfo = async (req, res) => {
         order.history.push({
           status: "cancelled",
           date: new Date(),
-          note: note || "Shop đã chấp nhận yêu cầu hủy đơn"
+          note: note || "Shop đã chấp nhận yêu cầu hủy đơn",
         });
         await order.save();
         return response.sendSuccess(
           res,
           { shipping: order },
-            "Đã chấp nhận hủy đơn hàng",
+          "Đã chấp nhận hủy đơn hàng",
           200
         );
       } else if (shipping_status) {
@@ -747,23 +751,23 @@ export const getAllOrders = async (req, res) => {
 export const searchOrders = async (req, res) => {
   try {
     const {
-      q,                    // từ khóa chung
-      order_number,         // mã đơn hàng
-      customer_name,        // tên khách hàng
-      customer_phone,       // SĐT khách hàng
-      customer_email,       // email khách hàng
-      product_name,         // tên sản phẩm
-      status,              // trạng thái đơn hàng
-      payment_method,      // phương thức thanh toán
-      payment_status,      // trạng thái thanh toán
-      date_from,           // từ ngày (YYYY-MM-DD)
-      date_to,             // đến ngày (YYYY-MM-DD)
-      min_amount,          // giá trị đơn tối thiểu
-      max_amount,          // giá trị đơn tối đa
+      q, // từ khóa chung
+      order_number, // mã đơn hàng
+      customer_name, // tên khách hàng
+      customer_phone, // SĐT khách hàng
+      customer_email, // email khách hàng
+      product_name, // tên sản phẩm
+      status, // trạng thái đơn hàng
+      payment_method, // phương thức thanh toán
+      payment_status, // trạng thái thanh toán
+      date_from, // từ ngày (YYYY-MM-DD)
+      date_to, // đến ngày (YYYY-MM-DD)
+      min_amount, // giá trị đơn tối thiểu
+      max_amount, // giá trị đơn tối đa
       page = 1,
       limit = 10,
       sort = "created_at",
-      order = "desc"
+      order = "desc",
     } = req.query;
 
     // Build search filter
@@ -775,34 +779,34 @@ export const searchOrders = async (req, res) => {
       filter.user_id = req.user.userId;
     }
     if (order_number) {
-      filter.order_number = { $regex: order_number, $options: 'i' };
+      filter.order_number = { $regex: order_number, $options: "i" };
     }
 
     // Tìm kiếm theo thông tin khách hàng
     if (customer_name) {
       andConditions.push({
         $or: [
-          { "shipping_info.name": { $regex: customer_name, $options: 'i' } },
-          { "billing_info.name": { $regex: customer_name, $options: 'i' } }
-        ]
+          { "shipping_info.name": { $regex: customer_name, $options: "i" } },
+          { "billing_info.name": { $regex: customer_name, $options: "i" } },
+        ],
       });
     }
 
     if (customer_phone) {
       andConditions.push({
         $or: [
-          { "shipping_info.phone": { $regex: customer_phone, $options: 'i' } },
-          { "billing_info.phone": { $regex: customer_phone, $options: 'i' } }
-        ]
+          { "shipping_info.phone": { $regex: customer_phone, $options: "i" } },
+          { "billing_info.phone": { $regex: customer_phone, $options: "i" } },
+        ],
       });
     }
 
     if (customer_email) {
       andConditions.push({
         $or: [
-          { "shipping_info.email": { $regex: customer_email, $options: 'i' } },
-          { "billing_info.email": { $regex: customer_email, $options: 'i' } }
-        ]
+          { "shipping_info.email": { $regex: customer_email, $options: "i" } },
+          { "billing_info.email": { $regex: customer_email, $options: "i" } },
+        ],
       });
     }
 
@@ -841,7 +845,7 @@ export const searchOrders = async (req, res) => {
 
     // Tìm kiếm chung (q) - tìm trong nhiều field
     if (q) {
-      const searchRegex = { $regex: q, $options: 'i' };
+      const searchRegex = { $regex: q, $options: "i" };
       andConditions.push({
         $or: [
           { order_number: searchRegex },
@@ -849,8 +853,8 @@ export const searchOrders = async (req, res) => {
           { "shipping_info.phone": searchRegex },
           { "shipping_info.email": searchRegex },
           { "shipping_info.address": searchRegex },
-          { notes: searchRegex }
-        ]
+          { notes: searchRegex },
+        ],
       });
     }
 
@@ -859,25 +863,30 @@ export const searchOrders = async (req, res) => {
     if (product_name) {
       // Tìm products có tên chứa từ khóa
       const products = await Product.find(
-        { name: { $regex: product_name, $options: 'i' } },
+        { name: { $regex: product_name, $options: "i" } },
         { _id: 1 }
       );
-      const productIds = products.map(p => p._id);
-      
+      const productIds = products.map((p) => p._id);
+
       if (productIds.length > 0) {
         filter["items.product_id"] = { $in: productIds };
       } else {
         // Không tìm thấy sản phẩm nào -> return empty
-        return response.sendSuccess(res, {
-          orders: [],
-          pagination: {
-            current_page: parseInt(page),
-            total_pages: 0,
-            total_orders: 0,
-            per_page: parseInt(limit)
+        return response.sendSuccess(
+          res,
+          {
+            orders: [],
+            pagination: {
+              current_page: parseInt(page),
+              total_pages: 0,
+              total_orders: 0,
+              per_page: parseInt(limit),
+            },
+            search_params: req.query,
           },
-          search_params: req.query
-        }, "Không tìm thấy đơn hàng nào", 200);
+          "Không tìm thấy đơn hàng nào",
+          200
+        );
       }
     }
 
@@ -897,11 +906,11 @@ export const searchOrders = async (req, res) => {
     const orders = await Order.find(filter)
       .populate({
         path: "items.product_id",
-        select: "name images price category brand"
+        select: "name images price category brand",
       })
       .populate({
         path: "user_id",
-        select: req.user.role === "user" ? "name" : "name email phone"
+        select: req.user.role === "user" ? "name" : "name email phone",
       })
       .sort(sortObj)
       .skip(skip)
@@ -921,17 +930,25 @@ export const searchOrders = async (req, res) => {
           total_amount: { $sum: "$total_amount" },
           avg_amount: { $avg: "$total_amount" },
           statuses: {
-            $push: "$status"
-          }
-        }
-      }
+            $push: "$status",
+          },
+        },
+      },
     ]);
 
     const statusBreakdown = {};
     if (searchStats.length > 0) {
       const statuses = searchStats[0].statuses;
-      ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "cancel_request"].forEach(status => {
-        statusBreakdown[status] = statuses.filter(s => s === status).length;
+      [
+        "pending",
+        "confirmed",
+        "processing",
+        "shipped",
+        "delivered",
+        "cancelled",
+        "cancel_request",
+      ].forEach((status) => {
+        statusBreakdown[status] = statuses.filter((s) => s === status).length;
       });
     }
 
@@ -943,20 +960,22 @@ export const searchOrders = async (req, res) => {
           current_page: parseInt(page),
           total_pages: totalPages,
           total_orders: totalOrders,
-          per_page: parseInt(limit)
+          per_page: parseInt(limit),
         },
         search_params: req.query,
-        statistics: searchStats.length > 0 ? {
-          total_orders: searchStats[0].total_orders,
-          total_amount: searchStats[0].total_amount,
-          avg_amount: Math.round(searchStats[0].avg_amount || 0),
-          status_breakdown: statusBreakdown
-        } : null
+        statistics:
+          searchStats.length > 0
+            ? {
+                total_orders: searchStats[0].total_orders,
+                total_amount: searchStats[0].total_amount,
+                avg_amount: Math.round(searchStats[0].avg_amount || 0),
+                status_breakdown: statusBreakdown,
+              }
+            : null,
       },
       `Tìm thấy ${totalOrders} đơn hàng`,
       200
     );
-
   } catch (error) {
     console.error("Search orders error:", error);
     return response.sendError(

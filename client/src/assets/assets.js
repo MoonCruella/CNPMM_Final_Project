@@ -19,11 +19,14 @@ import vnpay_icon from "./vnpay_icon.png";
 import zalo_pay from "./zalopay_icon.png";
 import cod_icon from "./cod_icon.png";
 import page_banner from "./page_banner.jpg";
+import coin_icon from "./coin_icon.png";
+import voucher_icon from "./voucher_icon.png";
 export const assets = {
   logo,
   search_icon,
   cart_icon,
   menu_icon,
+  voucher_icon,
   profile_icon,
   banner_main,
   banner_main_1,
@@ -33,6 +36,7 @@ export const assets = {
   squad_icon,
   sauces_icon,
   cake_icon,
+  coin_icon,
   farm_icon,
   grass,
   add_to_cart_icon,

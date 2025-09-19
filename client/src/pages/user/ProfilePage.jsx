@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useAddressContext } from "@/context/AddressContext";
 import AddressModal from "@/components/user/modal/AddressModal.jsx";
 import AddressItem from "@/components/user/item/AddressItem.jsx";
+import { assets } from "@/assets/assets";
 const ProfilePage = () => {
   const {
     user,
@@ -328,6 +329,12 @@ const ProfilePage = () => {
                 {getUserDisplayName()}
               </h1>
               <p className="text-gray-600 text-sm sm:text-base">{user.email}</p>
+              <div className="flex items-center space-x-2 my-3">
+                <img src={assets.coin_icon} className="h-6 w-6" />
+                <p className=" text-sm sm:text-base text-black">
+                  Xu tích lũy: {user.coin}
+                </p>
+              </div>
 
               {/* Address Display */}
               {/* {formatAddress() && (

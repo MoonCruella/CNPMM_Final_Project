@@ -20,6 +20,7 @@ const SellerLayout = () => {
     },
     { link: "/seller/products", label: "Product List", icon: IconReceipt2 },
     { link: "/seller/orders", label: "Orders", icon: IconFingerprint },
+    { link: "/seller/vouchers", label: "Vouchers", icon: IconKey },
     { link: "/seller/my-account", label: "My Account", icon: IconKey },
   ];
 
