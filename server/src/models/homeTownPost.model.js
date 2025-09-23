@@ -46,4 +46,7 @@ const hometownPostSchema = new mongoose.Schema({
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
 
-export default mongoose.model('HometownPost', hometownPostSchema);
+// Kiểm tra model đã tồn tại chưa, nếu rồi thì dùng lại
+const HometownPost = mongoose.models.HometownPost || mongoose.model('HometownPost', hometownPostSchema);
+
+export default HometownPost;

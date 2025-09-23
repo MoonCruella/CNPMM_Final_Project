@@ -27,6 +27,8 @@ import Notifications from "./components/seller/Notifications";
 import MyAccount from "./components/seller/MyAccount";
 import DashboardSeller from "./components/seller/DashboardSeller";
 import { useAppContext } from "./context/AppContext";
+import VoucherCard from "./components/user/item/VoucherCard";
+import Vouchers from "./components/seller/Vouchers";
 
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
@@ -51,8 +53,9 @@ const App = () => {
         <Route path="/products" element={<AllProducts />} />
         <Route path="//my-orders" element={<MyOrdersPage />} />
         <Route path="/my-profile" element={<ProfilePage />} />
-   <Route path="/checkout" element={<CheckoutPage />} />
-		<Route path="/products/:id" element={<ProductDetails />} />
+        <Route path="/voucher-list" element={<VoucherCard />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/products/:id" element={<ProductDetails />} />
         <Route
           path="/seller"
           element={isSeller ? <SellerLayout /> : <SellerLogin />}
@@ -62,6 +65,7 @@ const App = () => {
           <Route path="orders" element={<Orders />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="my-account" element={<MyAccount />} />
+          <Route path="vouchers" element={<Vouchers />} />
         </Route>
       </Routes>
       {!isSellerPath && <Footer />}

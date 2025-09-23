@@ -8,6 +8,25 @@ import ProductCard from "../../components/user/item/ProductCard.jsx";
 import categoryService from "../../services/categoryService.js";
 import { useCartContext } from "@/context/CartContext";
 import { useAppContext } from "@/context/AppContext";
+import ratingService from "@/services/rating.service.js";
+import { Rate } from "antd";
+
+const StarRating = ({ rating }) => {
+  return (
+    <div className="flex items-center space-x-1">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <span
+          key={i}
+          className={`text-lg ${
+            i < rating ? "text-yellow-400" : "text-gray-300"
+          }`}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  );
+};
 
 const ProductDetails = () => {
   const { user } = useAppContext();
@@ -20,6 +39,15 @@ const ProductDetails = () => {
   const [loading, setLoading] = useState(true);
   const [categoryName, setCategoryName] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [ratings, setRatings] = useState([]);
+  const [newRatingContent, setNewRatingContent] = useState("");
+  const [loadingRatings, setLoadingRatings] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(5); // số rating mỗi trang
+  const [total, setTotal] = useState(0);
+  const [rating, setRating] = useState(5);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalRatings, setTotalRatings] = useState(0);
 
   const formatCurrency = (value) =>
     value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
@@ -61,7 +89,7 @@ const ProductDetails = () => {
         }
 
         // 3️⃣ Fetch related products
-        const relatedRes = await productService.getAll(); // hoặc API lấy theo category
+        const relatedRes = await productService.getAll();
         if (relatedRes.success) {
           const related = relatedRes.data
             .filter((p) => p._id !== prod._id && p.category === prod.category)
@@ -77,6 +105,76 @@ const ProductDetails = () => {
 
     fetchProduct();
   }, [id]);
+
+  // Fetch ratings
+  useEffect(() => {
+    const fetchRatings = async () => {
+      try {
+        setLoadingRatings(true);
+        const res = await ratingService.getRatingsByProduct(id, page, limit);
+        console.log("Ratings response:", res);
+        if (res.success) {
+          setRatings(res.ratings);
+          setTotal(res.total);
+          setAverageRating(res.averageRating || 0);
+          setTotalRatings(res.totalRatings || 0);
+        }
+      } catch (err) {
+        console.error("Error fetching ratings:", err);
+      } finally {
+        setLoadingRatings(false);
+      }
+    };
+
+    fetchRatings();
+  }, [id, page, limit]);
+
+  const handleSubmitRating = async () => {
+    if (!user) {
+      toast.info("Vui lòng đăng nhập để đánh giá!");
+      return;
+    }
+    if (!newRatingContent.trim()) {
+      toast.warning("Vui lòng nhập nội dung đánh giá!");
+      return;
+    }
+
+    try {
+      const res = await ratingService.createRating({
+        product_id: id,
+        content: newRatingContent,
+        rating,
+      });
+
+      // ✅ Nếu thành công
+      setRatings((prev) => [res.data.rating, ...prev]);
+      setNewRatingContent("");
+      setRating(5);
+      toast.success("Đã thêm đánh giá!");
+      
+      // Refresh average rating
+      const avgRes = await ratingService.getProductAverageRating(id);
+      if (avgRes.success) {
+        setAverageRating(avgRes.data.averageRating);
+        setTotalRatings(avgRes.data.totalRatings);
+      }
+    } catch (err) {
+      if (err.response?.status === 403) {
+        toast.error(
+          err.response.data?.message ||
+            "Bạn cần mua sản phẩm này trước khi đánh giá!"
+        );
+      } else if (err.response?.status === 400) {
+        toast.error(
+          err.response.data?.message ||
+            "Bạn đã đánh giá sản phẩm này rồi!"
+        );
+      } else {
+        toast.error("Có lỗi khi gửi đánh giá!");
+      }
+      console.error("Error submitting rating:", err);
+    }
+  };
 
   const sliderSettings = {
     dots: true,
@@ -119,7 +217,7 @@ const ProductDetails = () => {
 
       {/* Product info */}
       <div className="flex flex-col md:flex-row gap-16 m-28">
-        {/* Thumbnails + main image */}
+        {/* Thumbnails */}
         <div className="flex gap-4">
           <div className="flex flex-col gap-3">
             {product.images.map((imageObj, index) => (
@@ -155,6 +253,14 @@ const ProductDetails = () => {
           <p className="text-xl text-gray-500">{categoryName}</p>
           <h1 className="text-3xl font-bold mt-2">{product.name}</h1>
 
+          {/* Rating summary */}
+          <div className="flex items-center gap-4 mt-2">
+            <StarRating rating={Math.round(averageRating)} />
+            <span className="text-gray-600">
+              ({averageRating.toFixed(1)} - {totalRatings} đánh giá)
+            </span>
+          </div>
+
           <div className="flex items-center gap-4 mt-2">
             <p className="text-2xl font-semibold text-green-700">
               {formatCurrency(product.sale_price)}
@@ -170,7 +276,7 @@ const ProductDetails = () => {
           <p className="text-gray-600 mt-6">{product.description}</p>
 
           <div className="flex items-center gap-4 mt-10">
-            {/* Bộ tăng giảm số lượng (chiều rộng cố định) */}
+            {/* Quantity */}
             <div className="flex items-center border rounded-lg overflow-hidden w-32 justify-between">
               <button
                 onClick={() => setQuantity((prev) => Math.max(prev - 1, 1))}
@@ -214,14 +320,92 @@ const ProductDetails = () => {
               <span className="font-medium">Tags:</span>{" "}
               {product.tags?.join(", ")}
             </p>
-            <p className="mt-2 flex items-center">
-              <span className="border border-green-700 text-green-700 px-2 py-1 rounded mr-2">
-                2-day Delivery
-              </span>
-              Speedy and reliable parcel delivery!
-            </p>
           </div>
         </div>
+      </div>
+
+      {/* Ratings & Reviews */}
+      <div className="m-16">
+        <h2 className="text-3xl font-semibold mb-6">Đánh giá sản phẩm</h2>
+        
+        {/* Rating stats */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-4">
+            <div className="text-4xl font-bold text-yellow-500">
+              {averageRating.toFixed(1)}
+            </div>
+            <div>
+              <StarRating rating={Math.round(averageRating)} />
+              <p className="text-gray-600">{totalRatings} đánh giá</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Form nhập rating */}
+        <div className="mb-6 p-4 border rounded-lg">
+          <h3 className="text-lg font-medium mb-3">Viết đánh giá của bạn</h3>
+          <div className="mb-3">
+            <label className="block text-sm font-medium mb-2">Số sao:</label>
+            <Rate value={rating} onChange={(value) => setRating(value)} />
+          </div>
+          <textarea
+            value={newRatingContent}
+            onChange={(e) => setNewRatingContent(e.target.value)}
+            placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..."
+            className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-600"
+            rows={3}
+          />
+          <button
+            onClick={handleSubmitRating}
+            className="mt-3 px-5 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800"
+          >
+            Gửi đánh giá
+          </button>
+        </div>
+
+        {/* Danh sách ratings */}
+        {loadingRatings ? (
+          <p>Đang tải đánh giá...</p>
+        ) : ratings.length === 0 ? (
+          <p className="text-gray-500">Chưa có đánh giá nào.</p>
+        ) : (
+          <div className="space-y-4">
+            {ratings.map((r) => (
+              <div
+                key={r._id.toString()}
+                className="border rounded-lg p-4 bg-white shadow-sm"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-medium text-gray-800">
+                    {r.user_id?.name || "Người dùng ẩn danh"}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(r.created_at || r.createdAt).toLocaleString("vi-VN")}
+                  </p>
+                </div>
+                <StarRating rating={r.rating || 5} />
+                <p className="text-gray-700 mt-2">{r.content}</p>
+              </div>
+            ))}
+
+            {/* Nút phân trang */}
+            <div className="flex justify-center mt-6 space-x-2">
+              {Array.from({ length: Math.ceil(total / limit) }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i + 1)}
+                  className={`px-3 py-1 rounded ${
+                    page === i + 1
+                      ? "bg-green-700 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Related Products */}
@@ -236,7 +420,7 @@ const ProductDetails = () => {
                 product.images && product.images.length > 0
                   ? product.images.find((img) => img.is_primary)?.image_url ||
                     product.images[0].image_url
-                  : ""; // ảnh dự phòng nếu rỗng
+                  : "";
 
               return (
                 <ProductCard
