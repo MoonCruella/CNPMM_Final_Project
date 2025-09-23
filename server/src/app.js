@@ -10,6 +10,7 @@ import addressRoutes from "./routes/address.route.js";
 import userRoutes from "./routes/user.route.js";
 import vnpayRoutes from "./routes/vnpay.route.js";
 import zalopayRoutes from "./routes/zalopay.route.js";
+import ratingRoutes from "./routes/rating.route.js";
 
 import cors from "cors";
 import {
@@ -77,5 +78,8 @@ app.use("/api/vnpay", vnpayRoutes);
 
 // ZaloPay
 app.use("/api/zalopay", zalopayRoutes);
+
+// Rating
+app.use("/api/ratings", ratingRoutes);
 
 export default app;
