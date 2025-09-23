@@ -26,6 +26,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       maxlength: 15,
     },
+    coin: {
+      type: Number,
+      default: 0,
+    },
     shipping_addresses: [
       {
         full_name: { type: String, required: true },
