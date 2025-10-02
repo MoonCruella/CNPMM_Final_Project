@@ -17,9 +17,8 @@ const StarRating = ({ rating }) => {
       {Array.from({ length: 5 }).map((_, i) => (
         <span
           key={i}
-          className={`text-lg ${
-            i < rating ? "text-yellow-400" : "text-gray-300"
-          }`}
+          className={`text-lg ${i < rating ? "text-yellow-400" : "text-gray-300"
+            }`}
         >
           ★
         </span>
@@ -48,7 +47,7 @@ const ProductDetails = () => {
   const [rating, setRating] = useState(5);
   const [averageRating, setAverageRating] = useState(0);
   const [totalRatings, setTotalRatings] = useState(0);
-
+  const [isFavorited, setIsFavorited] = useState(false);
   const formatCurrency = (value) =>
     value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
@@ -66,6 +65,25 @@ const ProductDetails = () => {
       toast.error("Thêm vào giỏ hàng thất bại!");
     }
   };
+  const toggleFavorite = async () => {
+    if (!user) {
+      toast.info("Vui lòng đăng nhập để thêm vào danh sách yêu thích!");
+      return;
+    }
+
+    try {
+      const res = await productService.toggleFavorite(product._id);
+      if (res.success) {
+        setIsFavorited(!isFavorited);
+        toast.success(isFavorited
+          ? "Đã xóa khỏi danh sách yêu thích"
+          : "Đã thêm vào danh sách yêu thích");
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast.error("Không thể thực hiện thao tác!");
+    }
+  };
 
   // Fetch product by id
   useEffect(() => {
@@ -73,14 +91,15 @@ const ProductDetails = () => {
       try {
         setLoading(true);
 
-        // 1️⃣ Fetch product
+        // 1️ Fetch product
         const res = await productService.getById(id);
         if (!res.success) return;
         const prod = res.data;
         setProduct(prod);
         setThumbnail(prod.images[0]);
+        setIsFavorited(prod.isFavorited || false);
 
-        // 2️⃣ Fetch category dựa trên category_id
+        // 2️ Fetch category dựa trên category_id
         if (prod.category_id) {
           const categoryRes = await categoryService.getById(prod.category_id);
           if (categoryRes.success) {
@@ -88,7 +107,7 @@ const ProductDetails = () => {
           }
         }
 
-        // 3️⃣ Fetch related products
+        // 3️ Fetch related products
         const relatedRes = await productService.getAll();
         if (relatedRes.success) {
           const related = relatedRes.data
@@ -146,12 +165,12 @@ const ProductDetails = () => {
         rating,
       });
 
-      // ✅ Nếu thành công
+      //  Nếu thành công
       setRatings((prev) => [res.data.rating, ...prev]);
       setNewRatingContent("");
       setRating(5);
       toast.success("Đã thêm đánh giá!");
-      
+
       // Refresh average rating
       const avgRes = await ratingService.getProductAverageRating(id);
       if (avgRes.success) {
@@ -162,12 +181,12 @@ const ProductDetails = () => {
       if (err.response?.status === 403) {
         toast.error(
           err.response.data?.message ||
-            "Bạn cần mua sản phẩm này trước khi đánh giá!"
+          "Bạn cần mua sản phẩm này trước khi đánh giá!"
         );
       } else if (err.response?.status === 400) {
         toast.error(
           err.response.data?.message ||
-            "Bạn đã đánh giá sản phẩm này rồi!"
+          "Bạn đã đánh giá sản phẩm này rồi!"
         );
       } else {
         toast.error("Có lỗi khi gửi đánh giá!");
@@ -224,11 +243,10 @@ const ProductDetails = () => {
               <div
                 key={index}
                 onClick={() => setThumbnail(imageObj)}
-                className={`border rounded overflow-hidden cursor-pointer w-30 h-30 ${
-                  thumbnail === imageObj
+                className={`border rounded overflow-hidden cursor-pointer w-30 h-30 ${thumbnail === imageObj
                     ? "border-green-700"
                     : "border-gray-300"
-                }`}
+                  }`}
               >
                 <img
                   src={imageObj.image_url}
@@ -239,12 +257,32 @@ const ProductDetails = () => {
             ))}
           </div>
 
-          <div className="border border-gray-300 rounded overflow-hidden w-[500px] h-[500px]">
-            <img
-              src={thumbnail?.image_url || product.images[0].image_url}
-              alt="Selected product"
-              className="w-full h-full object-cover"
-            />
+          <div className="flex flex-col">
+            <div className="border border-gray-300 rounded overflow-hidden w-[500px] h-[500px]">
+              <img
+                src={thumbnail?.image_url || product.images[0].image_url}
+                alt="Selected product"
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Nút Favorite */}
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={toggleFavorite}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${isFavorited
+                    ? "bg-red-50 border border-red-200 text-red-500"
+                    : "bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100"
+                  }`}
+              >
+                <span className="text-xl">
+                  {isFavorited ? "❤️" : "🤍"}
+                </span>
+                <span>
+                  {isFavorited ? "Đã yêu thích" : "Thêm vào yêu thích"}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -254,26 +292,39 @@ const ProductDetails = () => {
           <h1 className="text-3xl font-bold mt-2">{product.name}</h1>
 
           {/* Rating summary */}
-          <div className="flex items-center gap-4 mt-2">
-            <StarRating rating={Math.round(averageRating)} />
-            <span className="text-gray-600">
-              ({averageRating.toFixed(1)} - {totalRatings} đánh giá)
-            </span>
+          <div className="flex flex-wrap items-center divide-x divide-gray-300">
+            <div className="flex items-center gap-2 pr-4">
+              <StarRating rating={Math.round(averageRating)} />
+              <span className="text-gray-600">({averageRating.toFixed(1)})</span>
+            </div>
+
+            <div className="flex items-center text-gray-700 px-4">
+              <span className="text-green-600 mr-1">🛒</span>
+              <p className="text-sm">
+                <span className="font-medium">{product.sold_quantity || 0}</span> đã bán
+              </p>
+            </div>
+
+            <div className="flex items-center text-gray-700 px-4">
+              <span className="text-blue-500 mr-1">👁️</span>
+              <p className="text-sm">
+                <span className="font-medium">{product.view_count || 0}</span> lượt xem
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4 mt-2">
-            <p className="text-2xl font-semibold text-green-700">
+          {/* Price info */}
+          <div className="flex items-center gap-4 mt-4">
+            <p className="text-4xl font-bold text-green-700">
               {formatCurrency(product.sale_price)}
             </p>
-            <p className="text-gray-500 line-through">
+            <p className="text-2xl text-gray-500 line-through">
               {formatCurrency(product.price)}
-            </p>
-            <p className="text-green-500 font-medium">
-              Số lượng đã bán: {product.sold_quantity}
             </p>
           </div>
 
           <p className="text-gray-600 mt-6">{product.description}</p>
+
 
           <div className="flex items-center gap-4 mt-10">
             {/* Quantity */}
@@ -327,7 +378,7 @@ const ProductDetails = () => {
       {/* Ratings & Reviews */}
       <div className="m-16">
         <h2 className="text-3xl font-semibold mb-6">Đánh giá sản phẩm</h2>
-        
+
         {/* Rating stats */}
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <div className="flex items-center gap-4">
@@ -394,11 +445,10 @@ const ProductDetails = () => {
                 <button
                   key={i}
                   onClick={() => setPage(i + 1)}
-                  className={`px-3 py-1 rounded ${
-                    page === i + 1
-                      ? "bg-green-700 text-white"
-                      : "bg-gray-200 text-gray-700"
-                  }`}
+                  className={`px-3 py-1 rounded ${page === i + 1
+                    ? "bg-green-700 text-white"
+                    : "bg-gray-200 text-gray-700"
+                    }`}
                 >
                   {i + 1}
                 </button>
@@ -419,7 +469,7 @@ const ProductDetails = () => {
               const primary_image =
                 product.images && product.images.length > 0
                   ? product.images.find((img) => img.is_primary)?.image_url ||
-                    product.images[0].image_url
+                  product.images[0].image_url
                   : "";
 
               return (

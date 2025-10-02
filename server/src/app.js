@@ -12,7 +12,9 @@ import vnpayRoutes from "./routes/vnpay.route.js";
 import zalopayRoutes from "./routes/zalopay.route.js";
 import voucherRoutes from "./routes/voucher.route.js";
 import ratingRoutes from "./routes/rating.route.js";
-
+import notificationRoutes from "./routes/notification.route.js";
+import chatbotRoutes from './routes/chatbot.route.js';
+import supportChatRoutes from './routes/supportChat.route.js';
 import cors from "cors";
 import {
   User,
@@ -30,7 +32,7 @@ app.use(
       "http://localhost:5173", // Frontend Vite
     ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: [
       "Content-Type",
       "Authorization",
@@ -40,14 +42,7 @@ app.use(
     optionsSuccessStatus: 200,
   })
 );
-console.log("Models loaded:", {
-  User: User.modelName,
-  Category: Category.modelName,
-  Product: Product.modelName,
-  Order: Order.modelName,
-  Cart: Cart.modelName,
-  HomeTownPost: HomeTownPost.modelName,
-});
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -86,4 +81,8 @@ app.use("/api/vouchers", voucherRoutes);
 // Rating
 app.use("/api/ratings", ratingRoutes);
 
+app.use("/api/notifications", notificationRoutes)
+// Thêm vào phần routes
+app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/support', supportChatRoutes);
 export default app;

@@ -29,6 +29,37 @@ const productService = {
     const res = await api.get(`api/products/${id}`);
     return res.data;
   },
+  toggleFavorite: async (productId) => {
+    try {
+      const response = await api.post(`/api/products/${productId}/favorite`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Lấy danh sách sản phẩm yêu thích
+  getFavorites: async (page = 1, limit = 12) => {
+    try {
+      const response = await api.get(
+        `/api/products/favorites?page=${page}&limit=${limit}`
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Lấy danh sách sản phẩm đã xem gần đây
+  getViewedProducts: async (page = 1, limit = 12) => {
+    try {
+      const response = await api.get(
+        `/api/products/viewed?page=${page}&limit=${limit}`
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
 
 export default productService;

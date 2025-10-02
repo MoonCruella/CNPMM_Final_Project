@@ -4,10 +4,12 @@ import {
   IconKey,
   IconLogout,
   IconReceipt2,
+  IconMessages, 
 } from "@tabler/icons-react";
 import { assets } from "../../assets/assets";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
+import SellerNotificationBell from './SellerNotificationBell';
 import { toast } from "sonner";
 
 const SellerLayout = () => {
@@ -21,6 +23,7 @@ const SellerLayout = () => {
     { link: "/seller/products", label: "Product List", icon: IconReceipt2 },
     { link: "/seller/orders", label: "Orders", icon: IconFingerprint },
     { link: "/seller/vouchers", label: "Vouchers", icon: IconKey },
+    { link: "/seller/support", label: "Support Chat", icon: IconMessages }, 
     { link: "/seller/my-account", label: "My Account", icon: IconKey },
   ];
 
@@ -34,17 +37,17 @@ const SellerLayout = () => {
       const loadingToast = toast.loading("Đang đăng xuất...");
       await logout();
       toast.dismiss(loadingToast);
-      navigate("/seller"); // điều hướng về trang login dành cho seller
+      navigate("/seller");
     } catch (error) {
       toast.error("Có lỗi xảy ra khi đăng xuất");
     }
   };
 
   return (
-    <div className="flex">
+    <div className="flex h-screen"> 
       {/* Sidebar */}
-      <nav className="h-screen w-[280px] p-6 flex flex-col bg-green-700">
-        <div className="flex-1">
+      <nav className="h-full w-[280px] p-6 flex flex-col bg-green-700">
+        <div className="flex-1 overflow-y-auto"> 
           {/* Header */}
           <div className="flex items-center justify-between pb-6 mb-9 border-b border-green-800">
             <div className="flex items-center gap-2">
@@ -61,36 +64,38 @@ const SellerLayout = () => {
           </div>
 
           {/* Links */}
-          {data.map((item) => {
-            const isActive = activePath === item.link;
-            return (
-              <Link
-                to={item.link}
-                key={item.label}
-                className={`flex items-center text-sm px-4 py-3 rounded-md font-medium transition-colors
-                  ${
-                    isActive
-                      ? "bg-white text-green-800 shadow"
-                      : "text-white hover:bg-green-800"
-                  }`}
-              >
-                <item.icon
-                  stroke={1.5}
-                  className={`mr-4 w-6 h-6 ${
-                    isActive ? "text-green-700" : "text-sky-300"
-                  }`}
-                />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+          <div className="space-y-1"> 
+            {data.map((item) => {
+              const isActive = activePath === item.link;
+              return (
+                <Link
+                  to={item.link}
+                  key={item.label}
+                  className={`flex items-center text-sm px-4 py-3 rounded-md font-medium transition-colors
+                    ${
+                      isActive
+                        ? "bg-white text-green-800 shadow"
+                        : "text-white hover:bg-green-800"
+                    }`}
+                >
+                  <item.icon
+                    stroke={1.5}
+                    className={`mr-4 w-6 h-6 ${
+                      isActive ? "text-green-700" : "text-sky-300"
+                    }`}
+                  />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
         {/* Footer */}
         <div className="pt-6 mt-6 border-t border-green-800">
           <button
             onClick={handleLogout}
-            className="flex items-center w-full text-sm text-white px-4 py-3 rounded-md font-medium hover:bg-green-800"
+            className="flex items-center w-full text-sm text-white px-4 py-3 rounded-md font-medium hover:bg-green-800 transition-colors"
           >
             <IconLogout className="mr-4 w-6 h-6 text-sky-300" stroke={1.5} />
             <span>Logout</span>
@@ -98,9 +103,22 @@ const SellerLayout = () => {
         </div>
       </nav>
 
-      {/* Nội dung trang con */}
-      <main className="flex-1 p-6 bg-gray-50 overflow-y-auto">
-        <Outlet />
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col bg-gray-50 overflow-hidden"> 
+        {/* Header Bar */}
+        <div className="bg-white shadow-sm p-4 flex justify-between items-center border-b">
+          <h1 className="text-xl font-semibold text-green-700">
+            {data.find(item => item.link === activePath)?.label || 'Dashboard'}
+          </h1>
+          <div className="flex items-center gap-4">
+            <SellerNotificationBell />
+          </div>
+        </div>
+        
+        {/* Content Area - scrollable */}
+        <div className="flex-1 overflow-y-auto"> 
+          <Outlet />
+        </div>
       </main>
     </div>
   );

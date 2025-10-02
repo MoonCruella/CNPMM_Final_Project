@@ -23,13 +23,16 @@ import SellerLogin from "./pages/seller/SellerLogin";
 import SellerLayout from "./components/seller/SellerLayout";
 import ProductList from "./components/seller/ProductList";
 import Orders from "./components/seller/Orders";
-import Notifications from "./components/seller/Notifications";
+import Notifications from "./components/seller/SellerNotificationBell";
 import MyAccount from "./components/seller/MyAccount";
 import DashboardSeller from "./components/seller/DashboardSeller";
 import { useAppContext } from "./context/AppContext";
 import VoucherCard from "./components/user/item/VoucherCard";
 import Vouchers from "./components/seller/Vouchers";
-
+import TokenTester from './components/TokenTester';
+import Chatbot from './components/user/Chatbot'; 
+import SupportChat from './components/user/SupportChat';
+import SupportChatSeller from './components/seller/SupportChatSeller';
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
   const { showUserLogin, isSeller } = useAppContext();
@@ -49,9 +52,11 @@ const App = () => {
         <Route path="/reset-password" element={<NewPasswordPage />} />
         <Route path="/upload-to-cloudinary" element={<UploadImages />} />
 
+        <Route path="/token-tester" element={<TokenTester />} />
+
         <Route path="/cart" element={<CartPage />} />
         <Route path="/products" element={<AllProducts />} />
-        <Route path="//my-orders" element={<MyOrdersPage />} />
+        <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/my-profile" element={<ProfilePage />} />
         <Route path="/voucher-list" element={<VoucherCard />} />
         <Route path="/checkout" element={<CheckoutPage />} />
@@ -66,9 +71,12 @@ const App = () => {
           <Route path="notifications" element={<Notifications />} />
           <Route path="my-account" element={<MyAccount />} />
           <Route path="vouchers" element={<Vouchers />} />
+          <Route path="support" element={<SupportChatSeller />} />
         </Route>
       </Routes>
       {!isSellerPath && <Footer />}
+      {!isSellerPath && <SupportChat />}
+      {!isSellerPath && <Chatbot />}
     </div>
   );
 };
