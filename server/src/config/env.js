@@ -17,4 +17,11 @@ export const config = {
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   },
+  
+  clarifai: {
+    pat: process.env.CLARIFAI_PAT,
+    user_id: 'google',
+    app_id: 'generative',
+    model_id: 'gemini-pro'
+  }
 };

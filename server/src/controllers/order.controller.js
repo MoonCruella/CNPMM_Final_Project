@@ -3,7 +3,7 @@ import Product from "../models/product.model.js";
 import User from "../models/user.model.js";
 import mongoose from "mongoose";
 import response from "../helpers/response.js";
-
+import * as notificationService from '../services/notification.service.js';
 //Get user orders with filter and pagination
 export const getUserOrders = async (req, res) => {
   try {
@@ -209,7 +209,7 @@ export const getOrderById = async (req, res) => {
   }
 };
 
-// ✅ Cancel order
+//  Cancel order
 export const cancelOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -282,7 +282,7 @@ export const autoConfirmOrders = async () => {
   }
 };
 
-// ✅ Reorder - Add items to cart again
+//   Reorder - Add items to cart again
 export const reorder = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -485,6 +485,7 @@ export const createOrder = async (req, res) => {
     const data = {
       order: populatedOrder,
     };
+    await notificationService.notifyNewOrder(newOrder);
 
     return response.sendSuccess(res, data, "Đặt hàng thành công", 201);
   } catch (error) {
@@ -579,7 +580,11 @@ export const updateShippingInfo = async (req, res) => {
         400
       );
     }
-    // ✅ Trường hợp đặc biệt: duyệt yêu cầu hủy (cancel_request → cancelled)
+    
+    // Lưu trạng thái trước khi cập nhật để thông báo
+    const previousStatus = order.status;
+    
+    //   Trường hợp đặc biệt: duyệt yêu cầu hủy (cancel_request → cancelled)
     if (order.status === "cancel_request") {
       if (shipping_status === "cancelled") {
         order.status = "cancelled";
@@ -591,6 +596,14 @@ export const updateShippingInfo = async (req, res) => {
           note: note || "Shop đã chấp nhận yêu cầu hủy đơn",
         });
         await order.save();
+        
+        // Gửi thông báo khi đơn hàng bị hủy
+        try {
+          await notificationService.notifyOrderStatusUpdate(order, previousStatus);
+        } catch (notifyError) {
+          console.error('Không thể gửi thông báo cập nhật đơn hàng:', notifyError);
+        }
+        
         return response.sendSuccess(
           res,
           { shipping: order },
@@ -626,18 +639,45 @@ export const updateShippingInfo = async (req, res) => {
     if (shipping_status && !statusOrder.includes(shipping_status)) {
       return response.sendError(res, "Trạng thái không hợp lệ", 400);
     }
+    
+    // Biến để theo dõi xem trạng thái có thay đổi không
+    let statusChanged = false;
+    
     // Chỉ cho phép chuyển sang trạng thái tiếp theo
     if (
       shipping_status &&
       (nextIndex === currentIndex + 1 || shipping_status === order.status)
     ) {
+      statusChanged = shipping_status !== order.status;
       order.status = shipping_status;
+      
       // Ghi nhận thời gian cho từng trạng thái
       if (shipping_status === "confirmed") order.confirmed_at = new Date();
       if (shipping_status === "processing") order.processing_at = new Date();
       if (shipping_status === "shipped") order.shipped_at = new Date();
-      if (shipping_status === "delivered") order.delivered_at = new Date();
-
+      if (shipping_status === "delivered") {
+        order.delivered_at = new Date();
+        try {
+          for (const item of order.items) {
+            await Product.findByIdAndUpdate(
+              item.product_id,
+              {
+                $inc: {
+                  purchase_count: item.quantity,
+                  sold_quantity: item.quantity,
+                },
+                $addToSet: { purchase_users: order.user_id },
+              },
+              { new: true }
+            );
+          }
+          console.log(
+            `Đã cập nhật số lượng người mua cho đơn hàng ${order._id}`
+          );
+        } catch (updateError) {
+          console.error("Lỗi khi cập nhật số lượng người mua:", updateError);
+        }
+      }
       order.history = order.history || [];
       order.history.push({
         status: shipping_status,
@@ -658,10 +698,23 @@ export const updateShippingInfo = async (req, res) => {
       );
     }
 
+    // Kiểm tra xem có cập nhật carrier hoặc tracking number không
+    const carrierChanged = carrier && carrier !== order.carrier;
+    const trackingChanged = tracking_number && tracking_number !== order.tracking_number;
+    
     if (carrier) order.carrier = carrier;
     if (tracking_number) order.tracking_number = tracking_number;
 
     await order.save();
+    
+    // Gửi thông báo nếu có thay đổi trạng thái hoặc thông tin vận chuyển quan trọng
+    if (statusChanged || (order.status === "shipped" && (carrierChanged || trackingChanged))) {
+      try {
+        await notificationService.notifyOrderStatusUpdate(order, previousStatus);
+      } catch (notifyError) {
+        console.error('Không thể gửi thông báo cập nhật đơn hàng:', notifyError);
+      }
+    }
 
     return response.sendSuccess(
       res,

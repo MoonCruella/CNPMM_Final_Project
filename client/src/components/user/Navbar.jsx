@@ -5,6 +5,7 @@ import { useAppContext } from "../../context/AppContext.jsx";
 import { useUserContext } from "../../context/UserContext.jsx";
 import { toast } from "sonner";
 import { useCartContext } from "@/context/CartContext.jsx";
+import NotificationBell from './NotificationBell';
 import avatarService from "@/services/avatarService.js";
 import ca from "zod/v4/locales/ca.js";
 
@@ -108,6 +109,7 @@ const Navbar = () => {
             {items.length}
           </button>
         </div>
+        {isAuthenticated && <NotificationBell />}
 
         {/* User Menu */}
         {!isAuthenticated || !user ? (
@@ -130,8 +132,7 @@ const Navbar = () => {
                 className="w-10 h-10 rounded-full border-2 border-gray-200 hover:border-green-500 transition-colors"
                 alt="Profile"
                 onError={(e) => {
-                  console.error("Avatar load error:", e.target.src);
-                  // ✅ Better fallback handling
+                  // Better fallback handling
                   const name = user?.name || user?.email || "User";
                   e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
                     name
@@ -147,7 +148,7 @@ const Navbar = () => {
               ></div>
             </div>
 
-            {/* ✅ Dropdown Menu with proper positioning and transitions */}
+            {/* Dropdown Menu with proper positioning and transitions */}
             <div
               className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${
                 isUserMenuOpen

@@ -1,4 +1,4 @@
-import api from "./api";
+import api , { refreshToken as apiRefreshToken } from "./api";
 
 const authService = {
   // Token Management
@@ -55,12 +55,12 @@ const authService = {
     }
   },
 
-  // ✅ Fixed getCurrentUser - Correct response structure
+  // Fixed getCurrentUser - Correct response structure
   getCurrentUser: async () => {
     try {
       const res = await api.get("/api/auth/get-user");
 
-      // ✅ Based on your actual response: { status: true, user: {...} }
+      // Based on your actual response: { status: true, user: {...} }
       if (res.data && res.data.status === true && res.data.user) {
         const apiUser = res.data.user;
 
@@ -103,7 +103,7 @@ const authService = {
     }
   },
 
-  // ✅ Updated login with better error handling
+  // Updated login with better error handling
   login: async (email, password) => {
     try {
       const res = await api.post("/api/auth/login", { email, password });
@@ -120,7 +120,7 @@ const authService = {
         } catch (getUserError) {
           console.error("getCurrentUser failed after login:", getUserError);
 
-          // ✅ Fallback: Extract user data from login response or JWT
+          // Fallback: Extract user data from login response or JWT
           let fallbackUser = null;
 
           // Try from login response first
@@ -187,34 +187,18 @@ const authService = {
   },
 
   refreshToken: async () => {
-    const refreshToken = authService.getRefreshToken();
-    if (!refreshToken) throw new Error("No refresh token");
-
     try {
-      const res = await api.post("/api/auth/refresh-token", { refreshToken });
-
-      if (res.data.success) {
-        const { accessToken, refreshToken: newRefreshToken } = res.data.data;
-
-        // Save new tokens
-        authService.setTokens(accessToken, newRefreshToken);
-
-        // Try to fetch updated user data
-        try {
-          await authService.getCurrentUser();
-        } catch (getUserError) {
-          console.error(
-            "getCurrentUser failed after token refresh:",
-            getUserError
-          );
-          // Continue with existing user data - don't throw error
-        }
-
-        return accessToken;
-      } else {
-        authService.removeTokens();
-        throw new Error(res.data.message || "Token refresh failed");
+      // Sử dụng hàm refreshToken từ api.js
+      const newAccessToken = await apiRefreshToken();
+      
+      // Cập nhật user data sau khi refresh
+      try {
+        await authService.getCurrentUser();
+      } catch (getUserError) {
+        console.error("getCurrentUser failed after token refresh:", getUserError);
       }
+      
+      return newAccessToken;
     } catch (error) {
       authService.removeTokens();
       throw error;

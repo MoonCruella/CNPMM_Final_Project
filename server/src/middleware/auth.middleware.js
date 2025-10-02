@@ -29,7 +29,24 @@ export const authenticateToken = async (req, res, next) => {
   
   }
 };
-
+// middleware để kiểm tra xác thực nhưng không yêu cầu
+export const checkAuth = (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization']; // Sử dụng cách viết giống authenticateToken
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token) {
+      const decoded = verifyAccessToken(token);
+      console.log("DEBUG - checkAuth decoded token:", decoded); // Thêm log để debug
+      req.user = decoded;
+    }
+    
+    next();
+  } catch (error) {
+    console.log("DEBUG - checkAuth error:", error); // Thêm log để debug
+    next();
+  }
+};
 // Middleware kiểm tra role admin
 export const requireAdmin = async (req, res, next) => {
   try {

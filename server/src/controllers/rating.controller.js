@@ -1,7 +1,7 @@
 import Rating from "../models/rating.model.js";
 import Order from "../models/order.model.js";
 import mongoose from "mongoose";
-
+import * as notificationService from '../services/notification.service.js';
 /**
  * Tạo rating mới cho sản phẩm
  */
@@ -47,6 +47,8 @@ export const createRating = async (req, res) => {
 
     const populatedRating = await newRating.populate("user_id", "name email");
     
+    await notificationService.notifyNewRating(newRating);
+
     res.status(201).json({
       success: true,
       message: "Rating created successfully",
