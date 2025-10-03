@@ -40,8 +40,8 @@ const CheckoutForm = () => {
     <div>
       {/* Payment Method */}
       <div>
-        <h4 className="text-xl font-semibold mb-4">Phương thức thanh toán</h4>
-        <div className="space-y-3 w-full sm:w-2/3">
+        <h4 className="text-lg font-semibold mb-3">Phương thức thanh toán</h4>
+        <div className="grid sm:grid-cols-3 gap-3">
           {[
             {
               value: "cod",
@@ -50,23 +50,42 @@ const CheckoutForm = () => {
             },
             { value: "vnpay", label: "VNPAY", icon: assets.vnpay_icon },
             { value: "zalopay", label: "ZaloPay", icon: assets.zalo_pay },
-          ].map((method) => (
-            <label
-              key={method.value}
-              className="flex items-center gap-3 border rounded-lg p-3 cursor-pointer hover:bg-gray-50"
-            >
-              <input
-                type="radio"
-                name="payment"
-                value={method.value}
-                checked={paymentMethod === method.value}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-5 h-5 accent-green-600"
-              />
-              <img src={method.icon} alt={method.label} className="w-8 h-8" />
-              <span>{method.label}</span>
-            </label>
-          ))}
+          ].map((method) => {
+            const isSelected = paymentMethod === method.value;
+            return (
+              <label
+                key={method.value}
+                className={`flex items-center gap-2 border rounded-lg p-3 cursor-pointer transition
+            ${
+              isSelected
+                ? "border-green-600 bg-green-50 shadow-sm"
+                : "border-gray-200 hover:shadow-sm"
+            }
+          `}
+              >
+                <input
+                  type="radio"
+                  name="payment"
+                  value={method.value}
+                  checked={isSelected}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="hidden"
+                />
+                <img
+                  src={method.icon}
+                  alt={method.label}
+                  className="w-8 h-8 object-contain"
+                />
+                <span
+                  className={`font-medium text-sm ${
+                    isSelected ? "text-green-700" : "text-gray-800"
+                  }`}
+                >
+                  {method.label}
+                </span>
+              </label>
+            );
+          })}
         </div>
       </div>
 

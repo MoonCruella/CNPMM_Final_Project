@@ -21,6 +21,10 @@ import cod_icon from "./cod_icon.png";
 import page_banner from "./page_banner.jpg";
 import coin_icon from "./coin_icon.png";
 import voucher_icon from "./voucher_icon.png";
+import freeship_icon from "./freeship_icon.png";
+import promo_code_icon from "./promo_code_icon.png";
+import edit_icon from "./edit_icon.png";
+import delete_icon from "./delete_icon.png";
 export const assets = {
   logo,
   search_icon,
@@ -29,8 +33,11 @@ export const assets = {
   voucher_icon,
   profile_icon,
   banner_main,
+  edit_icon,
+  delete_icon,
   banner_main_1,
   banner_main_2,
+  promo_code_icon,
   banner_main_3,
   right_arrow_icon,
   squad_icon,
@@ -45,6 +52,7 @@ export const assets = {
   zalo_pay,
   cod_icon,
   page_banner,
+  freeship_icon,
 };
 
 export const categoriesColors = [

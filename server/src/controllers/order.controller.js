@@ -1,9 +1,10 @@
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import User from "../models/user.model.js";
+import Voucher from "../models/voucher.model.js";
 import mongoose from "mongoose";
 import response from "../helpers/response.js";
-import * as notificationService from '../services/notification.service.js';
+import * as notificationService from "../services/notification.service.js";
 //Get user orders with filter and pagination
 export const getUserOrders = async (req, res) => {
   try {
@@ -348,6 +349,7 @@ export const reorder = async (req, res) => {
         price: product.price, // Use current price
         quantity: item.quantity,
         total: product.price * item.quantity,
+        sale_price: product.sale_price || null,
       });
     }
 
@@ -379,8 +381,16 @@ export const reorder = async (req, res) => {
 export const createOrder = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { items, shipping_info, payment_method, notes = "" } = req.body;
-
+    const {
+      items,
+      shipping_info,
+      payment_method,
+      notes = "",
+      voucherCodes = {},
+      freeship_value,
+      discount_value,
+    } = req.body;
+    const { freeship, discount } = voucherCodes;
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
       return response.sendError(
@@ -413,12 +423,10 @@ export const createOrder = async (req, res) => {
       .substr(2, 4)
       .toUpperCase()}`;
 
-    // Calculate totals and validate products
     let totalAmount = 0;
     const orderItems = [];
 
     for (const item of items) {
-      // Validate product_id format
       if (!mongoose.Types.ObjectId.isValid(item.product_id)) {
         return response.sendError(
           res,
@@ -428,7 +436,6 @@ export const createOrder = async (req, res) => {
       }
 
       const product = await Product.findById(item.product_id);
-
       if (!product) {
         return response.sendError(
           res,
@@ -437,7 +444,6 @@ export const createOrder = async (req, res) => {
         );
       }
 
-      // Validate quantity
       if (!item.quantity || item.quantity < 1) {
         return response.sendError(
           res,
@@ -446,7 +452,9 @@ export const createOrder = async (req, res) => {
         );
       }
 
-      const itemTotal = product.price * item.quantity;
+      const itemTotal = product.sale_price
+        ? product.sale_price * item.quantity
+        : product.price * item.quantity;
       totalAmount += itemTotal;
 
       orderItems.push({
@@ -454,20 +462,24 @@ export const createOrder = async (req, res) => {
         quantity: item.quantity,
         price: product.price,
         total: itemTotal,
+        sale_price: product.sale_price || null,
       });
     }
 
-    // Calculate shipping fee (you can implement your logic here)
     const shippingFee = 30000;
     totalAmount += shippingFee;
+    totalAmount -= discount_value || 0;
+    totalAmount -= freeship_value || 0;
 
-    // Create order
+    // Tạo đơn
     const newOrder = new Order({
       user_id: userId,
       order_number: orderNumber,
       items: orderItems,
       total_amount: totalAmount,
       shipping_fee: shippingFee,
+      freeship_value: freeship_value || 0,
+      discount_value: discount_value || 0,
       payment_method,
       shipping_info,
       notes,
@@ -476,9 +488,25 @@ export const createOrder = async (req, res) => {
 
     await newOrder.save();
 
+    // Tăng usedCount cho voucher freeship nếu có
+    if (freeship) {
+      await Voucher.findOneAndUpdate(
+        { code: freeship },
+        { $inc: { usedCount: 1 } }
+      );
+    }
+
+    // Tăng usedCount cho voucher discount nếu có
+    if (discount) {
+      await Voucher.findOneAndUpdate(
+        { code: discount },
+        { $inc: { usedCount: 1 } }
+      );
+    }
+
     // Populate the created order
     const populatedOrder = await Order.findById(newOrder._id)
-      .populate("items.product_id", "name images price")
+      .populate("items.product_id", "name images price sale_price")
       .populate("user_id", "name email phone")
       .lean();
 
@@ -580,10 +608,10 @@ export const updateShippingInfo = async (req, res) => {
         400
       );
     }
-    
+
     // Lưu trạng thái trước khi cập nhật để thông báo
     const previousStatus = order.status;
-    
+
     //   Trường hợp đặc biệt: duyệt yêu cầu hủy (cancel_request → cancelled)
     if (order.status === "cancel_request") {
       if (shipping_status === "cancelled") {
@@ -596,14 +624,20 @@ export const updateShippingInfo = async (req, res) => {
           note: note || "Shop đã chấp nhận yêu cầu hủy đơn",
         });
         await order.save();
-        
+
         // Gửi thông báo khi đơn hàng bị hủy
         try {
-          await notificationService.notifyOrderStatusUpdate(order, previousStatus);
+          await notificationService.notifyOrderStatusUpdate(
+            order,
+            previousStatus
+          );
         } catch (notifyError) {
-          console.error('Không thể gửi thông báo cập nhật đơn hàng:', notifyError);
+          console.error(
+            "Không thể gửi thông báo cập nhật đơn hàng:",
+            notifyError
+          );
         }
-        
+
         return response.sendSuccess(
           res,
           { shipping: order },
@@ -639,10 +673,10 @@ export const updateShippingInfo = async (req, res) => {
     if (shipping_status && !statusOrder.includes(shipping_status)) {
       return response.sendError(res, "Trạng thái không hợp lệ", 400);
     }
-    
+
     // Biến để theo dõi xem trạng thái có thay đổi không
     let statusChanged = false;
-    
+
     // Chỉ cho phép chuyển sang trạng thái tiếp theo
     if (
       shipping_status &&
@@ -650,7 +684,7 @@ export const updateShippingInfo = async (req, res) => {
     ) {
       statusChanged = shipping_status !== order.status;
       order.status = shipping_status;
-      
+
       // Ghi nhận thời gian cho từng trạng thái
       if (shipping_status === "confirmed") order.confirmed_at = new Date();
       if (shipping_status === "processing") order.processing_at = new Date();
@@ -700,19 +734,29 @@ export const updateShippingInfo = async (req, res) => {
 
     // Kiểm tra xem có cập nhật carrier hoặc tracking number không
     const carrierChanged = carrier && carrier !== order.carrier;
-    const trackingChanged = tracking_number && tracking_number !== order.tracking_number;
-    
+    const trackingChanged =
+      tracking_number && tracking_number !== order.tracking_number;
+
     if (carrier) order.carrier = carrier;
     if (tracking_number) order.tracking_number = tracking_number;
 
     await order.save();
-    
+
     // Gửi thông báo nếu có thay đổi trạng thái hoặc thông tin vận chuyển quan trọng
-    if (statusChanged || (order.status === "shipped" && (carrierChanged || trackingChanged))) {
+    if (
+      statusChanged ||
+      (order.status === "shipped" && (carrierChanged || trackingChanged))
+    ) {
       try {
-        await notificationService.notifyOrderStatusUpdate(order, previousStatus);
+        await notificationService.notifyOrderStatusUpdate(
+          order,
+          previousStatus
+        );
       } catch (notifyError) {
-        console.error('Không thể gửi thông báo cập nhật đơn hàng:', notifyError);
+        console.error(
+          "Không thể gửi thông báo cập nhật đơn hàng:",
+          notifyError
+        );
       }
     }
 

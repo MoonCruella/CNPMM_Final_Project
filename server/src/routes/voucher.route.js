@@ -5,7 +5,7 @@ import {
   updateVoucher,
   deleteVoucher,
   applyVoucher,
-  applyAutoFreeship,
+  getAvailableVouchers,
 } from "../controllers/voucher.controller.js";
 
 import { authenticateToken } from "../middleware/auth.middleware.js";
@@ -20,6 +20,5 @@ router.delete("/:id", authenticateToken, deleteVoucher); // Xóa voucher
 
 // 📌 User
 router.post("/apply", authenticateToken, applyVoucher); // Nhập tay mã
-router.post("/apply/freeship", authenticateToken, applyAutoFreeship); // Freeship tự động
-
+router.get("/get-all", authenticateToken, getAvailableVouchers); // Lấy danh sách voucher không phân trang
 export default router;

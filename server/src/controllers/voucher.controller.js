@@ -27,7 +27,7 @@ export const getAllVouchers = async (req, res) => {
       startDate,
       endDate,
       page = 1,
-      limit = 2,
+      limit = 10,
     } = req.query;
 
     let filter = {};
@@ -64,6 +64,28 @@ export const getAllVouchers = async (req, res) => {
   }
 };
 
+// 📌 User: Lấy danh sách voucher (không phân trang) - trả về tất cả voucher đang có trong hệ thống
+// 📌 User: Lấy danh sách voucher đang khả dụng
+export const getAvailableVouchers = async (req, res) => {
+  try {
+    const now = new Date();
+
+    const vouchers = await Voucher.find({
+      active: true,
+      startDate: { $lte: now.toISOString() },
+      endDate: { $gte: now.toISOString() },
+      $expr: { $lt: ["$usedCount", "$usageLimit"] },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({ success: true, vouchers });
+  } catch (err) {
+    console.error("getAvailableVouchers error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // 📌 Admin: Cập nhật voucher
 export const updateVoucher = async (req, res) => {
   try {
@@ -95,19 +117,27 @@ export const applyVoucher = async (req, res) => {
 
     const voucher = await Voucher.findOne({ code, active: true });
     if (!voucher)
-      return res.status(404).json({ message: "Voucher không tồn tại" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Voucher không tồn tại" });
 
     const now = new Date();
     if (voucher.startDate > now || voucher.endDate < now) {
-      return res.status(400).json({ message: "Voucher đã hết hạn" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Voucher đã hết hạn" });
     }
 
     if (orderValue < voucher.minOrderValue) {
-      return res.status(400).json({ message: "Chưa đạt giá trị tối thiểu" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Chưa đạt giá trị tối thiểu" });
     }
 
     if (voucher.usageLimit > 0 && voucher.usedCount >= voucher.usageLimit) {
-      return res.status(400).json({ message: "Voucher đã hết lượt sử dụng" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Voucher đã hết lượt sử dụng" });
     }
 
     let discount = 0;
@@ -126,37 +156,8 @@ export const applyVoucher = async (req, res) => {
     // Voucher FREESHIP đã được tự động áp dụng, không cần nhập mã
 
     res.json({
+      success: true,
       message: "Áp dụng thành công",
-      discount,
-      finalPrice: orderValue + shippingFee - discount,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// 📌 User: Freeship tự động (không cần nhập mã)
-export const applyAutoFreeship = async (req, res) => {
-  try {
-    const { orderValue } = req.body;
-
-    const now = new Date();
-
-    // tìm voucher FREESHIP đang active và hợp lệ
-    const voucher = await Voucher.findOne({
-      type: "FREESHIP",
-      active: true,
-      startDate: { $lte: now },
-      endDate: { $gte: now },
-      minOrderValue: { $lte: orderValue },
-    });
-
-    let discount = 30000; // mặc định freeship 30k
-
-    res.json({
-      message: voucher
-        ? "Tự động áp dụng freeship"
-        : "Không có freeship tự động",
       discount,
       finalPrice: orderValue + shippingFee - discount,
     });

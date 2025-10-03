@@ -25,7 +25,7 @@ const CartItemRow = ({ item, updateQuantity, removeFromCart }) => {
           <p className="text-sm text-gray-500">
             {salePrice ? (
               <>
-                <span className="text-red-600">
+                <span className="text-green-700">
                   {salePrice.toLocaleString("vi-VN")}₫
                 </span>{" "}
                 <span className="line-through text-gray-400">
@@ -33,14 +33,16 @@ const CartItemRow = ({ item, updateQuantity, removeFromCart }) => {
                 </span>
               </>
             ) : (
-              <span>{price.toLocaleString("vi-VN")}₫</span>
+              <span className="text-green-700">
+                {price.toLocaleString("vi-VN")}₫
+              </span>
             )}
           </p>
           <button
             onClick={() => removeFromCart(item._id)}
-            className="text-xs text-red-500 hover:underline mt-1"
+            className="text-xs text-red-600 hover:underline mt-1"
           >
-            Remove
+            Xóa
           </button>
         </div>
       </td>
