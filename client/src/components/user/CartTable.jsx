@@ -30,7 +30,7 @@ const CartTable = ({ cartItems, updateQuantity, removeFromCart }) => {
                   colSpan="3"
                   className="py-6 text-center text-gray-500 font-medium"
                 >
-                  Your cart is empty.
+                  Giỏ hàng trống
                 </td>
               </tr>
             )}

@@ -55,6 +55,21 @@ const voucherService = {
     });
     return res.data;
   },
+
+  // 📌 6. Áp dụng voucher freeship tự động (User)
+  applyAutoFreeship: async (orderValue, shippingFee) => {
+    const res = await privateApi.post("/api/vouchers/apply/freeship", {
+      orderValue,
+      shippingFee,
+    });
+    return res.data;
+  },
+
+  // 📌 1.x Lấy danh sách voucher cho user (không phân trang)
+  getAvailable: async (params = {}) => {
+    const res = await privateApi.get("/api/vouchers/get-all", { params });
+    return res.data;
+  },
 };
 
 export default voucherService;

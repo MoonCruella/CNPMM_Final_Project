@@ -1,47 +1,63 @@
+// ...existing code...
 import React from "react";
 import { assets } from "@/assets/assets";
 
 export default function VoucherCard({
+  type = "discount", // "freeship" or "discount"
   labelLeft,
+  isPercent,
   discountValue,
   maxDiscount,
   minOrder,
   expireText,
-  conditionLink,
-  quantity,
   checked,
   onCheck,
 }) {
+  const leftBgClass = type === "freeship" ? "bg-[#009688]" : "bg-[#fb5a1d]";
+  const accentColor = type === "freeship" ? "#009688" : "#f53d2d";
+
+  // use freeship icon when type is freeship
+  const iconSrc =
+    type === "freeship" && assets.freeship_icon
+      ? assets.freeship_icon
+      : assets.voucher_icon;
+  const iconAlt = type === "freeship" ? "Freeship" : "Voucher";
+
   return (
-    <div className="flex items-stretch w-[300px] rounded-lg shadow-sm overflow-hidden border">
-      {/* Left red area */}
-      <div className="bg-[#f53d2d] flex flex-col justify-center items-center w-20 p-2 relative">
-        <img src={assets.voucher_icon} alt="Voucher" className="w-8 h-8 mb-1" />
+    <div className="flex items-stretch w-[360px] rounded-lg shadow-sm overflow-hidden border">
+      {/* Left colored area */}
+      <div
+        className={`${leftBgClass} flex flex-col justify-center items-center w-20 p-3 relative`}
+      >
+        <img src={iconSrc} alt={iconAlt} className="w-8 h-8 mb-1" />
         <p className="text-white font-medium text-center text-xs leading-tight">
           {labelLeft}
         </p>
       </div>
 
       {/* Right info area */}
-      <div className="flex-1 bg-white p-2 relative">
-        <h3 className="text-sm font-semibold text-gray-900 leading-snug">
-          Giảm {discountValue} Giảm tối đa {maxDiscount}
-        </h3>
-        <p className="text-gray-700 text-xs mt-0.5">Đơn tối thiểu {minOrder}</p>
-
-        <p className="text-gray-500 text-[11px] mt-1">
-          HSD: {expireText}{" "}
-          <a href={conditionLink} className="text-blue-500 underline">
-            Điều kiện
-          </a>
+      <div className="flex-1 bg-white p-3 relative hover:shadow cursor-pointer">
+        {type === "freeship" ? (
+          <h3 className="text-sm font-semibold text-gray-900 my-2 leading-snug">
+            Giảm {maxDiscount}
+          </h3>
+        ) : isPercent === true ? (
+          <h3 className="text-sm font-semibold text-gray-900 my-2 leading-snug">
+            Giảm {discountValue}{" "}
+            <span className="font-medium ">Giảm tối đa {maxDiscount}</span>
+          </h3>
+        ) : (
+          <h3 className="text-sm font-semibold text-gray-900 my-2 leading-snug">
+            Giảm {discountValue}
+          </h3>
+        )}
+        <p className="text-gray-900 text-xs my-2  mt-0.5">
+          Đơn tối thiểu {minOrder}
         </p>
 
-        {/* quantity badge */}
-        {quantity && (
-          <div className="absolute top-1 right-1 bg-[#ffe7e0] text-[#f53d2d] text-xs font-bold px-1.5 py-0.5 rounded-full">
-            x{quantity}
-          </div>
-        )}
+        <p className="text-gray-500 text-[11px] my-2 mt-1">
+          HSD: {expireText}{" "}
+        </p>
 
         {/* radio circle */}
         <div className="absolute top-1/2 right-1 -translate-y-1/2">
@@ -49,7 +65,8 @@ export default function VoucherCard({
             type="radio"
             checked={checked}
             onChange={onCheck}
-            className="w-4 h-4 rounded-full border-gray-400 text-[#f53d2d] focus:ring-[#f53d2d]"
+            className="w-4 h-4 mx-2 rounded-full border-gray-400"
+            style={{ accentColor }}
           />
         </div>
       </div>

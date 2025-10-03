@@ -1,58 +1,75 @@
 import React, { useMemo, useCallback } from "react";
-import { X, Package, Truck, CheckCircle, XCircle, Clock, MapPin, CreditCard, FileText } from "lucide-react";
+import {
+  X,
+  Package,
+  Truck,
+  CheckCircle,
+  XCircle,
+  Clock,
+  MapPin,
+  CreditCard,
+  FileText,
+} from "lucide-react";
 
-const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) => {
+const OrderDetailModal = ({
+  order,
+  isOpen,
+  onClose,
+  onCancelOrder,
+  onReorder,
+}) => {
   // ✅ Memoize computed values
   const computedValues = useMemo(() => {
     if (!order) return {};
 
+    console.log("Order in OrderDetailModal:", order);
     const formatDate = (dateString) => {
       if (!dateString) return null;
-      return new Date(dateString).toLocaleDateString('vi-VN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      return new Date(dateString).toLocaleDateString("vi-VN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       });
     };
 
     const formatCurrency = (amount) => {
-      return Number(amount).toLocaleString('vi-VN') + '₫';
+      return Number(amount).toLocaleString("vi-VN") + "₫";
     };
 
     const getStatusInfo = (status) => {
       const statusMap = {
         pending: {
-          label: 'Chờ xác nhận',
-          color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+          label: "Chờ xác nhận",
+          color: "bg-yellow-100 text-yellow-800 border-yellow-200",
           icon: Clock,
-          description: 'Đơn hàng đang chờ được xác nhận'
+          description: "Đơn hàng đang chờ được xác nhận",
         },
         processing: {
-          label: 'Đang xử lý',
-          color: 'bg-blue-100 text-blue-800 border-blue-200',
+          label: "Đang xử lý",
+          color: "bg-blue-100 text-blue-800 border-blue-200",
           icon: Package,
-          description: 'Đơn hàng đang được chuẩn bị'
+          description: "Đơn hàng đang được chuẩn bị",
         },
         shipped: {
-          label: 'Đang giao hàng',
-          color: 'bg-purple-100 text-purple-800 border-purple-200',
+          label: "Đang giao hàng",
+          color: "bg-purple-100 text-purple-800 border-purple-200",
           icon: Truck,
-          description: 'Đơn hàng đang trên đường giao đến bạn'
+          description: "Đơn hàng đang trên đường giao đến bạn",
         },
         delivered: {
-          label: 'Đã giao thành công',
-          color: 'bg-green-100 text-green-800 border-green-200',
+          label: "Đã giao thành công",
+          color: "bg-green-100 text-green-800 border-green-200",
           icon: CheckCircle,
-          description: 'Đơn hàng đã được giao thành công'
+          description: "Đơn hàng đã được giao thành công",
         },
         cancelled: {
-          label: 'Đã hủy',
-          color: 'bg-red-100 text-red-800 border-red-200',
+          label: "Đã hủy",
+          color: "bg-red-100 text-red-800 border-red-200",
           icon: XCircle,
-          description: 'Đơn hàng đã bị hủy'
-        }
+          description: "Đơn hàng đã bị hủy",
+        },
       };
       return statusMap[status] || statusMap.pending;
     };
@@ -60,45 +77,47 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
     const getTimeline = () => {
       const timeline = [
         {
-          status: 'pending',
-          label: 'Đặt hàng',
+          status: "pending",
+          label: "Đặt hàng",
           date: order.created_at,
           completed: true,
-          description: 'Đơn hàng đã được tạo thành công'
-        }
+          description: "Đơn hàng đã được tạo thành công",
+        },
       ];
 
-      if (order.status !== 'cancelled') {
+      if (order.status !== "cancelled") {
         timeline.push(
           {
-            status: 'processing',
-            label: 'Xác nhận & Chuẩn bị',
+            status: "processing",
+            label: "Xác nhận & Chuẩn bị",
             date: order.confirmed_at,
-            completed: ['processing', 'shipped', 'delivered'].includes(order.status),
-            description: 'Đơn hàng đã được xác nhận và đang chuẩn bị'
+            completed: ["processing", "shipped", "delivered"].includes(
+              order.status
+            ),
+            description: "Đơn hàng đã được xác nhận và đang chuẩn bị",
           },
           {
-            status: 'shipped',
-            label: 'Giao hàng',
+            status: "shipped",
+            label: "Giao hàng",
             date: order.shipped_at,
-            completed: ['shipped', 'delivered'].includes(order.status),
-            description: 'Đơn hàng đang được vận chuyển'
+            completed: ["shipped", "delivered"].includes(order.status),
+            description: "Đơn hàng đang được vận chuyển",
           },
           {
-            status: 'delivered',
-            label: 'Hoàn thành',
+            status: "delivered",
+            label: "Hoàn thành",
             date: order.delivered_at,
-            completed: order.status === 'delivered',
-            description: 'Đơn hàng đã được giao thành công'
+            completed: order.status === "delivered",
+            description: "Đơn hàng đã được giao thành công",
           }
         );
       } else {
         timeline.push({
-          status: 'cancelled',
-          label: 'Đã hủy',
+          status: "cancelled",
+          label: "Đã hủy",
           date: order.cancelled_at,
           completed: true,
-          description: order.cancel_reason || 'Đơn hàng đã bị hủy'
+          description: order.cancel_reason || "Đơn hàng đã bị hủy",
         });
       }
 
@@ -107,14 +126,18 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
 
     const getPrimaryImage = (item) => {
       const images = item.product_id?.images;
-      if (!images || !Array.isArray(images)) return '/placeholder-product.jpg';
-      
-      const primaryImage = images.find(img => img.is_primary);
-      return primaryImage?.image_url || images[0]?.image_url || '/placeholder-product.jpg';
+      if (!images || !Array.isArray(images)) return "/placeholder-product.jpg";
+
+      const primaryImage = images.find((img) => img.is_primary);
+      return (
+        primaryImage?.image_url ||
+        images[0]?.image_url ||
+        "/placeholder-product.jpg"
+      );
     };
 
-    const canCancel = ['pending', 'processing'].includes(order.status);
-    const canReorder = ['delivered', 'cancelled'].includes(order.status);
+    const canCancel = ["pending", "processing"].includes(order.status);
+    const canReorder = ["delivered", "cancelled"].includes(order.status);
 
     return {
       formatDate,
@@ -123,18 +146,29 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
       getTimeline,
       getPrimaryImage,
       canCancel,
-      canReorder
+      canReorder,
     };
   }, [order]);
 
-  const { formatDate, formatCurrency, getStatusInfo, getTimeline, getPrimaryImage, canCancel, canReorder } = computedValues;
+  const {
+    formatDate,
+    formatCurrency,
+    getStatusInfo,
+    getTimeline,
+    getPrimaryImage,
+    canCancel,
+    canReorder,
+  } = computedValues;
 
   // ✅ Memoize handlers
-  const handleBackdropClick = useCallback((e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  }, [onClose]);
+  const handleBackdropClick = useCallback(
+    (e) => {
+      if (e.target === e.currentTarget) {
+        onClose();
+      }
+    },
+    [onClose]
+  );
 
   const handleCancelOrder = useCallback(() => {
     onCancelOrder(order._id);
@@ -151,7 +185,7 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
   const timeline = getTimeline();
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={handleBackdropClick}
     >
@@ -164,14 +198,16 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
           >
             <X className="w-5 h-5" />
           </button>
-          
+
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <Package className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-2xl font-bold">Chi tiết đơn hàng</h2>
-              <p className="text-green-100">#{order.order_number || order._id?.slice(-8)}</p>
+              <p className="text-green-100">
+                #{order.order_number || order._id?.slice(-8)}
+              </p>
             </div>
           </div>
         </div>
@@ -180,7 +216,9 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {/* Status & Timeline */}
           <div className="mb-8">
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${statusInfo.color} mb-4`}>
+            <div
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${statusInfo.color} mb-4`}
+            >
               <StatusIcon className="w-4 h-4" />
               <span className="font-medium">{statusInfo.label}</span>
             </div>
@@ -195,12 +233,18 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
               <div className="space-y-3">
                 {timeline.map((step, index) => (
                   <div key={step.status} className="flex items-start gap-4">
-                    <div className={`w-4 h-4 rounded-full mt-1 ${
-                      step.completed ? 'bg-green-500' : 'bg-gray-300'
-                    }`}></div>
+                    <div
+                      className={`w-4 h-4 rounded-full mt-1 ${
+                        step.completed ? "bg-green-500" : "bg-gray-300"
+                      }`}
+                    ></div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h4 className={`font-medium ${step.completed ? 'text-gray-800' : 'text-gray-500'}`}>
+                        <h4
+                          className={`font-medium ${
+                            step.completed ? "text-gray-800" : "text-gray-500"
+                          }`}
+                        >
                           {step.label}
                         </h4>
                         {step.date && (
@@ -209,7 +253,9 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600">{step.description}</p>
+                      <p className="text-sm text-gray-600">
+                        {step.description}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -241,7 +287,9 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
                 {order.tracking_number && (
                   <div>
                     <span className="text-sm text-gray-500">Mã vận đơn:</span>
-                    <p className="font-medium text-blue-600">{order.tracking_number}</p>
+                    <p className="font-medium text-blue-600">
+                      {order.tracking_number}
+                    </p>
                   </div>
                 )}
               </div>
@@ -260,12 +308,18 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">Trạng thái:</span>
-                  <p className="font-medium">{order.payment_status || 'Chờ thanh toán'}</p>
+                  <p className="font-medium">
+                    {order.payment_status || "Chờ thanh toán"}
+                  </p>
                 </div>
                 {order.payment_date && (
                   <div>
-                    <span className="text-sm text-gray-500">Ngày thanh toán:</span>
-                    <p className="font-medium">{formatDate(order.payment_date)}</p>
+                    <span className="text-sm text-gray-500">
+                      Ngày thanh toán:
+                    </span>
+                    <p className="font-medium">
+                      {formatDate(order.payment_date)}
+                    </p>
                   </div>
                 )}
                 <div>
@@ -284,25 +338,46 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
             </h3>
             <div className="space-y-4">
               {order.items?.map((item, index) => (
-                <div key={item._id || index} className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl">
+                <div
+                  key={item._id || index}
+                  className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl"
+                >
                   <img
                     src={getPrimaryImage(item)}
                     alt={item.product_id?.name}
                     className="w-16 h-16 object-cover rounded-lg"
                     onError={(e) => {
-                      e.target.src = '/placeholder-product.jpg';
+                      e.target.src = "/placeholder-product.jpg";
                     }}
                   />
                   <div className="flex-1">
-                    <h4 className="font-medium text-gray-800">{item.product_id?.name}</h4>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                      <span>Số lượng: {item.quantity}</span>
-                      <span>Đơn giá: {formatCurrency(item.price)}</span>
+                    <h4 className="font-medium text-gray-800">
+                      {item.product_id?.name}
+                    </h4>
+                    <div className="mt-1 text-sm text-gray-600">
+                      <p>Số lượng: {item.quantity}</p>
+                      <p className="text-sm text-gray-500">
+                        Đơn giá:{" "}
+                        {item.sale_price ? (
+                          <>
+                            <span className="line-through text-gray-400">
+                              {formatCurrency(item.price)}
+                            </span>{" "}
+                            <span className="text-green-700">
+                              {formatCurrency(item.sale_price)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-green-700">
+                            {formatCurrency(item.price)}
+                          </span>
+                        )}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-lg">
-                      {formatCurrency(item.total || item.price * item.quantity)}
+                      {formatCurrency(item.total)}
                     </p>
                   </div>
                 </div>
@@ -312,26 +387,54 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
 
           {/* Order Summary */}
           <div className="bg-gray-50 rounded-xl p-6 mb-6">
-            <h3 className="font-semibold text-gray-800 mb-4">Tóm tắt đơn hàng</h3>
-            <div className="space-y-2">
+            <h3 className="font-semibold text-gray-800 mb-4">
+              Tóm tắt đơn hàng
+            </h3>
+            <div className="space-y-2 ">
               <div className="flex justify-between">
-                <span>Tạm tính:</span>
-                <span>{formatCurrency((order.total_amount || 0) - (order.shipping_fee || 0))}</span>
+                <span>Tổng tiền hàng</span>
+                <span>
+                  {" "}
+                  {formatCurrency(
+                    order.items?.reduce(
+                      (acc, item) =>
+                        acc +
+                        (item.sale_price ? item.sale_price : item.price) *
+                          item.quantity,
+                      0
+                    )
+                  )}
+                </span>
               </div>
+
+              {/* show actual shipping fee after freeship */}
               <div className="flex justify-between">
-                <span>Phí vận chuyển:</span>
+                <span>Phí vận chuyển</span>
                 <span>{formatCurrency(order.shipping_fee || 0)}</span>
               </div>
-              {order.discount_amount > 0 && (
-                <div className="flex justify-between text-red-600">
-                  <span>Giảm giá:</span>
-                  <span>-{formatCurrency(order.discount_amount)}</span>
+
+              {/* show freeship discount only when applicable */}
+              {order.freeship_value > 0 && (
+                <div className="flex justify-between">
+                  <span>Giảm giá phí vận chuyển</span>
+                  <span className="text-green-600">
+                    -{formatCurrency(order.freeship_value || 0)}
+                  </span>
+                </div>
+              )}
+
+              {order.discount_value > 0 && (
+                <div className="flex justify-between">
+                  <span>Voucher giảm giá</span>
+                  <span className="text-orange-600">
+                    -{formatCurrency(order.discount_value || 0)}
+                  </span>
                 </div>
               )}
               <hr className="my-2" />
               <div className="flex justify-between text-lg font-semibold">
-                <span>Tổng cộng:</span>
-                <span className="text-green-600">{formatCurrency(order.total_amount)}</span>
+                <span>Tổng thanh toán</span>
+                <span>{formatCurrency(order.total_amount)}</span>
               </div>
             </div>
           </div>
@@ -360,7 +463,7 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
                 Hủy đơn hàng
               </button>
             )}
-            
+
             {canReorder && (
               <button
                 onClick={handleReorder}
@@ -370,7 +473,7 @@ const OrderDetailModal = ({ order, isOpen, onClose, onCancelOrder, onReorder }) 
                 Đặt lại
               </button>
             )}
-            
+
             <button
               onClick={onClose}
               className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"

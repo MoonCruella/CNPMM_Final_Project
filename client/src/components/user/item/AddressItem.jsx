@@ -1,4 +1,5 @@
 import React from "react";
+import { assets } from "@/assets/assets";
 
 const AddressItem = ({
   address,
@@ -10,7 +11,15 @@ const AddressItem = ({
   isDefault = false,
 }) => {
   return (
-    <label className="flex items-start gap-3 border rounded-xl p-3 cursor-pointer hover:shadow">
+    <div
+      className={`relative rounded-2xl border p-4 transition cursor-pointer
+    ${
+      selected
+        ? "border-green-600 shadow-md bg-green-50"
+        : "border-gray-200 hover:shadow-md bg-white"
+    }`}
+      onClick={() => showRadio && onSelect?.(address._id)}
+    >
       {showRadio && (
         <input
           type="radio"
@@ -18,11 +27,13 @@ const AddressItem = ({
           value={address._id}
           checked={selected}
           onChange={() => onSelect?.(address._id)}
-          className="w-5 h-5 accent-green-600 mt-1"
+          className="absolute top-5 left-4 w-5 h-5 accent-green-600"
         />
       )}
-      <div className="flex-1">
-        <p className="font-semibold flex items-center gap-2">
+
+      {/* Nội dung cách radio 2rem */}
+      <div className={`${showRadio ? "pl-10" : ""}`}>
+        <p className="font-semibold flex items-center gap-2 text-gray-900">
           {address.full_name} - {address.phone}
           {isDefault && (
             <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
@@ -30,28 +41,44 @@ const AddressItem = ({
             </span>
           )}
         </p>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 mt-1">
           {address.street}, {address.ward?.name}, {address.district?.name},{" "}
           {address.province?.name}
         </p>
       </div>
-      <div className="flex gap-2">
+
+      {/* Action buttons */}
+      <div className="absolute top-3 right-3 flex gap-2">
         <button
           type="button"
-          onClick={() => onEdit(address)}
-          className="text-blue-600 hover:underline text-sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(address);
+          }}
+          className="p-2 rounded-full hover:bg-gray-100 transition"
         >
-          Sửa
+          <img
+            src={assets.edit_icon}
+            alt="Sửa"
+            className="w-4 h-4 object-contain"
+          />
         </button>
         <button
           type="button"
-          onClick={() => onDelete(address._id)}
-          className="text-red-600 hover:underline text-sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(address._id);
+          }}
+          className="p-2 rounded-full hover:bg-gray-100 transition"
         >
-          Xóa
+          <img
+            src={assets.delete_icon}
+            alt="Xóa"
+            className="w-4 h-4 object-contain"
+          />
         </button>
       </div>
-    </label>
+    </div>
   );
 };
 

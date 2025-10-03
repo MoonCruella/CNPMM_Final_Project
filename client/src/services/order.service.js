@@ -95,7 +95,7 @@ class OrderService {
   };
 
   // ✅ Get order by ID
-  getOrderById = async (orderId) => {
+  sale_price = async (orderId) => {
     try {
       const response = await privateApi.get(`/api/orders/${orderId}`);
 
@@ -196,34 +196,36 @@ class OrderService {
     }
   };
   searchOrders = async (searchParams = {}, isMyOrders = false) => {
-  try {
-    const params = new URLSearchParams();
-    Object.entries(searchParams).forEach(([key, value]) => {
-      if (value !== "" && value !== null && value !== undefined) {
-        params.append(key, value);
-      }
-    });
+    try {
+      const params = new URLSearchParams();
+      Object.entries(searchParams).forEach(([key, value]) => {
+        if (value !== "" && value !== null && value !== undefined) {
+          params.append(key, value);
+        }
+      });
 
-    const endpoint = isMyOrders ? "/api/orders/my-orders/search" : "/api/orders/search";
-    const response = await privateApi.get(`${endpoint}?${params.toString()}`);
-    
-    if (response.data.success) {
+      const endpoint = isMyOrders
+        ? "/api/orders/my-orders/search"
+        : "/api/orders/search";
+      const response = await privateApi.get(`${endpoint}?${params.toString()}`);
+
+      if (response.data.success) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message,
+        };
+      } else {
+        throw new Error(response.data.message || "Không thể tìm kiếm đơn hàng");
+      }
+    } catch (error) {
+      console.error("Search orders error:", error);
       return {
-        success: true,
-        data: response.data.data,
-        message: response.data.message,
+        success: false,
+        message: error.response?.data?.message || "Có lỗi xảy ra khi tìm kiếm",
+        error: error.message,
       };
-    } else {
-      throw new Error(response.data.message || "Không thể tìm kiếm đơn hàng");
     }
-  } catch (error) {
-    console.error("Search orders error:", error);
-    return {
-      success: false,
-      message: error.response?.data?.message || "Có lỗi xảy ra khi tìm kiếm",
-      error: error.message,
-    };
-  }
-};
+  };
 }
 export default new OrderService();
