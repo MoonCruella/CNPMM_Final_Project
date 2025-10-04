@@ -1,20 +1,23 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import cartService from "@/services/cartService";
-import { useAppContext } from "./AppContext"; // lấy AppContext để get user
+import { useSelector } from "react-redux"; // Thay đổi: sử dụng Redux thay vì AppContext
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const { user } = useAppContext(); // ✅ destructure đúng user
+  // Lấy user từ Redux store
+  const { user, isAuthenticated } = useSelector(state => state.auth);
+  
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Load giỏ hàng từ API (chỉ khi đã login)
   const loadCart = async () => {
-    if (!user) {
+    if (!isAuthenticated || !user) {
       setItems([]); // nếu chưa login hoặc logout thì giỏ rỗng
       return;
     }
+    
     try {
       setLoading(true);
       const res = await cartService.getCart();
@@ -30,7 +33,9 @@ export const CartProvider = ({ children }) => {
 
   // Thêm sản phẩm
   const addToCart = async (product_id, quantity = 1) => {
-    if (!user) return; // không cho thêm khi chưa login
+    
+    if (!isAuthenticated || !user) return; 
+    
     try {
       const res = await cartService.addToCart(product_id, quantity);
       if (res.success) {
@@ -53,7 +58,8 @@ export const CartProvider = ({ children }) => {
 
   // Cập nhật số lượng
   const updateQuantity = async (cartItem_id, quantity) => {
-    if (!user) return;
+    if (!isAuthenticated || !user) return;
+    
     try {
       const res = await cartService.updateCartItem(cartItem_id, quantity);
       if (res.success) {
@@ -72,7 +78,8 @@ export const CartProvider = ({ children }) => {
 
   // Xóa sản phẩm
   const removeFromCart = async (cartItem_id) => {
-    if (!user) return;
+    if (!isAuthenticated || !user) return;
+    
     try {
       const res = await cartService.removeFromCart(cartItem_id);
       if (res.success) {
@@ -85,7 +92,8 @@ export const CartProvider = ({ children }) => {
 
   // Xóa toàn bộ giỏ
   const clearCart = async () => {
-    if (!user) return;
+    if (!isAuthenticated || !user) return;
+    
     try {
       const res = await cartService.clearCart();
       if (res.success) {
@@ -96,10 +104,20 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  // Thêm debug log để theo dõi Redux state
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('CartContext: Redux auth state:', {
+        isAuthenticated,
+        userId: user?._id
+      });
+    }
+  }, [isAuthenticated, user]);
+
   // 🔑 Load lại giỏ mỗi khi user thay đổi (login/logout)
   useEffect(() => {
     loadCart();
-  }, [user]);
+  }, [isAuthenticated, user?._id]); // Sửa dependency để theo dõi cả isAuthenticated và user ID
 
   const refreshCart = async () => {
     await loadCart();
@@ -116,6 +134,8 @@ export const CartProvider = ({ children }) => {
         clearCart,
         loadCart,
         refreshCart,
+        isAuthenticated, // Export thêm trạng thái xác thực
+        hasUser: !!user, // Tiện ích để kiểm tra có user hay không
       }}
     >
       {children}

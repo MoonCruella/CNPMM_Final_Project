@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import LoginPage from "./pages/user/LoginPage";
 import RegisterPage from "./pages/user/RegisterPage";
 import Dashboard from "./pages/user/Dashboard";
 import HomePage from "./pages/user/HomePage";
-import { Route, Routes, useLocation } from "react-router";
+import { Route, Routes, useLocation, Navigate } from "react-router";
 import { Toaster } from "./components/ui/sonner";
 import ForgotPasswordPage from "./pages/user/ForgotPasswordPage";
 import ProfilePage from "./pages/user/ProfilePage";
@@ -19,7 +19,6 @@ import AllProducts from "./pages/user/AllProducts";
 import MyOrdersPage from "./pages/user/MyOrderPage";
 import CheckoutPage from "./pages/user/CheckoutPage";
 import ProductDetails from "./pages/user/ProductDetails";
-import SellerLogin from "./pages/seller/SellerLogin";
 import SellerLayout from "./components/seller/SellerLayout";
 import ProductList from "./components/seller/ProductList";
 import Orders from "./components/seller/Orders";
@@ -29,14 +28,36 @@ import DashboardSeller from "./components/seller/DashboardSeller";
 import { useAppContext } from "./context/AppContext";
 import VoucherCard from "./components/user/item/VoucherCard";
 import Vouchers from "./components/seller/Vouchers";
-import TokenTester from "./components/TokenTester";
-import Chatbot from "./components/user/Chatbot";
-import SupportChat from "./components/user/SupportChat";
-import SupportChatSeller from "./components/seller/SupportChatSeller";
+import TokenTester from './components/TokenTester';
+import Chatbot from './components/user/Chatbot'; 
+import SupportChat from './components/user/SupportChat';
+import SupportChatSeller from './components/seller/SupportChatSeller';
+import { useSelector } from 'react-redux'; 
 import UserList from "./components/seller/UserList";
+
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
-  const { showUserLogin, isSeller } = useAppContext();
+  const { showUserLogin } = useAppContext();
+  
+  // Sử dụng Redux selector để lấy trạng thái đăng nhập và role
+  const { isAuthenticated, isSeller } = useSelector(state => state.auth);
+
+  // SellerRoute component xử lý việc chuyển hướng cho seller routes
+  const SellerRoute = ({ children }) => {
+    if (!isAuthenticated) {
+      // Nếu chưa đăng nhập, chuyển hướng đến trang login với mode=seller
+      return <Navigate to="/login?mode=seller" replace />;
+    }
+    
+    if (!isSeller) {
+      // Nếu đã đăng nhập nhưng không phải seller, chuyển hướng đến trang login với mode=seller
+      return <Navigate to="/login?mode=seller" replace />;
+    }
+    
+    // Nếu đã đăng nhập và là seller, hiển thị nội dung seller
+    return children;
+  };
+
   return (
     <div>
       {isSellerPath ? null : <Navbar />}
@@ -62,11 +83,14 @@ const App = () => {
         <Route path="/voucher-list" element={<VoucherCard />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/products/:id" element={<ProductDetails />} />
-        <Route
-          path="/seller"
-          element={isSeller ? <SellerLayout /> : <SellerLogin />}
-        >
-          <Route index element={isSeller ? <DashboardSeller /> : null} />
+        
+        {/* Thay thế route /seller để sử dụng SellerRoute */}
+        <Route path="/seller" element={
+          <SellerRoute>
+            <SellerLayout />
+          </SellerRoute>
+        }>
+          <Route index element={<DashboardSeller />} />
           <Route path="products" element={<ProductList />} />
           <Route path="orders" element={<Orders />} />
           <Route path="notifications" element={<Notifications />} />

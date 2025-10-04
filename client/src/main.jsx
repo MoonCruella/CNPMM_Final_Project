@@ -2,6 +2,8 @@ import { createRoot } from "react-dom/client";
 import { UserContextProvider } from "./context/UserContext.jsx";
 import "./index.css";
 import App from "./App.jsx";
+import { Provider } from 'react-redux';
+import { store } from './redux/store';
 import { BrowserRouter } from "react-router-dom";
 import { AppContextProvider } from "./context/AppContext";
 import { CartProvider } from "./context/CartContext";
@@ -13,6 +15,7 @@ import { ChatbotProvider } from './context/ChatBoxContext.jsx';
 import { SupportChatProvider } from './context/SupportChatContext.jsx';
 createRoot(document.getElementById("root")).render(
   <BrowserRouter>
+  <Provider store={store}>
     <AppContextProvider>
       <UserContextProvider>
         <CartProvider>
@@ -30,5 +33,6 @@ createRoot(document.getElementById("root")).render(
         </CartProvider>
       </UserContextProvider>
     </AppContextProvider>
+    </Provider>
   </BrowserRouter>
 );

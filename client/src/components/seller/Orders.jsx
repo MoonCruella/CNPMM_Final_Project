@@ -1,29 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useSelector } from 'react-redux';
 import OrdersTable from "@/components/user/OrdersTable";
 import OrdersSummary from "@/components/user/OrdersSummary";
 import orderService from "@/services/order.service";
 import { toast } from "sonner";
 import { assets } from "@/assets/assets";
-import { useUserContext } from "@/context/UserContext";
+import { useAppContext } from "@/context/AppContext";
 import OrderSearchForm from "../order/OrderSearch";
 
 
 const Orders = () => {
-  const { user, isAuthenticated } = useUserContext();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const { user, isAuthenticated, isSeller } = useSelector((state) => state.auth);
 
 
 
   useEffect(() => {
-    if (isAuthenticated && user?.role === "seller") {
+    if (isAuthenticated && isSeller) {
       loadOrders();
     }
-  }, [isAuthenticated, user, filter, page]);
+  }, [isAuthenticated, isSeller, filter, page]);
 
   const [orderStats, setOrderStats] = useState({
     total: 0,
