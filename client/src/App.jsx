@@ -29,10 +29,11 @@ import DashboardSeller from "./components/seller/DashboardSeller";
 import { useAppContext } from "./context/AppContext";
 import VoucherCard from "./components/user/item/VoucherCard";
 import Vouchers from "./components/seller/Vouchers";
-import TokenTester from './components/TokenTester';
-import Chatbot from './components/user/Chatbot'; 
-import SupportChat from './components/user/SupportChat';
-import SupportChatSeller from './components/seller/SupportChatSeller';
+import TokenTester from "./components/TokenTester";
+import Chatbot from "./components/user/Chatbot";
+import SupportChat from "./components/user/SupportChat";
+import SupportChatSeller from "./components/seller/SupportChatSeller";
+import UserList from "./components/seller/UserList";
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
   const { showUserLogin, isSeller } = useAppContext();
@@ -71,6 +72,7 @@ const App = () => {
           <Route path="notifications" element={<Notifications />} />
           <Route path="my-account" element={<MyAccount />} />
           <Route path="vouchers" element={<Vouchers />} />
+          <Route path="manage-user" element={<UserList />} />
           <Route path="support" element={<SupportChatSeller />} />
         </Route>
       </Routes>

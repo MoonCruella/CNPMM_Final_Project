@@ -2,7 +2,7 @@ import response from "../helpers/response.js";
 import userModel from "../models/user.model.js";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-
+import Order from "../models/order.model.js";
 export const getUsers = async (req, res, next) => {
   try {
     const users = await userModel.find().select("-password -refresh_tokens");
@@ -70,11 +70,11 @@ export const getUserList = async (req, res) => {
       filter.$or = [
         { name: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
-        { username: { $regex: search, $options: "i" } },
       ];
     }
     if (role) filter.role = role;
-    if (active !== undefined) filter.active = active === "true";
+    if (active !== undefined && active !== "")
+      filter.active = active === "true";
 
     const skip = (page - 1) * limit;
 
@@ -351,21 +351,27 @@ export const deleteUser = async (req, res) => {
 export const toggleUserStatus = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { active } = req.body;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return response.sendError(res, "ID user không hợp lệ", 400);
     }
 
-    if (typeof active !== "boolean") {
-      return response.sendError(res, "Trạng thái active phải là boolean", 400);
+    // Find user first
+    const user = await userModel
+      .findById(userId)
+      .select("-password -refresh_tokens");
+    if (!user) {
+      return response.sendError(res, "User không tồn tại", 404);
     }
 
-    const user = await userModel.findByIdAndUpdate(
+    // Toggle active
+    const newActive = !Boolean(user.active);
+
+    const updatedUser = await userModel.findByIdAndUpdate(
       userId,
       {
-        active: active,
+        active: newActive,
         updated_at: new Date(),
       },
       {
@@ -374,14 +380,10 @@ export const toggleUserStatus = async (req, res) => {
       }
     );
 
-    if (!user) {
-      return response.sendError(res, "User không tồn tại", 404);
-    }
-
     return response.sendSuccess(
       res,
-      { user },
-      `${active ? "Kích hoạt" : "Vô hiệu hóa"} user thành công`,
+      { user: updatedUser },
+      `${newActive ? "Kích hoạt" : "Vô hiệu hóa"} user thành công`,
       200
     );
   } catch (error) {

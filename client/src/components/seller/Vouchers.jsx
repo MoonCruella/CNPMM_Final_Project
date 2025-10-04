@@ -3,7 +3,7 @@ import voucherService from "@/services/voucherService";
 import { toast } from "sonner";
 import { useUserContext } from "@/context/UserContext";
 import VouchersTable from "./VouchersTable";
-import VoucherForm from "./VoucherForm";
+import VoucherForm from "./modal/VoucherModal";
 
 const Vouchers = () => {
   const { user, isAuthenticated } = useUserContext();
@@ -84,7 +84,7 @@ const Vouchers = () => {
     if (!confirm) return;
 
     try {
-      await voucherService.delete(voucherId); // gọi API xóa
+      await voucherService.remove(voucherId); // gọi API xóa
       toast.success("Xóa voucher thành công");
       // Reload danh sách sau khi xóa
       // Nếu page hiện tại trống (vì xóa hết items) -> page - 1
@@ -176,14 +176,14 @@ const Vouchers = () => {
               setEndDate("");
               setPage(1); // useEffect tự load
             }}
-            className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500"
+            className="flex items-center gap-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition"
           >
             Xóa bộ lọc
           </button>
 
           <button
             onClick={handleAddVoucher}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition"
           >
             + Thêm Voucher
           </button>
@@ -195,8 +195,8 @@ const Vouchers = () => {
       <section className="pb-16 container mx-auto px-4">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Đang tải voucher...</p>
+            <div className="w-8 h-8 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-700">Đang tải voucher...</p>
           </div>
         ) : (
           <>
@@ -216,7 +216,7 @@ const Vouchers = () => {
                   className={`px-3 py-1 rounded ${
                     page === 1
                       ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-green-600 text-white"
+                      : "bg-gray-800 text-white"
                   }`}
                 >
                   {"<"}
@@ -228,7 +228,7 @@ const Vouchers = () => {
                     onClick={() => setPage(idx + 1)}
                     className={`px-3 py-1 rounded ${
                       page === idx + 1
-                        ? "bg-green-600 text-white"
+                        ? "bg-gray-800 text-white"
                         : "bg-gray-200"
                     }`}
                   >
@@ -242,7 +242,7 @@ const Vouchers = () => {
                   className={`px-3 py-1 rounded ${
                     page === totalPages
                       ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-green-600 text-white"
+                      : "bg-gray-800 text-white"
                   }`}
                 >
                   {">"}
