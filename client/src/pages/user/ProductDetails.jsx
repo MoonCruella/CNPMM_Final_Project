@@ -8,6 +8,7 @@ import ProductCard from "../../components/user/item/ProductCard.jsx";
 import categoryService from "../../services/categoryService.js";
 import { useCartContext } from "@/context/CartContext";
 import { useAppContext } from "@/context/AppContext";
+import { useSelector } from "react-redux";
 import ratingService from "@/services/rating.service.js";
 import { Rate } from "antd";
 
@@ -28,7 +29,7 @@ const StarRating = ({ rating }) => {
 };
 
 const ProductDetails = () => {
-  const { user } = useAppContext();
+  const { user, isAuthenticated } = useSelector(state => state.auth);
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCartContext();
@@ -53,18 +54,24 @@ const ProductDetails = () => {
 
   // Xử lý thêm vào giỏ
   const handleAddToCart = async () => {
-    try {
-      if (!user) {
-        toast.info("Vui lòng đăng nhập!");
-      } else {
-        await addToCart(product._id, quantity);
-        toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Thêm vào giỏ hàng thất bại!");
+  try {
+    // Debug user object đúng cách
+    console.log("User object:", user);
+    console.log("Authentication state:", { isAuthenticated, userId: user?._id });
+    
+    // Kiểm tra cả isAuthenticated và user
+    if (!isAuthenticated || !user) {
+      toast.info("Vui lòng đăng nhập!");
+      return;
     }
-  };
+    
+    await addToCart(product._id, quantity);
+    toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
+  } catch (err) {
+    console.error(err);
+    toast.error("Thêm vào giỏ hàng thất bại!");
+  }
+};
   const toggleFavorite = async () => {
     if (!user) {
       toast.info("Vui lòng đăng nhập để thêm vào danh sách yêu thích!");

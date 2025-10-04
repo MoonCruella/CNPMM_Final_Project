@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import userService from '../services/user.service.js';
 import avatarService from '../services/avatarService.js';
 import { toast } from 'sonner';
+import { useSelector } from 'react-redux'; // Import useSelector từ react-redux
 
 const UserContext = createContext();
 
@@ -19,6 +20,10 @@ export const UserContextProvider = ({ children }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [error, setError] = useState(null);
+
+  // Lấy state từ Redux
+  const reduxUser = useSelector(state => state.auth.user);
+  const reduxIsAuthenticated = useSelector(state => state.auth.isAuthenticated);
 
   // Load user from localStorage on init
   useEffect(() => {
@@ -44,6 +49,63 @@ export const UserContextProvider = ({ children }) => {
       if (token) {
         loadUserFromServer();
       }
+    }
+  }, []);
+
+  // THÊM MỚI: Đồng bộ từ Redux sang UserContext khi auth state thay đổi
+  useEffect(() => {
+    // Chỉ cập nhật nếu reduxUser có giá trị và khác với user hiện tại trong context
+    if (reduxUser && reduxIsAuthenticated) {
+      console.log("Syncing Redux user to UserContext:", reduxUser);
+      
+      // Tạo đối tượng user với cấu trúc phù hợp cho UserContext
+      const normalizedUser = {
+        _id: reduxUser._id,
+        email: reduxUser.email,
+        name: reduxUser.full_name,
+        full_name: reduxUser.full_name,
+        role: reduxUser.role,
+        avatar: reduxUser.avatar,
+        avatar_public_id: reduxUser.avatar_public_id,
+        active: reduxUser.active,
+        phone: reduxUser.phone,
+        address: reduxUser.address,
+        createdAt: reduxUser.createdAt,
+        updatedAt: reduxUser.updatedAt
+      };
+      
+      setUser(normalizedUser);
+      userService.saveUserToStorage(normalizedUser);
+    }
+    // Nếu đăng xuất trong Redux, cũng xóa trong Context
+    else if (!reduxIsAuthenticated && user) {
+      clearUser();
+    }
+  }, [reduxUser, reduxIsAuthenticated]);
+
+  // THÊM MỚI: Method để đồng bộ hóa từ Redux 
+  const syncWithRedux = useCallback((reduxUserData) => {
+    if (reduxUserData) {
+      console.log("Manual sync from Redux:", reduxUserData);
+      
+      // Tạo đối tượng user với cấu trúc phù hợp cho UserContext
+      const normalizedUser = {
+        _id: reduxUserData._id,
+        email: reduxUserData.email,
+        name: reduxUserData.full_name,
+        full_name: reduxUserData.full_name,
+        role: reduxUserData.role,
+        avatar: reduxUserData.avatar,
+        avatar_public_id: reduxUserData.avatar_public_id,
+        active: reduxUserData.active,
+        phone: reduxUserData.phone,
+        address: reduxUserData.address,
+        createdAt: reduxUserData.createdAt,
+        updatedAt: reduxUserData.updatedAt
+      };
+      
+      setUser(normalizedUser);
+      userService.saveUserToStorage(normalizedUser);
     }
   }, []);
 
@@ -197,7 +259,7 @@ export const UserContextProvider = ({ children }) => {
           console.log('🔍 Avatar upload in updateUserWithAvatar:', uploadResponse); // Debug
 
           if (uploadResponse.success) {
-            // ✅ FIX: Extract data correctly
+            // FIX: Extract data correctly
             const avatarData = uploadResponse.data;
             finalUpdateData.avatar = avatarData.url;
             finalUpdateData.avatar_public_id = avatarData.publicId;
@@ -259,7 +321,7 @@ export const UserContextProvider = ({ children }) => {
       const deleteResponse = await avatarService.deleteAvatar(publicId);
 
       if (deleteResponse.success) {
-        // ✅ Update user profile to remove avatar
+        // Update user profile to remove avatar
         const updateResponse = await userService.updateUserProfile({
           avatar: null,
           avatar_public_id: null
@@ -300,8 +362,6 @@ export const UserContextProvider = ({ children }) => {
     userService.removeUserFromStorage();
   };
 
-
-
   // Computed values using userService helpers
   const getUserDisplayName = () => userService.getUserDisplayName(user);
   const isActiveUser = () => userService.isActiveUser(user);
@@ -311,17 +371,14 @@ export const UserContextProvider = ({ children }) => {
   // Form helpers for address
   const createAddressObject = (addressForm) => userService.createAddressObject(addressForm);
 
-  const getUserAvatarUrl = (size = 200) => {
-    if (user?.avatar) {
-      
-        const serviceUrl = avatarService.getOptimizedAvatarUrl(user.avatar, size);
-        return serviceUrl;
-      
+  const getUserAvatarUrl = (size = 40) => {
+    if (user?.avatar) {     
+      const serviceUrl = avatarService.getOptimizedAvatarUrl(user.avatar, size);
+      return serviceUrl;
     }
 
     const name = user?.name || user?.email || 'User';
     const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=${size}`;
-  
     return fallbackUrl;
   };
 
@@ -340,6 +397,7 @@ export const UserContextProvider = ({ children }) => {
     uploadAvatar,
     updateUserWithAvatar,
     clearUser,
+    syncWithRedux, // THÊM MỚI: hàm đồng bộ với Redux
 
     // Computed values
     getUserDisplayName,

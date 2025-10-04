@@ -1,35 +1,75 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { useAppContext } from './AppContext';
+import { useSelector } from 'react-redux';
 
 const SocketContext = createContext();
 
 export const SocketProvider = ({ children }) => {
-  const { user, isAuthenticated, tokenRefreshed } = useAppContext();
+  // Chỉ sử dụng Redux để lấy thông tin user và authentication
+  const { user, isAuthenticated, accessToken } = useSelector(state => state.auth);
+  
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const connectAttemptsRef = useRef(0); // Thay thế state bằng useRef
+  const connectAttemptsRef = useRef(0);
   const MAX_RECONNECT_ATTEMPTS = 5;
-  const socketRef = useRef(null); // Thêm ref để theo dõi socket hiện tại
+  const socketRef = useRef(null);
+  const prevAuthRef = useRef({ userId: null, token: null });
+  
+  // THÊM: Biến để ngăn chặn kết nối liên tục
+  const preventReconnectRef = useRef(false);
+  const initializedRef = useRef(false);
+  const connectTimeoutRef = useRef(null);
 
-  // Hàm helper để lấy token từ localStorage
-  const getAccessTokenFromStorage = () => {
+  // Hàm helper để lấy token từ Redux hoặc localStorage
+  const getAccessToken = useCallback(() => {
+    // Ưu tiên token từ Redux state
+    if (accessToken) {
+      return accessToken;
+    }
+    // Fallback về localStorage nếu cần
     return localStorage.getItem('accessToken');
-  };
+  }, [accessToken]);
 
   // Tạo hoặc cập nhật kết nối socket
   const createSocketConnection = useCallback(() => {
+    // Ngăn chặn kết nối liên tục
+    if (preventReconnectRef.current) {
+      console.log('🛑 Preventing reconnect loop');
+      return null;
+    }
+
     // Đóng kết nối cũ nếu có
     if (socketRef.current) {
+      console.log('Closing existing socket connection');
+      socketRef.current.removeAllListeners(); // Quan trọng: xóa tất cả listeners
       socketRef.current.disconnect();
     }
 
-    // Lấy token trực tiếp từ localStorage
-    const token = getAccessTokenFromStorage();
+    // Lấy token 
+    const token = getAccessToken();
     if (!token) {
       console.error("No access token available for socket connection");
       return null;
     }
+
+    // Kiểm tra nếu user hoặc token đã thay đổi
+    const currentUserId = user?._id;
+    
+    // Nếu không có thay đổi về user/token và đã kết nối, không cần kết nối lại
+    if (
+      isConnected && 
+      socketRef.current && 
+      socketRef.current.connected &&
+      prevAuthRef.current.userId === currentUserId && 
+      prevAuthRef.current.token === token
+    ) {
+      console.log('Socket already connected with same user/token');
+      return socketRef.current;
+    }
+
+    // Lưu trạng thái hiện tại
+    prevAuthRef.current = { userId: currentUserId, token };
+    console.log('Creating new socket connection for user:', currentUserId);
 
     // Tạo kết nối socket mới
     const socketInstance = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000', {
@@ -45,67 +85,120 @@ export const SocketProvider = ({ children }) => {
 
     // Xử lý các sự kiện
     socketInstance.on('connect', () => {
-      console.log('Socket connected:', socketInstance.id);
+      console.log('✅ Socket connected:', socketInstance.id, 'for user:', currentUserId);
       setIsConnected(true);
-      connectAttemptsRef.current = 0; // Sử dụng ref
+      connectAttemptsRef.current = 0;
+      initializedRef.current = true; // Đánh dấu đã kết nối thành công
     });
 
-    socketInstance.on('disconnect', () => {
-      console.log('Socket disconnected');
+    socketInstance.on('disconnect', (reason) => {
+      console.log('❌ Socket disconnected, reason:', reason);
       setIsConnected(false);
+      
+      // THÊM: Ngăn kết nối lại tự động nếu ngắt kết nối do client
+      if (reason === 'io client disconnect' || reason === 'io server disconnect') {
+        console.log('⚠️ Manual disconnect detected, preventing auto-reconnect');
+        preventReconnectRef.current = true;
+        
+        // Cho phép kết nối lại sau một khoảng thời gian
+        setTimeout(() => {
+          preventReconnectRef.current = false;
+        }, 5000);
+      }
     });
 
     socketInstance.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message);
+      console.error('🔴 Socket connection error:', err.message);
       setIsConnected(false);
       
       // Nếu lỗi liên quan đến authentication, có thể token đã hết hạn
       if (err.message.includes('auth') || err.message.includes('unauthorized')) {
-        // Thử lại sau 2 giây với token mới nhất
         connectAttemptsRef.current += 1;
         
         if (connectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-          setTimeout(() => {
-            reconnectWithNewToken();
-          }, 2000);
+          // Sử dụng timeout để tránh kết nối liên tục
+          if (connectTimeoutRef.current) {
+            clearTimeout(connectTimeoutRef.current);
+          }
+          
+          connectTimeoutRef.current = setTimeout(() => {
+            if (!preventReconnectRef.current) {
+              reconnectWithNewToken();
+            }
+          }, 2000 * (connectAttemptsRef.current + 1)); // Tăng dần thời gian đợi
         } else {
           console.error('Max socket reconnect attempts reached');
+          // Đánh dấu để ngăn kết nối liên tục
+          preventReconnectRef.current = true;
+          
+          // Reset sau 30 giây
+          setTimeout(() => {
+            preventReconnectRef.current = false;
+            connectAttemptsRef.current = 0;
+          }, 30000);
         }
       }
     });
 
-    socketRef.current = socketInstance; // Lưu socket hiện tại vào ref
+    socketRef.current = socketInstance;
     setSocket(socketInstance);
     return socketInstance;
-  }, []);  // Loại bỏ dependencies không cần thiết
+  }, [getAccessToken, isConnected, user]);
 
-  // Initial connection when user logs in
+  // Phản ứng với thay đổi trạng thái xác thực từ Redux - QUAN TRỌNG NHẤT
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const newSocket = createSocketConnection();
+    // Dùng timeout để tránh nhiều lần kết nối liên tiếp
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current);
+    }
+    
+    // Chỉ kết nối khi đã xác thực và có user
+    if (isAuthenticated && user && user._id) {
+      // Chỉ kết nối nếu chưa được kết nối hoặc user ID thay đổi
+      const currentUserId = user._id;
+      const prevUserId = prevAuthRef.current.userId;
       
-      // Cleanup on component unmount
-      return () => {
-        if (newSocket) {
-          newSocket.disconnect();
-        }
-      };
+      if (!isConnected || currentUserId !== prevUserId) {
+        console.log('🔑 Auth state changed:', { 
+          connected: isConnected, 
+          currentUser: currentUserId,
+          prevUser: prevUserId
+        });
+        
+        // Đặt timeout ngắn để tránh gọi nhiều lần
+        connectTimeoutRef.current = setTimeout(() => {
+          // Kiểm tra lại điều kiện trước khi kết nối
+          if (!isConnected && !preventReconnectRef.current) {
+            const newSocket = createSocketConnection();
+            
+            // Cleanup khi component unmount
+            // Cẩn thận: đừng gây ra vòng lặp cleanup -> connect -> cleanup
+            preventReconnectRef.current = true;
+            setTimeout(() => {
+              preventReconnectRef.current = false;
+            }, 1000);
+          }
+        }, 500);
+      }
     }
-  }, [isAuthenticated, user, createSocketConnection]);
-
-  // Reconnect when token is refreshed
-  useEffect(() => {
-    if (tokenRefreshed && isAuthenticated && user) {
-      console.log('Token was refreshed, reconnecting socket');
-      createSocketConnection();
-    }
-  }, [tokenRefreshed, isAuthenticated, user, createSocketConnection]);
+    
+    return () => {
+      // Cleanup timeout nếu component unmount
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current);
+      }
+    };
+  }, [isAuthenticated, user?._id, createSocketConnection, isConnected]);
 
   // Handle reconnection with new token
   const reconnectWithNewToken = useCallback(() => {
     try {
-      // Lấy token trực tiếp từ localStorage
-      const token = getAccessTokenFromStorage();
+      if (preventReconnectRef.current) {
+        console.log('🛑 Reconnect prevented to avoid loop');
+        return;
+      }
+      
+      const token = getAccessToken();
       
       if (!token) {
         console.error('No access token available for socket reconnection');
@@ -122,19 +215,77 @@ export const SocketProvider = ({ children }) => {
     } catch (error) {
       console.error('Socket reconnect error:', error);
     }
-  }, [createSocketConnection]);
+  }, [getAccessToken, createSocketConnection]);
 
   // Manual reconnect function exposed to components
   const reconnect = useCallback(() => {
-    connectAttemptsRef.current = 0; // Reset attempts counter
-    reconnectWithNewToken();
+    console.log('🔄 Manual reconnect requested');
+    
+    // Reset các biến phòng vệ
+    connectAttemptsRef.current = 0;
+    preventReconnectRef.current = false;
+    
+    // Đảm bảo socket hiện tại đã được dọn dẹp
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+    
+    // Kết nối lại sau một khoảng thời gian ngắn
+    setTimeout(() => {
+      reconnectWithNewToken();
+    }, 300);
   }, [reconnectWithNewToken]);
 
-  // Socket service object - implements common socket operations
+  // THÊM: Manual connect with explicit token
+  const connect = useCallback((token) => {
+    if (!token) {
+      console.error('⚠️ Cannot connect: no token provided');
+      return null;
+    }
+    
+    console.log('🔌 Manual connect with explicit token');
+    
+    // Reset biến phòng vệ
+    preventReconnectRef.current = false;
+    connectAttemptsRef.current = 0;
+    
+    // Đóng kết nối cũ
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+    }
+    
+    // Tạo socket mới với token được cung cấp
+    const socketInstance = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000', {
+      auth: { token },
+      withCredentials: true,
+      transports: ['websocket'],
+      autoConnect: true,
+      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS
+    });
+    
+    socketInstance.on('connect', () => {
+      console.log('✅ Socket connected manually:', socketInstance.id);
+      setIsConnected(true);
+    });
+    
+    socketInstance.on('disconnect', (reason) => {
+      console.log('❌ Socket disconnected, reason:', reason);
+      setIsConnected(false);
+    });
+    
+    socketRef.current = socketInstance;
+    setSocket(socketInstance);
+    return socketInstance;
+  }, []);
+
+  // Socket service object
   const socketService = {
     emit: (event, data, callback) => {
       if (!socket || !isConnected) {
-        console.warn('Socket not connected, cannot emit:', event);
+        console.warn('⚠️ Socket not connected, cannot emit:', event);
         return false;
       }
       socket.emit(event, data, callback);
@@ -152,7 +303,6 @@ export const SocketProvider = ({ children }) => {
       socket.off(event, handler);
     },
     
-    // Emit with promise-based response handling
     emitAsync: (event, data, timeout = 5000) => {
       return new Promise((resolve, reject) => {
         if (!socket || !isConnected) {
@@ -181,7 +331,15 @@ export const SocketProvider = ({ children }) => {
       socket, 
       isConnected, 
       reconnect,
-      socketService
+      connect, // Thêm hàm connect
+      socketService,
+      // Thêm debug info
+      reduxAuthState: {
+        hasUser: !!user,
+        userId: user?._id,
+        isAuthenticated,
+        hasToken: !!accessToken
+      }
     }}>
       {children}
     </SocketContext.Provider>
@@ -196,7 +354,6 @@ export const useSocket = () => {
   return context;
 };
 
-// Hook để sử dụng socket service trực tiếp
 export const useSocketService = () => {
   const { socketService } = useSocket();
   return socketService;

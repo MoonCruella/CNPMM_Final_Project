@@ -7,10 +7,12 @@ import {
   IconMessages,
 } from "@tabler/icons-react";
 import { assets } from "../../assets/assets";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
 import SellerNotificationBell from "./SellerNotificationBell";
 import { toast } from "sonner";
+import { useDispatch } from 'react-redux'; 
+import { logout } from '../../redux/authSlice'; 
 
 const SellerLayout = () => {
   const data = [
@@ -28,17 +30,26 @@ const SellerLayout = () => {
     { link: "/seller/manage-user", label: "Quản lý người dùng", icon: IconKey },
   ];
 
-  const { navigate, logout } = useAppContext();
+  const { logoutAll } = useAppContext();
   const location = useLocation();
   const activePath = location.pathname;
+  const navigate = useNavigate(); // Sử dụng hook useNavigate
+  const dispatch = useDispatch(); // Sử dụng dispatch để gọi action
 
-  // Logout handler
+  // Cập nhật logout handler để chuyển hướng về trang đăng nhập với mode=seller
   const handleLogout = async () => {
     try {
       const loadingToast = toast.loading("Đang đăng xuất...");
-      await logout();
-      toast.dismiss(loadingToast);
-      navigate("/seller");
+      
+      // Logout thông qua AppContext
+      await logoutAll();
+      
+      // Đồng thời dispatch logout action trong Redux
+      dispatch(logout());
+      
+      toast.dismiss(loadingToast);      
+      // Chuyển hướng đến trang login với mode=seller
+      navigate("/login?mode=seller");
     } catch (error) {
       toast.error("Có lỗi xảy ra khi đăng xuất");
     }
@@ -108,9 +119,8 @@ const SellerLayout = () => {
       <main className="flex-1 flex flex-col bg-white overflow-hidden">
         {/* Header Bar */}
         <div className="bg-white shadow-sm p-4 flex justify-between items-center border-b">
-          <h1 className="text-xl font-medium text-gray-900">
-            {data.find((item) => item.link === activePath)?.label ||
-              "Dashboard"}
+          <h1 className="text-xl font-semibold text-green-700">
+            {data.find(item => item.link === activePath || activePath.startsWith(item.link + '/'))?.label || 'Dashboard'}
           </h1>
           <div className="flex items-center gap-4">
             <SellerNotificationBell />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSocket } from './SocketContext';
 import { toast } from 'sonner';
 import api from '../services/api';
+import { useAppContext } from './AppContext';
 
 const NotificationContext = createContext();
 
@@ -12,22 +13,24 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-
+  const { isAuthenticated } = useAppContext();
   // Lấy số thông báo chưa đọc khi component mount
   useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const { data } = await api.get('/api/notifications/unread-count');
-        if (data.success) {
-          setUnreadCount(data.data.count);
+    if (isAuthenticated) {
+      const fetchUnreadCount = async () => {
+        try {
+          const { data } = await api.get('/api/notifications/unread-count');
+          if (data.success) {
+            setUnreadCount(data.data.count);
+          }
+        } catch (error) {
+          console.error('Error fetching unread count:', error);
         }
-      } catch (error) {
-        console.error('Error fetching unread count:', error);
-      }
-    };
-
-    fetchUnreadCount();
-  }, []);
+      };
+      
+      fetchUnreadCount();
+    }
+  }, [isAuthenticated]); 
 
   // Lắng nghe sự kiện từ socket
   useEffect(() => {

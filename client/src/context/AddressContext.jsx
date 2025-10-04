@@ -1,12 +1,12 @@
 // context/AddressContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import addressService from "@/services/addressService";
-import { useAppContext } from "./AppContext";
+import { useSelector } from "react-redux";
 
 const AddressContext = createContext();
 
 export const AddressProvider = ({ children }) => {
-  const { user } = useAppContext();
+  const { user, isAuthenticated } = useSelector(state => state.auth);
 
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null); // lưu object

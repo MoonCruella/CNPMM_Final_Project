@@ -1,19 +1,27 @@
 import React, { useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useUserContext } from "../../context/UserContext.jsx";
 import { toast } from "sonner";
 import { useCartContext } from "@/context/CartContext.jsx";
 import NotificationBell from './NotificationBell';
-import avatarService from "@/services/avatarService.js";
-import ca from "zod/v4/locales/ca.js";
+import { useDispatch, useSelector } from 'react-redux'; // Thêm Redux hooks
+import { logoutAsync } from '../../redux/authSlice'; // Thêm Redux action
 
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
-  const { user, isAuthenticated, navigate, logout, logoutAll, openLogin } =
+  
+  // Giữ AppContext để tương thích ngược
+  const { navigate: contextNavigate, logout: contextLogout, logoutAll: contextLogoutAll, openLogin } =
     useAppContext();
+    
+  // Sử dụng Redux
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, isSeller } = useSelector(state => state.auth);
+  
   const { getUserAvatarUrl } = useUserContext();
   const getAvatarUrl = (size = 40) => {
     if (getUserAvatarUrl) {
@@ -21,18 +29,26 @@ const Navbar = () => {
     }
 
     // Fallback if getUserAvatarUrl is not available
-    const name = user?.name || user?.email || "User";
+    const name = user?.name || user?.full_name || user?.email || "User";
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
       name
     )}&background=10b981&color=fff&size=${size}`;
   };
 
-  // Logout handlers
+  // Logout handler sử dụng cả Redux và AppContext
   const handleLogout = async () => {
     try {
       const loadingToast = toast.loading("Đang đăng xuất...");
-      await logout();
+      
+      // Logout qua AppContext để đảm bảo tương thích
+      await contextLogout();
+      
+      // Dispatch Redux action
+      await dispatch(logoutAsync()).unwrap();
+      
       toast.dismiss(loadingToast);
+      toast.success("Đăng xuất thành công");
+      
       navigate("/");
       setOpen(false);
       setIsUserMenuOpen(false);
@@ -46,8 +62,16 @@ const Navbar = () => {
       const loadingToast = toast.loading(
         "Đang đăng xuất khỏi tất cả thiết bị..."
       );
-      await logoutAll();
+      
+      // Logout qua AppContext để đảm bảo tương thích
+      await contextLogoutAll();
+      
+      // Dispatch Redux action
+      await dispatch(logoutAsync()).unwrap();
+      
       toast.dismiss(loadingToast);
+      toast.success("Đã đăng xuất khỏi tất cả thiết bị");
+      
       setOpen(false);
       setIsUserMenuOpen(false);
     } catch (error) {
@@ -60,6 +84,7 @@ const Navbar = () => {
     openLogin();
     navigate("/login");
   };
+  
   const handleMenuNavigation = (path) => {
     navigate(path);
     setIsUserMenuOpen(false);
@@ -70,6 +95,10 @@ const Navbar = () => {
   useEffect(() => {
     refreshCart(); // luôn sync lại khi load Navbar
   }, []);
+
+  // Sử dụng Redux state cho user và isAuthenticated
+  const currentUser = user; // Từ Redux state
+  const userIsAuthenticated = isAuthenticated; // Từ Redux state
 
   return (
     <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-b border-gray-300 bg-white relative transition-all">
@@ -109,10 +138,10 @@ const Navbar = () => {
             {items.length}
           </button>
         </div>
-        {isAuthenticated && <NotificationBell />}
+        {userIsAuthenticated && <NotificationBell />}
 
         {/* User Menu */}
-        {!isAuthenticated || !user ? (
+        {!userIsAuthenticated || !currentUser ? (
           <button
             onClick={handleLoginClick}
             className="cursor-pointer px-8 py-2 btn-primary transition text-white rounded-full"
@@ -133,7 +162,7 @@ const Navbar = () => {
                 alt="Profile"
                 onError={(e) => {
                   // Better fallback handling
-                  const name = user?.name || user?.email || "User";
+                  const name = currentUser?.name || currentUser?.full_name || currentUser?.email || "User";
                   e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
                     name
                   )}&background=10b981&color=fff&size=40`;
@@ -143,7 +172,7 @@ const Navbar = () => {
               {/* Active Status Indicator */}
               <div
                 className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
-                  user.active === true ? "bg-green-500" : "bg-red-500"
+                  currentUser.active === true ? "bg-green-500" : "bg-red-500"
                 }`}
               ></div>
             </div>
@@ -161,10 +190,10 @@ const Navbar = () => {
                 <div className="flex items-center gap-2">
                   <div>
                     <p className="font-medium text-gray-800 truncate">
-                      {user.name}
+                      {currentUser.name || currentUser.full_name}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {user.email}
+                      {currentUser.email}
                     </p>
                   </div>
                 </div>
@@ -173,28 +202,28 @@ const Navbar = () => {
                 <div className="flex gap-1 mt-1">
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      user.role === "admin"
+                      currentUser.role === "admin"
                         ? "bg-red-100 text-red-700"
-                        : user.role === "seller"
+                        : currentUser.role === "seller"
                         ? "bg-blue-100 text-blue-700"
                         : "bg-green-100 text-green-700"
                     }`}
                   >
-                    {user.role === "admin"
+                    {currentUser.role === "admin"
                       ? "Admin"
-                      : user.role === "seller"
+                      : currentUser.role === "seller"
                       ? "Seller"
                       : "User"}
                   </span>
 
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      user.active === true
+                      currentUser.active === true
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"
                     }`}
                   >
-                    {user.active === true ? "Active" : "Inactive"}
+                    {currentUser.active === true ? "Active" : "Inactive"}
                   </span>
                 </div>
               </div>
@@ -215,7 +244,7 @@ const Navbar = () => {
               </button>
 
               {/* Admin Link */}
-              {user.role === "admin" && (
+              {currentUser.role === "admin" && (
                 <button
                   onClick={() => handleMenuNavigation("/admin")}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-purple-600 transition-colors"
@@ -225,7 +254,7 @@ const Navbar = () => {
               )}
 
               {/* Seller Dashboard */}
-              {user.role === "seller" && (
+              {currentUser.role === "seller" && (
                 <button
                   onClick={() => handleMenuNavigation("/seller")}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-blue-600 transition-colors"
@@ -280,7 +309,7 @@ const Navbar = () => {
           </NavLink>
 
           {/* User-specific mobile menu */}
-          {isAuthenticated && user ? (
+          {userIsAuthenticated && currentUser ? (
             <>
               <hr className="w-full my-2" />
 
@@ -291,23 +320,23 @@ const Navbar = () => {
                   className="w-8 h-8 rounded-full object-cover"
                   alt="Profile"
                   onError={(e) => {
-                    const name = user?.name || user?.email || "User";
+                    const name = currentUser?.name || currentUser?.full_name || currentUser?.email || "User";
                     e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
                       name
                     )}&background=10b981&color=fff&size=32`;
                   }}
                 />
                 <div>
-                  <p className="font-medium text-gray-800">{user.name}</p>
+                  <p className="font-medium text-gray-800">{currentUser.name || currentUser.full_name}</p>
                   <div className="flex gap-1">
                     <span
                       className={`px-1.5 py-0.5 rounded text-xs ${
-                        user.active === true
+                        currentUser.active === true
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
                       }`}
                     >
-                      {user.active === true ? "Active" : "Inactive"}
+                      {currentUser.active === true ? "Active" : "Inactive"}
                     </span>
                   </div>
                 </div>
@@ -321,17 +350,7 @@ const Navbar = () => {
                 📦 My Orders
               </NavLink>
 
-              {user.role === "admin" && (
-                <NavLink
-                  to="/admin"
-                  onClick={() => setOpen(false)}
-                  className="text-purple-600"
-                >
-                  ⚙️ Admin Panel
-                </NavLink>
-              )}
-
-              {user.role === "seller" && (
+              {currentUser.role === "seller" && (
                 <NavLink
                   to="/seller"
                   onClick={() => setOpen(false)}
@@ -356,6 +375,14 @@ const Navbar = () => {
               Login
             </button>
           )}
+        </div>
+      )}
+      
+      {/* Redux Debug - chỉ hiển thị trong môi trường development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="hidden fixed bottom-4 left-4 p-2 bg-white/80 backdrop-blur-sm border border-gray-300 shadow rounded text-xs text-gray-800">
+          <p><strong>Redux Auth:</strong> {userIsAuthenticated ? 'Logged In' : 'Not Logged In'}</p>
+          <p><strong>Role:</strong> {currentUser?.role || 'N/A'}</p>
         </div>
       )}
     </nav>

@@ -1,6 +1,8 @@
 import axios from "axios";
 import authService from "./authService";
-
+import { store } from "../redux/store"; 
+import { fetchCurrentUser } from "../redux/authSlice";
+import { logout, updateToken } from "../redux/authSlice";
 // Config cho API calls
 const API_TIMEOUT = 30000; // 30 giây timeout cho requests
 const MAX_RETRIES = 2; // Số lần retry tối đa khi request bị lỗi mạng
@@ -35,12 +37,16 @@ const setTokens = (accessToken, refreshToken) => {
   if (refreshToken) {
     localStorage.setItem("refreshToken", refreshToken);
   }
+  if (accessToken) {
+    store.dispatch(updateToken({ accessToken, refreshToken }));
+  }
 };
 const removeTokens = () => {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("user");
   setAuthHeader(null);
+  store.dispatch(logout());
 };
 
 // Thêm subscriber vào queue khi đang refresh token
@@ -99,6 +105,7 @@ export const setupAutoRefresh = () => {
         console.log(`Token sắp hết hạn (còn ${Math.round(timeRemaining/60000)} phút), đang refresh...`);
         await refreshToken();
         console.log('Token đã được refresh tự động');
+        store.dispatch(fetchCurrentUser());
       }
     } catch (error) {
       console.error('Lỗi khi tự động refresh token:', error);
@@ -130,6 +137,7 @@ export const setupVisibilityRefresh = () => {
           console.log(`Tab được kích hoạt lại, token còn ${Math.round(timeRemaining/60000)} phút, đang refresh...`);
           await refreshToken();
           console.log('Token đã được refresh khi kích hoạt tab');
+          store.dispatch(fetchCurrentUser());
         }
       } catch (error) {
         console.error('Lỗi khi refresh token sau khi kích hoạt tab:', error);
@@ -163,9 +171,15 @@ export const initTokenRefresh = () => {
         try {
           await refreshToken();
           console.log('Token đã được refresh khi khởi động');
+          
+          // Redux: Cập nhật user data sau khi refresh token
+          store.dispatch(fetchCurrentUser());
         } catch (error) {
           console.error('Lỗi khi refresh token khi khởi động:', error);
         }
+      } else if (timeRemaining > 0) {
+        // Redux: Cập nhật Redux store từ localStorage
+        store.dispatch(fetchCurrentUser());
       }
     }
   }, 1000);
@@ -195,6 +209,7 @@ export const setupTokenRefreshInterval = (minimumValidTime = 5 * 60 * 1000) => {
       try {
         await refreshToken();
         console.log("Token refreshed proactively");
+        store.dispatch(fetchCurrentUser());
       } catch (error) {
         console.error("Failed to refresh token proactively:", error);
       }
@@ -330,6 +345,7 @@ api.interceptors.response.use(
         if (!newAccess) throw new Error("No access token in refresh response");
 
         setTokens(newAccess, newRefresh);
+        store.dispatch(fetchCurrentUser());
         processSubscribers(newAccess);
         isRefreshing = false;
 
@@ -444,6 +460,8 @@ export const handleApiError = (error) => {
 const initialToken = getAccessToken();
 if (initialToken) {
   setAuthHeader(initialToken);
+  // Redux: Cập nhật trạng thái ban đầu từ localStorage
+  store.dispatch(fetchCurrentUser());
 }
 
 export default api;

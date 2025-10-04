@@ -207,7 +207,7 @@ useEffect(() => {
 
       if (response.data.success) {
         const userData = authService.getUser();
-
+        console.log('User data: ' +userData);
         if (userData.role === "user") {
           syncAuthState(userData);
           setShowUserLogin(false);
@@ -349,12 +349,11 @@ useEffect(() => {
       const response = await authService.login(email, password);
 
       if (response.data.success) {
-        const userData = authService.getUser();
+        const userData = authService.getCurrentUser();
 
         if (userData.role === "seller") {
           syncAuthState(userData);
           setShowUserLogin(false);
-          setupTokenRefreshTimer();
           return response.data;
         } else {
           localStorage.removeItem("accessToken");
