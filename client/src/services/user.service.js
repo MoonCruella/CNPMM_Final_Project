@@ -1,4 +1,5 @@
 import api from "./api.js";
+import privateApi from "./privateApi.js";
 
 class UserService {
   // ✅ Storage management
@@ -210,6 +211,67 @@ class UserService {
       province: addressForm.province || "", // ✅ Sử dụng province
       full_address: addressForm.full_address || "",
     };
+  };
+
+  toggleUserStatus = async (userId) => {
+    try {
+      if (!userId) throw new Error("userId is required");
+      const response = await privateApi.put(
+        `/api/users/admin/toggle-status/${userId}`
+      );
+      return {
+        success: true,
+        data: response.data,
+        message:
+          response.data?.message || "Thay đổi trạng thái người dùng thành công",
+      };
+    } catch (error) {
+      console.error("toggleUserStatus error:", error);
+      return {
+        success: false,
+        message:
+          error.response?.data?.message ||
+          error.message ||
+          "Lỗi khi thay đổi trạng thái người dùng",
+      };
+    }
+  };
+  getUserList = async ({
+    limit = 10,
+    page = 1,
+    search = "",
+    role = "",
+    active,
+  } = {}) => {
+    try {
+      const params = { limit, page, search, role };
+      if (active !== undefined) params.active = active;
+
+      const response = await privateApi.get("/api/users/admin/list", {
+        params,
+      });
+      const payload = response.data || {};
+
+      const data = payload.data ?? payload;
+      const users = data.users ?? payload.users ?? [];
+      const pagination = data.pagination ?? payload.pagination ?? null;
+
+      return {
+        success: true,
+        users,
+        pagination,
+        raw: payload,
+      };
+    } catch (error) {
+      console.error("getUserList error:", error);
+      return {
+        success: false,
+        message:
+          error.response?.data?.message ||
+          error.message ||
+          "Lỗi khi lấy danh sách người dùng",
+      };
+    }
   };
 }
 
