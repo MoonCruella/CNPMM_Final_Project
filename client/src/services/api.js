@@ -109,8 +109,18 @@ export const setupAutoRefresh = () => {
       }
     } catch (error) {
       console.error('Lỗi khi tự động refresh token:', error);
+      setTimeout(async () => {
+        try {
+          if (isTokenValid() && getTokenTimeRemaining() < REFRESH_THRESHOLD) {
+            console.log('Thử lại refresh token sau lỗi...');
+            await refreshToken();
+          }
+        } catch (retryError) {
+          console.error('Thử lại refresh token thất bại:', retryError);
+        }
+      }, 10000);
     }
-  }, 60000); // Kiểm tra mỗi phút
+  }, 30000); // Kiểm tra mỗi phút
   
   // Trả về cleanup function
   return () => {
@@ -156,15 +166,20 @@ export const setupVisibilityRefresh = () => {
 
 // Khởi tạo hệ thống refresh token
 export const initTokenRefresh = () => {
-  const autoRefreshCleanup = setupAutoRefresh();
-  const visibilityRefreshCleanup = setupVisibilityRefresh();
+  // Xóa cấu hình refresh cũ nếu có
+  if (window.tokenRefreshInterval) {
+    clearInterval(window.tokenRefreshInterval);
+  }
+
+  console.log('Khởi tạo hệ thống refresh token tự động');
   
-  // Kiểm tra token ngay khi khởi động
+  // Thiết lập ngưỡng refresh token - 5 phút
+  const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 phút
+  
+  // Kiểm tra token ngay khi khởi động (không đợi interval)
   setTimeout(async () => {
     if (localStorage.getItem('accessToken')) {
       const timeRemaining = getTokenTimeRemaining();
-      // Refresh token khi còn dưới 10 phút
-      const REFRESH_THRESHOLD = 10 * 60 * 1000;
       
       if (timeRemaining > 0 && timeRemaining < REFRESH_THRESHOLD) {
         console.log(`Khởi động ứng dụng, token còn ${Math.round(timeRemaining/60000)} phút, đang refresh...`);
@@ -178,16 +193,76 @@ export const initTokenRefresh = () => {
           console.error('Lỗi khi refresh token khi khởi động:', error);
         }
       } else if (timeRemaining > 0) {
+        console.log(`Token hợp lệ, còn ${Math.round(timeRemaining/60000)} phút`);
         // Redux: Cập nhật Redux store từ localStorage
         store.dispatch(fetchCurrentUser());
       }
     }
-  }, 1000);
+  }, 100);
+  
+  // Thiết lập kiểm tra liên tục mỗi 30 giây
+  window.tokenRefreshInterval = setInterval(async () => {
+    try {
+      // Nếu không có token, không làm gì
+      if (!localStorage.getItem('accessToken')) return;
+      
+      const timeRemaining = getTokenTimeRemaining();
+      
+      if (timeRemaining > 0 && timeRemaining < REFRESH_THRESHOLD) {
+        console.log(`Token sắp hết hạn (còn ${Math.round(timeRemaining/60000)} phút), đang refresh...`);
+        await refreshToken();
+        console.log('Token đã được refresh tự động');
+        store.dispatch(fetchCurrentUser());
+      }
+    } catch (error) {
+      console.error('Lỗi khi tự động refresh token:', error);
+      
+      // Thử lại sau 10 giây nếu gặp lỗi
+      setTimeout(async () => {
+        try {
+          const timeRemaining = getTokenTimeRemaining();
+          if (isTokenValid() && timeRemaining < REFRESH_THRESHOLD) {
+            console.log('Thử lại refresh token sau lỗi...');
+            await refreshToken();
+          }
+        } catch (retryError) {
+          console.error('Thử lại refresh token thất bại:', retryError);
+        }
+      }, 10000);
+    }
+  }, 30000); // Kiểm tra mỗi 30 giây
+  
+  // Thiết lập tự động refresh khi tab được kích hoạt lại
+  const handleVisibilityChange = async () => {
+    if (document.visibilityState === 'visible') {
+      try {
+        // Nếu không có token, không làm gì
+        if (!localStorage.getItem('accessToken')) return;
+        
+        const timeRemaining = getTokenTimeRemaining();
+        
+        if (timeRemaining > 0 && timeRemaining < REFRESH_THRESHOLD * 2) { // Ngưỡng cao hơn khi quay lại tab
+          console.log(`Tab được kích hoạt lại, token còn ${Math.round(timeRemaining/60000)} phút, đang refresh...`);
+          await refreshToken();
+          console.log('Token đã được refresh khi kích hoạt tab');
+          store.dispatch(fetchCurrentUser());
+        }
+      } catch (error) {
+        console.error('Lỗi khi refresh token sau khi kích hoạt tab:', error);
+      }
+    }
+  };
+  
+  // Thêm event listener cho visibility change
+  document.addEventListener('visibilitychange', handleVisibilityChange);
   
   // Trả về cleanup function tổng hợp
   return () => {
-    autoRefreshCleanup();
-    visibilityRefreshCleanup();
+    if (window.tokenRefreshInterval) {
+      clearInterval(window.tokenRefreshInterval);
+      console.log('Đã tắt tự động refresh token');
+    }
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
   };
 };
 
