@@ -107,6 +107,19 @@ const VoucherModal = ({ isOpen, onClose, onApply, options = {}, subtotal }) => {
   if (!isOpen) return null;
 
   // Sort helper
+  const computeEffective = (v) => {
+    const rawPercent = Number(v.discountValue ?? v.value ?? 0);
+    const flat = Number(v.discountValue ?? v.value ?? 0);
+    const cap = Number(v.maxDiscount ?? v.max_value ?? 0) || 0;
+    const isPercent = v.isPercent === true;
+
+    if (isPercent) {
+      const fromPercent = (Number(subtotal) || 0) * (rawPercent / 100);
+      return cap > 0 ? Math.min(fromPercent, cap) : fromPercent;
+    }
+    return flat;
+  };
+
   const sortVouchers = (list) => {
     return [...list].sort((a, b) => {
       const aDisabled = subtotal < (a.minOrderValue || 0);
@@ -116,9 +129,9 @@ const VoucherModal = ({ isOpen, onClose, onApply, options = {}, subtotal }) => {
       if (aDisabled && !bDisabled) return 1;
       if (!aDisabled && bDisabled) return -1;
 
-      // Nếu cùng trạng thái, sort theo giảm giá cao → thấp
-      const aValue = a.discountValue || a.value || 0;
-      const bValue = b.discountValue || b.value || 0;
+      // Nếu cùng trạng thái, sort theo giá trị giảm thực tế (tính % → VND khi cần)
+      const aValue = computeEffective(a) || 0;
+      const bValue = computeEffective(b) || 0;
       return bValue - aValue;
     });
   };
@@ -140,6 +153,23 @@ const VoucherModal = ({ isOpen, onClose, onApply, options = {}, subtotal }) => {
         )
     )
   );
+
+  // compute best (deepest) voucher keys for each list
+  const bestKeyForList = (list) => {
+    let best = null;
+    let bestVal = -Infinity;
+    (list || []).forEach((v) => {
+      const val = computeEffective(v) || 0;
+      if (val > bestVal) {
+        bestVal = val;
+        best = v;
+      }
+    });
+    return best ? String(best.code ?? best._id) : null;
+  };
+
+  const bestFreeshipKey = bestKeyForList(freeshipList);
+  const bestDiscountKey = bestKeyForList(discountList);
 
   const handleApply = () => {
     const freeshipObj =
@@ -209,22 +239,29 @@ const VoucherModal = ({ isOpen, onClose, onApply, options = {}, subtotal }) => {
                         isDisabled ? "opacity-50 cursor-not-allowed" : ""
                       }`}
                     >
-                      <VoucherCard
-                        type="freeship"
-                        labelLeft="Freeship"
-                        discountValue={formatVND(v.discountValue)}
-                        maxDiscount={
-                          v.maxDiscount ? formatVND(v.maxDiscount) : "-"
-                        }
-                        minOrder={formatVND(v.minOrderValue)}
-                        expireText={
-                          v.endDate
-                            ? new Date(v.endDate).toLocaleDateString()
-                            : "N/A"
-                        }
-                        checked={selectedFreeship === key}
-                        onCheck={() => toggleFreeship(key)}
-                      />
+                      <div className="relative">
+                        <VoucherCard
+                          type="freeship"
+                          labelLeft="Freeship"
+                          discountValue={formatVND(v.discountValue)}
+                          maxDiscount={
+                            v.maxDiscount ? formatVND(v.maxDiscount) : "-"
+                          }
+                          minOrder={formatVND(v.minOrderValue)}
+                          expireText={
+                            v.endDate
+                              ? new Date(v.endDate).toLocaleDateString()
+                              : "N/A"
+                          }
+                          checked={selectedFreeship === key}
+                          onCheck={() => toggleFreeship(key)}
+                        />
+                        {String(bestFreeshipKey) === key && (
+                          <span className="absolute top-2 right-2 bg-orange-100 text-orange-800 text-xs font-semibold px-2 py-0.5 rounded-2xl">
+                            Giảm nhiều nhất
+                          </span>
+                        )}
+                      </div>
                     </button>
                   );
                 })}
@@ -259,29 +296,36 @@ const VoucherModal = ({ isOpen, onClose, onApply, options = {}, subtotal }) => {
                         isDisabled ? "opacity-50 cursor-not-allowed" : ""
                       }`}
                     >
-                      <VoucherCard
-                        type={v.type || "discount"}
-                        labelLeft={
-                          v.type === "percent" ? `${v.value}%` : "Giảm giá"
-                        }
-                        isPercent={v.isPercent}
-                        discountValue={
-                          v.isPercent === true
-                            ? `${v.discountValue}%`
-                            : formatVND(v.discountValue)
-                        }
-                        maxDiscount={
-                          v.maxDiscount ? formatVND(v.maxDiscount) : "-"
-                        }
-                        minOrder={formatVND(v.minOrderValue)}
-                        expireText={
-                          v.endDate
-                            ? new Date(v.endDate).toLocaleDateString()
-                            : "N/A"
-                        }
-                        checked={selectedDiscount === key}
-                        onCheck={() => toggleDiscount(key)}
-                      />
+                      <div className="relative">
+                        <VoucherCard
+                          type={v.type || "discount"}
+                          labelLeft={
+                            v.type === "percent" ? `${v.value}%` : "Giảm giá"
+                          }
+                          isPercent={v.isPercent}
+                          discountValue={
+                            v.isPercent === true
+                              ? `${v.discountValue}%`
+                              : formatVND(v.discountValue)
+                          }
+                          maxDiscount={
+                            v.maxDiscount ? formatVND(v.maxDiscount) : "-"
+                          }
+                          minOrder={formatVND(v.minOrderValue)}
+                          expireText={
+                            v.endDate
+                              ? new Date(v.endDate).toLocaleDateString()
+                              : "N/A"
+                          }
+                          checked={selectedDiscount === key}
+                          onCheck={() => toggleDiscount(key)}
+                        />
+                        {String(bestDiscountKey) === key && (
+                          <span className="absolute top-1 right-2 bg-orange-100 text-orange-800 text-xs font-semibold px-2 py-0.5 rounded-full">
+                            Giảm nhiều nhất
+                          </span>
+                        )}
+                      </div>
                     </button>
                   );
                 })}

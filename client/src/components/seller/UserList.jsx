@@ -7,6 +7,7 @@ import {
   IconLock,
   IconLockOpen,
 } from "@tabler/icons-react";
+import UserModal from "./modal/UserModal";
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
@@ -18,6 +19,10 @@ const UserList = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // user modal state (modal will lazy-load orders itself)
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // filters
   const [search, setSearch] = useState("");
@@ -115,6 +120,19 @@ const UserList = () => {
   const goToPage = (p) => {
     if (p < 1 || p > (pagination.pages || 1)) return;
     setPage(p);
+  };
+
+  // view user details
+  const handleView = async (u) => {
+    if (!u) return;
+    // just set user and open modal — UserModal will fetch orders lazily on open
+    setSelectedUser(u);
+    setIsUserModalOpen(true);
+  };
+
+  const closeUserModal = () => {
+    setIsUserModalOpen(false);
+    setSelectedUser(null);
   };
 
   return (
@@ -249,6 +267,7 @@ const UserList = () => {
                     <div className="inline-flex items-center gap-3 justify-center">
                       {/* View */}
                       <button
+                        onClick={() => handleView(u)}
                         className="w-20 h-10 flex items-center justify-center gap-2 rounded-full bg-blue-50 border border-blue-100 text-black-800 hover:bg-blue-100 shadow-sm transition transform hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-300 whitespace-nowrap"
                         title="Xem"
                       >
@@ -277,6 +296,13 @@ const UserList = () => {
           </tbody>
         </table>
       </div>
+
+      {/* User detail modal */}
+      <UserModal
+        isOpen={isUserModalOpen}
+        onClose={closeUserModal}
+        user={selectedUser}
+      />
 
       {/* Pagination */}
       <div className="flex items-center justify-between mt-4">

@@ -68,7 +68,7 @@ const VouchersTable = ({ vouchers, onEdit, onDelete, isLoading }) => {
   return (
     <div className="overflow-x-auto shadow rounded-xl bg-white">
       <table className="w-full text-left">
-        <thead className="bg-gray-100">
+        <thead className="bg-gray-200">
           <tr>
             <th
               className="py-3 px-4 text-gray-700 cursor-pointer hover:bg-gray-200 transition"
@@ -109,61 +109,95 @@ const VouchersTable = ({ vouchers, onEdit, onDelete, isLoading }) => {
         </thead>
         <tbody className="bg-white">
           {sortedVouchers.length > 0 ? (
-            sortedVouchers.map((voucher) => (
-              <tr key={voucher._id} className="border-b hover:bg-gray-50">
-                <td className="py-3 px-4 font-medium text-gray-800">
-                  {voucher.code}
-                </td>
-                <td className="py-3 px-4 text-center text-gray-700">
-                  {voucher.type === "DISCOUNT" ? "Giảm giá" : "Freeship"}
-                </td>
-                <td className="py-3 px-4 text-center text-gray-700">
-                  {voucher.isPercent
-                    ? `${voucher.discountValue}%`
-                    : `${voucher.discountValue.toLocaleString()}₫`}
-                </td>
-                <td className="py-3 px-4 text-center text-gray-700">
-                  {voucher.startDate
-                    ? new Date(voucher.startDate).toLocaleDateString("vi-VN")
-                    : "-"}
-                </td>
-                <td className="py-3 px-4 text-center text-gray-700">
-                  {voucher.endDate
-                    ? new Date(voucher.endDate).toLocaleDateString("vi-VN")
-                    : "-"}
-                </td>
-                <td className="py-3 px-4 text-center">
-                  {/* text-only status like UserList */}
-                  {voucher.active ? (
-                    <span className="text-sm font-medium text-green-600">
-                      Hoạt động
-                    </span>
-                  ) : (
-                    <span className="text-sm font-medium text-red-600">
-                      Không hoạt động
-                    </span>
-                  )}
-                </td>
-                <td className="py-3 px-4 text-center">
-                  <div className="flex justify-center gap-2">
-                    <button
-                      onClick={() => onEdit && onEdit(voucher)}
-                      className="w-24 h-10 flex items-center justify-center gap-2 rounded-full bg-blue-50 border border-blue-100 text-blue-800 hover:bg-blue-100 shadow-sm transition transform hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-300 whitespace-nowrap"
-                    >
-                      <IconEdit size={16} />
-                      <span>Sửa</span>
-                    </button>
-                    <button
-                      onClick={() => onDelete && onDelete(voucher._id)}
-                      className="w-24 h-10 flex items-center justify-center gap-2 rounded-full bg-white border border-blue-100 text-red-600 hover:bg-red-50 shadow-sm transition transform hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-300 whitespace-nowrap"
-                    >
-                      <IconTrash size={16} />
-                      <span>Xóa</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))
+            sortedVouchers.map((voucher) => {
+              return (
+                <tr key={voucher._id} className="border-b hover:bg-gray-50">
+                  <td className="py-3 px-4 font-medium text-gray-800">
+                    {voucher.code}
+                  </td>
+                  {/* chỉ tô màu quanh ô "Loại" */}
+                  <td className="py-3 px-4 text-center">
+                    {(() => {
+                      const t = String(voucher.type || "").toUpperCase();
+                      const badgeClass =
+                        t === "FREESHIP"
+                          ? "ring-1 ring-green-200 bg-green-100 text-green-800"
+                          : t === "DISCOUNT"
+                          ? "ring-1 ring-amber-200 bg-orange-100 text-amber-800"
+                          : "text-gray-700";
+                      const label = t === "DISCOUNT" ? "Giảm giá" : "Freeship";
+                      return (
+                        <span
+                          className={`inline-block px-3 py-1 rounded-md text-sm font-medium ${badgeClass}`}
+                        >
+                          {label}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td className="py-3 px-4 text-center text-gray-700">
+                    {String(voucher.type || "").toUpperCase() === "FREESHIP"
+                      ? (voucher.maxDiscount ??
+                          voucher.maxValue ??
+                          voucher.max_value) !== undefined &&
+                        (voucher.maxDiscount ??
+                          voucher.maxValue ??
+                          voucher.max_value) !== null
+                        ? `${Number(
+                            voucher.maxDiscount ??
+                              voucher.maxValue ??
+                              voucher.max_value
+                          ).toLocaleString("vi-VN")} ₫`
+                        : "-"
+                      : voucher.isPercent
+                      ? `${voucher.discountValue}%`
+                      : `${Number(voucher.discountValue || 0).toLocaleString(
+                          "vi-VN"
+                        )} ₫`}
+                  </td>
+                  <td className="py-3 px-4 text-center text-gray-700">
+                    {voucher.startDate
+                      ? new Date(voucher.startDate).toLocaleDateString("vi-VN")
+                      : "-"}
+                  </td>
+                  <td className="py-3 px-4 text-center text-gray-700">
+                    {voucher.endDate
+                      ? new Date(voucher.endDate).toLocaleDateString("vi-VN")
+                      : "-"}
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    {/* text-only status like UserList */}
+                    {voucher.active ? (
+                      <span className="text-sm font-medium text-green-600">
+                        Hoạt động
+                      </span>
+                    ) : (
+                      <span className="text-sm font-medium text-red-600">
+                        Không hoạt động
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => onEdit && onEdit(voucher)}
+                        className="w-24 h-10 flex items-center justify-center gap-2 rounded-full bg-blue-50 border border-blue-100 text-blue-800 hover:bg-blue-100 shadow-sm transition transform hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-300 whitespace-nowrap"
+                      >
+                        <IconEdit size={16} />
+                        <span>Sửa</span>
+                      </button>
+                      <button
+                        onClick={() => onDelete && onDelete(voucher._id)}
+                        className="w-24 h-10 flex items-center justify-center gap-2 rounded-full bg-white border border-blue-100 text-red-600 hover:bg-red-50 shadow-sm transition transform hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-300 whitespace-nowrap"
+                      >
+                        <IconTrash size={16} />
+                        <span>Xóa</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
           ) : (
             <tr>
               <td
