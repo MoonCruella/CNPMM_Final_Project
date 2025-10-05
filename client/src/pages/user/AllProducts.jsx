@@ -53,7 +53,6 @@ const AllProducts = () => {
 
     fetchData();
   }, []);
-
   // Filter logic (category + search)
   useEffect(() => {
     let filtered = [...products];
