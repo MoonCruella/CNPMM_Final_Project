@@ -4,7 +4,8 @@ import {
   getRatingsByProduct,
   deleteRating,
   updateRating,
-  getProductAverageRating
+  getProductAverageRating,
+  getAllRatings,
 } from "../controllers/rating.controller.js";
 import { authenticateToken } from "../middleware/auth.middleware.js";
 
@@ -24,5 +25,8 @@ router.put("/:id", authenticateToken, updateRating);
 
 // Xoá Rating (chính chủ hoặc admin)
 router.delete("/:id", authenticateToken, deleteRating);
+
+//Lấy tất cả rating (admin)
+router.get("/", authenticateToken, getAllRatings);
 
 export default router;

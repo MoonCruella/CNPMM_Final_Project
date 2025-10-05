@@ -5,16 +5,23 @@ import {
   IconLogout,
   IconReceipt2,
   IconMessages,
+  IconMessageReply,
+  IconMessage,
 } from "@tabler/icons-react";
 import { assets } from "../../assets/assets";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
 import SellerNotificationBell from "./SellerNotificationBell";
 import { toast } from "sonner";
-import { useDispatch } from 'react-redux'; 
-import { logout } from '../../redux/authSlice'; 
+import { useDispatch } from 'react-redux';
+import { logout } from '../../redux/authSlice';
 
 const SellerLayout = () => {
+  const { logoutAll } = useAppContext();
+  const location = useLocation();
+  const activePath = location.pathname;
+  const navigate = useNavigate(); // Sử dụng hook useNavigate
+  const dispatch = useDispatch(); // Sử dụng dispatch để gọi action
   const data = [
     { link: "/seller", label: "Dashboard", icon: IconReceipt2 },
     {
@@ -26,28 +33,33 @@ const SellerLayout = () => {
     { link: "/seller/orders", label: "Orders", icon: IconFingerprint },
     { link: "/seller/vouchers", label: "Vouchers", icon: IconKey },
     { link: "/seller/support", label: "Support Chat", icon: IconMessages },
+    { link: "/seller/ratings", label: "Ratings", icon: IconMessageReply },
     { link: "/seller/my-account", label: "My Account", icon: IconKey },
     { link: "/seller/manage-user", label: "Quản lý người dùng", icon: IconKey },
+    {
+      label: 'Quản lý Blog',
+      icon: (
+        IconKey
+      ),
+      link: '/seller/blog',
+      active: activePath === '/seller/blog', // Thay pathname bằng activePath
+    },
   ];
 
-  const { logoutAll } = useAppContext();
-  const location = useLocation();
-  const activePath = location.pathname;
-  const navigate = useNavigate(); // Sử dụng hook useNavigate
-  const dispatch = useDispatch(); // Sử dụng dispatch để gọi action
+  
 
   // Cập nhật logout handler để chuyển hướng về trang đăng nhập với mode=seller
   const handleLogout = async () => {
     try {
       const loadingToast = toast.loading("Đang đăng xuất...");
-      
+
       // Logout thông qua AppContext
       await logoutAll();
-      
+
       // Đồng thời dispatch logout action trong Redux
       dispatch(logout());
-      
-      toast.dismiss(loadingToast);      
+
+      toast.dismiss(loadingToast);
       // Chuyển hướng đến trang login với mode=seller
       navigate("/login?mode=seller");
     } catch (error) {
@@ -84,17 +96,15 @@ const SellerLayout = () => {
                   to={item.link}
                   key={item.label}
                   className={`flex items-center text-sm px-4 py-3 rounded-md font-medium transition-colors
-                    ${
-                      isActive
-                        ? "bg-white text-gray-900 shadow"
-                        : "text-gray-300 hover:bg-gray-800"
+                    ${isActive
+                      ? "bg-white text-gray-900 shadow"
+                      : "text-gray-300 hover:bg-gray-800"
                     }`}
                 >
                   <item.icon
                     stroke={1.5}
-                    className={`mr-4 w-6 h-6 ${
-                      isActive ? "text-gray-700" : "text-gray-400"
-                    }`}
+                    className={`mr-4 w-6 h-6 ${isActive ? "text-gray-700" : "text-gray-400"
+                      }`}
                   />
                   <span>{item.label}</span>
                 </Link>
@@ -104,7 +114,7 @@ const SellerLayout = () => {
         </div>
 
         {/* Footer */}
-        <div className="pt-6 mt-6 border-t border-gray-800">
+        <div className="mt-6 border-t border-gray-800">
           <button
             onClick={handleLogout}
             className="flex items-center w-full text-sm text-gray-200 px-4 py-3 rounded-md font-medium hover:bg-gray-800 transition-colors"

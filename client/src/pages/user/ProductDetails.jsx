@@ -18,8 +18,9 @@ const StarRating = ({ rating }) => {
       {Array.from({ length: 5 }).map((_, i) => (
         <span
           key={i}
-          className={`text-lg ${i < rating ? "text-yellow-400" : "text-gray-300"
-            }`}
+          className={`text-lg ${
+            i < rating ? "text-yellow-400" : "text-gray-300"
+          }`}
         >
           ★
         </span>
@@ -29,7 +30,7 @@ const StarRating = ({ rating }) => {
 };
 
 const ProductDetails = () => {
-  const { user, isAuthenticated } = useSelector(state => state.auth);
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCartContext();
@@ -54,24 +55,27 @@ const ProductDetails = () => {
 
   // Xử lý thêm vào giỏ
   const handleAddToCart = async () => {
-  try {
-    // Debug user object đúng cách
-    console.log("User object:", user);
-    console.log("Authentication state:", { isAuthenticated, userId: user?._id });
-    
-    // Kiểm tra cả isAuthenticated và user
-    if (!isAuthenticated || !user) {
-      toast.info("Vui lòng đăng nhập!");
-      return;
+    try {
+      // Debug user object đúng cách
+      console.log("User object:", user);
+      console.log("Authentication state:", {
+        isAuthenticated,
+        userId: user?._id,
+      });
+
+      // Kiểm tra cả isAuthenticated và user
+      if (!isAuthenticated || !user) {
+        toast.info("Vui lòng đăng nhập!");
+        return;
+      }
+
+      await addToCart(product._id, quantity);
+      toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Thêm vào giỏ hàng thất bại!");
     }
-    
-    await addToCart(product._id, quantity);
-    toast.success(`${product.name} đã được thêm vào giỏ hàng!`);
-  } catch (err) {
-    console.error(err);
-    toast.error("Thêm vào giỏ hàng thất bại!");
-  }
-};
+  };
   const toggleFavorite = async () => {
     if (!user) {
       toast.info("Vui lòng đăng nhập để thêm vào danh sách yêu thích!");
@@ -82,9 +86,11 @@ const ProductDetails = () => {
       const res = await productService.toggleFavorite(product._id);
       if (res.success) {
         setIsFavorited(!isFavorited);
-        toast.success(isFavorited
-          ? "Đã xóa khỏi danh sách yêu thích"
-          : "Đã thêm vào danh sách yêu thích");
+        toast.success(
+          isFavorited
+            ? "Đã xóa khỏi danh sách yêu thích"
+            : "Đã thêm vào danh sách yêu thích"
+        );
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
@@ -140,8 +146,13 @@ const ProductDetails = () => {
         const res = await ratingService.getRatingsByProduct(id, page, limit);
         console.log("Ratings response:", res);
         if (res.success) {
-          setRatings(res.ratings);
-          setTotal(res.total);
+          // ✅ Lọc chỉ những đánh giá có trạng thái visible hoặc approved
+          const visibleRatings = res.ratings.filter(
+            (r) => r.status === "visible" || r.status === "approved"
+          );
+
+          setRatings(visibleRatings);
+          setTotal(visibleRatings.length);
           setAverageRating(res.averageRating || 0);
           setTotalRatings(res.totalRatings || 0);
         }
@@ -188,12 +199,11 @@ const ProductDetails = () => {
       if (err.response?.status === 403) {
         toast.error(
           err.response.data?.message ||
-          "Bạn cần mua sản phẩm này trước khi đánh giá!"
+            "Bạn cần mua sản phẩm này trước khi đánh giá!"
         );
       } else if (err.response?.status === 400) {
         toast.error(
-          err.response.data?.message ||
-          "Bạn đã đánh giá sản phẩm này rồi!"
+          err.response.data?.message || "Bạn đã đánh giá sản phẩm này rồi!"
         );
       } else {
         toast.error("Có lỗi khi gửi đánh giá!");
@@ -250,10 +260,11 @@ const ProductDetails = () => {
               <div
                 key={index}
                 onClick={() => setThumbnail(imageObj)}
-                className={`border rounded overflow-hidden cursor-pointer w-30 h-30 ${thumbnail === imageObj
+                className={`border rounded overflow-hidden cursor-pointer w-30 h-30 ${
+                  thumbnail === imageObj
                     ? "border-green-700"
                     : "border-gray-300"
-                  }`}
+                }`}
               >
                 <img
                   src={imageObj.image_url}
@@ -277,14 +288,13 @@ const ProductDetails = () => {
             <div className="mt-4 flex justify-center">
               <button
                 onClick={toggleFavorite}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${isFavorited
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  isFavorited
                     ? "bg-red-50 border border-red-200 text-red-500"
                     : "bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100"
-                  }`}
+                }`}
               >
-                <span className="text-xl">
-                  {isFavorited ? "❤️" : "🤍"}
-                </span>
+                <span className="text-xl">{isFavorited ? "❤️" : "🤍"}</span>
                 <span>
                   {isFavorited ? "Đã yêu thích" : "Thêm vào yêu thích"}
                 </span>
@@ -302,20 +312,26 @@ const ProductDetails = () => {
           <div className="flex flex-wrap items-center divide-x divide-gray-300">
             <div className="flex items-center gap-2 pr-4">
               <StarRating rating={Math.round(averageRating)} />
-              <span className="text-gray-600">({averageRating.toFixed(1)})</span>
+              <span className="text-gray-600">
+                ({averageRating.toFixed(1)})
+              </span>
             </div>
 
             <div className="flex items-center text-gray-700 px-4">
               <span className="text-green-600 mr-1">🛒</span>
               <p className="text-sm">
-                <span className="font-medium">{product.sold_quantity || 0}</span> đã bán
+                <span className="font-medium">
+                  {product.sold_quantity || 0}
+                </span>{" "}
+                đã bán
               </p>
             </div>
 
             <div className="flex items-center text-gray-700 px-4">
               <span className="text-blue-500 mr-1">👁️</span>
               <p className="text-sm">
-                <span className="font-medium">{product.view_count || 0}</span> lượt xem
+                <span className="font-medium">{product.view_count || 0}</span>{" "}
+                lượt xem
               </p>
             </div>
           </div>
@@ -331,7 +347,6 @@ const ProductDetails = () => {
           </div>
 
           <p className="text-gray-600 mt-6">{product.description}</p>
-
 
           <div className="flex items-center gap-4 mt-10">
             {/* Quantity */}
@@ -438,7 +453,9 @@ const ProductDetails = () => {
                     {r.user_id?.name || "Người dùng ẩn danh"}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {new Date(r.created_at || r.createdAt).toLocaleString("vi-VN")}
+                    {new Date(r.created_at || r.createdAt).toLocaleString(
+                      "vi-VN"
+                    )}
                   </p>
                 </div>
                 <StarRating rating={r.rating || 5} />
@@ -452,10 +469,11 @@ const ProductDetails = () => {
                 <button
                   key={i}
                   onClick={() => setPage(i + 1)}
-                  className={`px-3 py-1 rounded ${page === i + 1
-                    ? "bg-green-700 text-white"
-                    : "bg-gray-200 text-gray-700"
-                    }`}
+                  className={`px-3 py-1 rounded ${
+                    page === i + 1
+                      ? "bg-green-700 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
                 >
                   {i + 1}
                 </button>
@@ -476,7 +494,7 @@ const ProductDetails = () => {
               const primary_image =
                 product.images && product.images.length > 0
                   ? product.images.find((img) => img.is_primary)?.image_url ||
-                  product.images[0].image_url
+                    product.images[0].image_url
                   : "";
 
               return (

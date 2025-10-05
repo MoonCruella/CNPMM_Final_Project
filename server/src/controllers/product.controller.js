@@ -13,7 +13,7 @@ export const createProduct = async (req, res) => {
       sale_price,
       category_id,
       tags,
-      quantity,
+      stock_quantity,
       images
     } = req.body;
 
@@ -48,7 +48,7 @@ export const createProduct = async (req, res) => {
       category_id,
       slug: finalSlug,
       tags: tags || [],
-      quantity: quantity || 0,
+      stock_quantity: stock_quantity || 0,
       images: images || [],
       status: "active",
       view_count: 0,
@@ -83,6 +83,69 @@ export const createProduct = async (req, res) => {
       success: false,
       message: "Đã xảy ra lỗi khi tạo sản phẩm mới",
       error: error.message
+    });
+  }
+};
+
+// Cập nhật sản phẩm
+export const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Cập nhật sản phẩm
+    const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Sản phẩm không tồn tại",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: updatedProduct,
+      message: "Cập nhật sản phẩm thành công",
+    });
+  } catch (error) {
+    console.error("Update product error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Đã xảy ra lỗi khi cập nhật sản phẩm",
+      error: error.message,
+    });
+  }
+};
+
+// Xóa sản phẩm
+export const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Xóa sản phẩm
+    const deletedProduct = await Product.findByIdAndDelete(id);
+
+    if (!deletedProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Sản phẩm không tồn tại",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Xóa sản phẩm thành công",
+    });
+  } catch (error) {
+    console.error("Delete product error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Đã xảy ra lỗi khi xóa sản phẩm",
+      error: error.message,
     });
   }
 };

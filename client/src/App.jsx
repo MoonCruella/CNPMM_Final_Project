@@ -34,7 +34,11 @@ import SupportChat from './components/user/SupportChat';
 import SupportChatSeller from './components/seller/SupportChatSeller';
 import { useSelector } from 'react-redux'; 
 import UserList from "./components/seller/UserList";
+import Ratings from "./components/seller/Ratings";
 
+import BlogPage from './pages/user/BlogPage';
+import BlogPostPage from './pages/user/BlogPostPage';
+import SellerBlogPage from './pages/seller/SellerBlogPage';
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
   const { showUserLogin } = useAppContext();
@@ -83,13 +87,16 @@ const App = () => {
         <Route path="/voucher-list" element={<VoucherCard />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/products/:id" element={<ProductDetails />} />
-        
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:slug" element={<BlogPostPage />} />
         {/* Thay thế route /seller để sử dụng SellerRoute */}
         <Route path="/seller" element={
           <SellerRoute>
             <SellerLayout />
           </SellerRoute>
+          
         }>
+          <Route path="/seller/blog" element={<SellerBlogPage />} />
           <Route index element={<DashboardSeller />} />
           <Route path="products" element={<ProductList />} />
           <Route path="orders" element={<Orders />} />
@@ -98,6 +105,8 @@ const App = () => {
           <Route path="vouchers" element={<Vouchers />} />
           <Route path="manage-user" element={<UserList />} />
           <Route path="support" element={<SupportChatSeller />} />
+          <Route path="ratings" element={<Ratings />} />
+          
         </Route>
       </Routes>
       {!isSellerPath && <Footer />}
