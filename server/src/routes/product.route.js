@@ -1,6 +1,9 @@
 // routes/productRoutes.js
 import express from "express";
 import {
+  createProduct,
+  updateProduct,
+  deleteProduct,
   getAllProducts,
   getBestSellers,
   getBiggestDiscounts,
@@ -30,6 +33,11 @@ router.get("/:productId/stats", getProductStats);
 
 // Public routes
 router.get("/", getAllProducts);
+router.post("/", authenticateToken, createProduct);
+router.put("/:id", authenticateToken, updateProduct);
+router.delete("/:id", authenticateToken, deleteProduct);
+
+// Special product lists
 router.get("/best-sellers", getBestSellers);
 router.get("/discounts", getBiggestDiscounts);
 router.get("/newest", getNewestProducts);

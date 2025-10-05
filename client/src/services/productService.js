@@ -21,44 +21,50 @@ const productService = {
 
   // Lấy 4 sản phẩm giảm giá sâu nhất
   getBestDiscount: async () => {
-    const res = await api.get("api/products/discounts?limit=4");
+    const res = await api.get("/api/products/discounts?limit=4");
     return res.data;
   },
 
+  // Lấy sản phẩm theo id
   getById: async (id) => {
-    const res = await api.get(`api/products/${id}`);
+    const res = await api.get(`/api/products/${id}`);
     return res.data;
   },
-  toggleFavorite: async (productId) => {
-    try {
-      const response = await api.post(`/api/products/${productId}/favorite`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+
+  // Tạo sản phẩm mới
+  create: async (data) => {
+    const res = await api.post("/api/products", data);
+    return res.data;
   },
+
+  // Cập nhật sản phẩm
+  update: async (id, data) => {
+    const res = await api.put(`/api/products/${id}`, data);
+    return res.data;
+  },
+
+  // Xóa sản phẩm
+  remove: async (id) => {
+    const res = await api.delete(`/api/products/${id}`);
+    return res.data;
+  },
+
+  // Toggle yêu thích
+  toggleFavorite: async (productId) => {
+    const res = await api.post(`/api/products/${productId}/favorite`);
+    return res.data;
+  },
+
   // Lấy danh sách sản phẩm yêu thích
   getFavorites: async (page = 1, limit = 12) => {
-    try {
-      const response = await api.get(
-        `/api/products/favorites?page=${page}&limit=${limit}`
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const res = await api.get(`/api/products/favorites?page=${page}&limit=${limit}`);
+    return res.data;
   },
 
   // Lấy danh sách sản phẩm đã xem gần đây
   getViewedProducts: async (page = 1, limit = 12) => {
-    try {
-      const response = await api.get(
-        `/api/products/viewed?page=${page}&limit=${limit}`
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const res = await api.get(`/api/products/viewed?page=${page}&limit=${limit}`);
+    return res.data;
   },
 };
 
