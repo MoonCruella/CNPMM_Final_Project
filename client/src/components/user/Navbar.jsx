@@ -12,16 +12,16 @@ import { logoutAsync } from '../../redux/authSlice'; // Thêm Redux action
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
-  
+
   // Giữ AppContext để tương thích ngược
   const { navigate: contextNavigate, logout: contextLogout, logoutAll: contextLogoutAll, openLogin } =
     useAppContext();
-    
+
   // Sử dụng Redux
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user, isAuthenticated, isSeller } = useSelector(state => state.auth);
-  
+
   const { getUserAvatarUrl } = useUserContext();
   const getAvatarUrl = (size = 40) => {
     if (getUserAvatarUrl) {
@@ -39,16 +39,16 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       const loadingToast = toast.loading("Đang đăng xuất...");
-      
+
       // Logout qua AppContext để đảm bảo tương thích
       await contextLogout();
-      
+
       // Dispatch Redux action
       await dispatch(logoutAsync()).unwrap();
-      
+
       toast.dismiss(loadingToast);
       toast.success("Đăng xuất thành công");
-      
+
       navigate("/");
       setOpen(false);
       setIsUserMenuOpen(false);
@@ -62,16 +62,16 @@ const Navbar = () => {
       const loadingToast = toast.loading(
         "Đang đăng xuất khỏi tất cả thiết bị..."
       );
-      
+
       // Logout qua AppContext để đảm bảo tương thích
       await contextLogoutAll();
-      
+
       // Dispatch Redux action
       await dispatch(logoutAsync()).unwrap();
-      
+
       toast.dismiss(loadingToast);
       toast.success("Đã đăng xuất khỏi tất cả thiết bị");
-      
+
       setOpen(false);
       setIsUserMenuOpen(false);
     } catch (error) {
@@ -84,7 +84,7 @@ const Navbar = () => {
     openLogin();
     navigate("/login");
   };
-  
+
   const handleMenuNavigation = (path) => {
     navigate(path);
     setIsUserMenuOpen(false);
@@ -111,7 +111,7 @@ const Navbar = () => {
         <NavLink to="/">Home</NavLink>
         <NavLink to="/products">All Products</NavLink>
         <NavLink to="/contact">Contact</NavLink>
-
+        <NavLink to="/blog">Blog</NavLink>
         {/* Search Bar */}
         <div className="hidden lg:flex items-center text-sm gap-2 border border-gray-300 px-3 rounded-full">
           <input
@@ -171,19 +171,17 @@ const Navbar = () => {
 
               {/* Active Status Indicator */}
               <div
-                className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
-                  currentUser.active === true ? "bg-green-500" : "bg-red-500"
-                }`}
+                className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${currentUser.active === true ? "bg-green-500" : "bg-red-500"
+                  }`}
               ></div>
             </div>
 
             {/* Dropdown Menu with proper positioning and transitions */}
             <div
-              className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${
-                isUserMenuOpen
+              className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${isUserMenuOpen
                   ? "opacity-100 visible translate-y-0"
                   : "opacity-0 invisible -translate-y-2"
-              }`}
+                }`}
             >
               {/* User Info Header */}
               <div className="px-4 py-2 border-b border-gray-100">
@@ -201,27 +199,25 @@ const Navbar = () => {
                 {/* Status Badge */}
                 <div className="flex gap-1 mt-1">
                   <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      currentUser.role === "admin"
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${currentUser.role === "admin"
                         ? "bg-red-100 text-red-700"
                         : currentUser.role === "seller"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-green-100 text-green-700"
-                    }`}
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-green-100 text-green-700"
+                      }`}
                   >
                     {currentUser.role === "admin"
                       ? "Admin"
                       : currentUser.role === "seller"
-                      ? "Seller"
-                      : "User"}
+                        ? "Seller"
+                        : "User"}
                   </span>
 
                   <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      currentUser.active === true
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${currentUser.active === true
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"
-                    }`}
+                      }`}
                   >
                     {currentUser.active === true ? "Active" : "Inactive"}
                   </span>
@@ -307,6 +303,9 @@ const Navbar = () => {
           <NavLink to="/contact" onClick={() => setOpen(false)}>
             Contact
           </NavLink>
+          <NavLink to="/blog" onClick={() => setOpen(false)}>
+            Blog
+          </NavLink>
 
           {/* User-specific mobile menu */}
           {userIsAuthenticated && currentUser ? (
@@ -330,11 +329,10 @@ const Navbar = () => {
                   <p className="font-medium text-gray-800">{currentUser.name || currentUser.full_name}</p>
                   <div className="flex gap-1">
                     <span
-                      className={`px-1.5 py-0.5 rounded text-xs ${
-                        currentUser.active === true
+                      className={`px-1.5 py-0.5 rounded text-xs ${currentUser.active === true
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
-                      }`}
+                        }`}
                     >
                       {currentUser.active === true ? "Active" : "Inactive"}
                     </span>
@@ -377,7 +375,7 @@ const Navbar = () => {
           )}
         </div>
       )}
-      
+
       {/* Redux Debug - chỉ hiển thị trong môi trường development */}
       {process.env.NODE_ENV === 'development' && (
         <div className="hidden fixed bottom-4 left-4 p-2 bg-white/80 backdrop-blur-sm border border-gray-300 shadow rounded text-xs text-gray-800">
