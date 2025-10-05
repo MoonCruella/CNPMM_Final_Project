@@ -31,6 +31,7 @@
     "@tiptap/starter-kit": "^3.6.5",
     "antd": "^5.27.4",
     "axios": "^1.11.0",
+    "badge": "^1.0.3",
     "class-variance-authority": "^0.7.1",
     "client": "^0.0.1",
     "clsx": "^2.1.1",

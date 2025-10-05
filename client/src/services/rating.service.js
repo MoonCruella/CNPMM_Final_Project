@@ -27,6 +27,11 @@ const ratingService = {
     const res = await api.put(`/api/ratings/${ratingId}`, data);
     return res.data;
   },
+
+  getAll: async (params) => {
+    const res = await api.get("/api/ratings", { params });
+    return res.data;
+  },
 };
 
 export default ratingService;

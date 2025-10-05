@@ -34,6 +34,8 @@ import SupportChat from './components/user/SupportChat';
 import SupportChatSeller from './components/seller/SupportChatSeller';
 import { useSelector } from 'react-redux'; 
 import UserList from "./components/seller/UserList";
+import Ratings from "./components/seller/Ratings";
+
 import BlogPage from './pages/user/BlogPage';
 import BlogPostPage from './pages/user/BlogPostPage';
 import SellerBlogPage from './pages/seller/SellerBlogPage';
@@ -103,6 +105,7 @@ const App = () => {
           <Route path="vouchers" element={<Vouchers />} />
           <Route path="manage-user" element={<UserList />} />
           <Route path="support" element={<SupportChatSeller />} />
+          <Route path="ratings" element={<Ratings />} />
           
         </Route>
       </Routes>
