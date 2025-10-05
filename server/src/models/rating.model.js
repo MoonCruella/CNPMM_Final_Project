@@ -29,4 +29,4 @@ const commentSchema = new mongoose.Schema({
   timestamps: { createdAt: "created_at", updatedAt: "updated_at" }
 });
 
-export default mongoose.model("Comment", commentSchema);
+export default mongoose.model("Rating", commentSchema);

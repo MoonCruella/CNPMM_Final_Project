@@ -5,6 +5,8 @@ import {
   IconLogout,
   IconReceipt2,
   IconMessages,
+  IconMessageReply,
+  IconMessage,
 } from "@tabler/icons-react";
 import { assets } from "../../assets/assets";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -26,6 +28,7 @@ const SellerLayout = () => {
     { link: "/seller/orders", label: "Orders", icon: IconFingerprint },
     { link: "/seller/vouchers", label: "Vouchers", icon: IconKey },
     { link: "/seller/support", label: "Support Chat", icon: IconMessages },
+    { link: "/seller/ratings", label: "Ratings", icon: IconMessageReply },
     { link: "/seller/my-account", label: "My Account", icon: IconKey },
     { link: "/seller/manage-user", label: "Quản lý người dùng", icon: IconKey },
   ];
@@ -104,7 +107,7 @@ const SellerLayout = () => {
         </div>
 
         {/* Footer */}
-        <div className="pt-6 mt-6 border-t border-gray-800">
+        <div className="mt-6 border-t border-gray-800">
           <button
             onClick={handleLogout}
             className="flex items-center w-full text-sm text-gray-200 px-4 py-3 rounded-md font-medium hover:bg-gray-800 transition-colors"

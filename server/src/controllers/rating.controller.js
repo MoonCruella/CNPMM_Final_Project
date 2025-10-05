@@ -121,13 +121,13 @@ export const getRatingsByProduct = async (req, res) => {
 };
 
 /**
- * Xoá rating (admin hoặc chính chủ)
+ * Xoá rating (seller hoặc chính chủ)
  */
 export const deleteRating = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.userId;
-    const isAdmin = req.user.role === "admin";
+    const isseller = req.user.role === "seller";
 
     const rating = await Rating.findById(id);
     if (!rating) {
@@ -136,7 +136,7 @@ export const deleteRating = async (req, res) => {
         .json({ success: false, message: "Rating not found" });
     }
 
-    if (!isAdmin && rating.user_id.toString() !== userId.toString()) {
+    if (!isseller && rating.user_id.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to delete this rating",
@@ -156,31 +156,32 @@ export const deleteRating = async (req, res) => {
 };
 
 /**
- * Update rating (admin hoặc chính chủ)
+ * Update rating (seller hoặc chính chủ)
  */
 export const updateRating = async (req, res) => {
   try {
     const { id } = req.params;
-    const { content, rating } = req.body;
+    const { content, rating, status } = req.body; // 👈 thêm status
     const userId = req.user.userId;
-    const isAdmin = req.user.role === "admin";
+    const isSeller = req.user.role === "seller";
 
     const existingRating = await Rating.findById(id);
     if (!existingRating) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Rating not found" });
+      return res.status(404).json({ success: false, message: "Rating not found" });
     }
 
-    if (!isAdmin && existingRating.user_id.toString() !== userId.toString()) {
+    // Nếu không phải seller/admin => chỉ sửa nội dung & số sao của chính mình
+    if (!isSeller && existingRating.user_id.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to update this rating",
       });
     }
 
-    existingRating.content = content ?? existingRating.content;
-    existingRating.rating = rating ?? existingRating.rating;
+    // ✅ Cập nhật các trường cho phép
+    if (content !== undefined) existingRating.content = content;
+    if (rating !== undefined) existingRating.rating = rating;
+    if (status !== undefined && isSeller) existingRating.status = status; // 👈 chỉ seller mới đổi trạng thái
 
     await existingRating.save();
 
@@ -192,6 +193,7 @@ export const updateRating = async (req, res) => {
       data: { rating: updatedRating },
     });
   } catch (error) {
+    console.error("Error updating rating:", error);
     res.status(500).json({
       success: false,
       message: "Error updating rating",
@@ -199,6 +201,7 @@ export const updateRating = async (req, res) => {
     });
   }
 };
+
 
 /**
  * Lấy rating trung bình của sản phẩm
@@ -248,5 +251,63 @@ export const getProductAverageRating = async (req, res) => {
       message: "Error calculating average rating",
       error: error.message,
     });
+  }
+};
+
+// Lấy toàn bộ rating (cho seller)
+export const getAllRatings = async (req, res) => {
+  try {
+    const { page = 1, status, searchUser, searchProduct } = req.query;
+    const limit = 10;
+    const skip = (page - 1) * limit;
+
+    // Tạo điều kiện lọc
+    const filter = {};
+
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    // Tìm theo tên người dùng hoặc sản phẩm (sau khi populate)
+    const ratings = await Rating.find(filter)
+      .populate({
+        path: "user_id",
+        select: "name email",
+      })
+      .populate({
+        path: "product_id",
+        select: "name",
+      })
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Nếu cần lọc theo tên người dùng / sản phẩm
+    const filtered = ratings.filter((r) => {
+      const matchUser =
+        !searchUser ||
+        r.user_id?.name?.toLowerCase().includes(searchUser.toLowerCase());
+      const matchProduct =
+        !searchProduct ||
+        r.product_id?.name?.toLowerCase().includes(searchProduct.toLowerCase());
+      return matchUser && matchProduct;
+    });
+
+    res.json({
+      success: true,
+      total: filtered.length,
+      ratings: filtered.map((r) => ({
+        _id: r._id,
+        userName: r.user_id?.name || "Không rõ",
+        productName: r.product_id?.name || "Không rõ",
+        content: r.content,
+        rating: r.rating,
+        status: r.status,
+        created_at: r.created_at,
+      })),
+    });
+  } catch (err) {
+    console.error("Lỗi lấy danh sách rating:", err);
+    res.status(500).json({ message: "Lỗi server khi lấy danh sách đánh giá" });
   }
 };

@@ -32,10 +32,15 @@ const AllProducts = () => {
       try {
         const productRes = await productService.getAll();
         if (productRes.success) {
-          const formatted = productRes.data.map((p) => ({
+          const activeProducts = productRes.data.filter(
+            (p) => p.status === "active"
+          );
+
+          const formatted = activeProducts.map((p) => ({
             ...p,
             primary_image: p.images.find((img) => img.is_primary)?.image_url,
           }));
+
           setProducts(formatted);
           setDisplayProducts(formatted);
         }

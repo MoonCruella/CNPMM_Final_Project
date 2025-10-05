@@ -7,7 +7,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
     description: "",
     short_description: "",
     price: "",
-    sale_price: "", // 🆕 thêm trường này
+    sale_price: "",
     stock_quantity: "",
     status: "active",
     featured: false,
@@ -27,7 +27,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
         description: initialData.description || "",
         short_description: initialData.short_description || "",
         price: initialData.price || "",
-        sale_price: initialData.sale_price || "", // 🆕
+        sale_price: initialData.sale_price || "",
         stock_quantity: initialData.stock_quantity || "",
         status: initialData.status || "active",
         featured: initialData.featured || false,
@@ -36,11 +36,9 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
         images: initialData.images || [],
       });
 
-      if (initialData.images && initialData.images.length > 0) {
-        setPreviews(initialData.images.map((img) => img.url || img.image_url || img));
-      } else {
-        setPreviews([]);
-      }
+      setPreviews(
+        initialData.images?.map((img) => img.image_url || img.url) || []
+      );
     } else {
       setForm({
         name: "",
@@ -48,7 +46,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
         description: "",
         short_description: "",
         price: "",
-        sale_price: "", // 🆕
+        sale_price: "",
         stock_quantity: "",
         status: "active",
         featured: false,
@@ -98,10 +96,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
           images: [...prev.images, ...uploaded],
         }));
 
-        setPreviews((prev) => [
-          ...prev,
-          ...uploaded.map((img) => img.image_url),
-        ]);
+        setPreviews((prev) => [...prev, ...uploaded.map((img) => img.image_url)]);
       } else {
         alert("Upload ảnh thất bại!");
       }
@@ -123,99 +118,164 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
     const payload = {
       ...form,
-      sale_price:
-        form.sale_price === "" ? null : Number(form.sale_price), // 🧠 xử lý null khi trống
-      images: form.images,
+      sale_price: form.sale_price === "" ? null : Number(form.sale_price),
     };
-
     onSubmit(payload);
   };
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
-      <div className="bg-white rounded-2xl shadow-lg w-full max-w-xl p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-semibold mb-4">
-          {initialData ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
+    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
+      <div className="bg-white w-full max-w-3xl rounded-xl shadow-lg p-6 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-bold text-gray-800 mb-6 flex justify-between items-center">
+          {initialData ? "✏️ Chỉnh sửa sản phẩm" : "➕ Thêm sản phẩm mới"}
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-800 text-2xl font-bold"
+          >
+            ×
+          </button>
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            name="name"
-            placeholder="Tên sản phẩm"
-            value={form.name}
-            onChange={handleChange}
-            required
-            className="w-full border rounded-xl px-3 py-2"
-          />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* --- Thông tin cơ bản --- */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                Tên sản phẩm
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                required
+                className="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-gray-200"
+              />
+            </div>
 
-          <input
-            type="text"
-            name="slug"
-            placeholder="Slug"
-            value={form.slug}
-            onChange={handleChange}
-            className="w-full border rounded-xl px-3 py-2"
-          />
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Slug</label>
+              <input
+                type="text"
+                name="slug"
+                value={form.slug}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2"
+              />
+            </div>
 
-          <textarea
-            name="description"
-            placeholder="Mô tả chi tiết"
-            value={form.description}
-            onChange={handleChange}
-            className="w-full border rounded-xl px-3 py-2"
-          />
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Giá</label>
+              <input
+                type="number"
+                name="price"
+                value={form.price}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2"
+              />
+            </div>
 
-          <textarea
-            name="short_description"
-            placeholder="Mô tả ngắn"
-            value={form.short_description}
-            onChange={handleChange}
-            className="w-full border rounded-xl px-3 py-2"
-          />
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                Giá khuyến mãi
+              </label>
+              <input
+                type="number"
+                name="sale_price"
+                value={form.sale_price}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2"
+              />
+            </div>
 
-          <input
-            type="number"
-            name="price"
-            placeholder="Giá (VNĐ)"
-            value={form.price}
-            onChange={handleChange}
-            className="w-full border rounded-xl px-3 py-2"
-          />
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                Số lượng tồn
+              </label>
+              <input
+                type="number"
+                name="stock_quantity"
+                value={form.stock_quantity}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2"
+              />
+            </div>
 
-          {/* 🆕 Thêm trường Giá khuyến mãi */}
-          <input
-            type="number"
-            name="sale_price"
-            placeholder="Giá khuyến mãi (VNĐ)"
-            value={form.sale_price}
-            onChange={handleChange}
-            className="w-full border rounded-xl px-3 py-2"
-          />
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                Trạng thái
+              </label>
+              <select
+                name="status"
+                value={form.status}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="active">Đang bán</option>
+                <option value="inactive">Ngừng bán</option>
+              </select>
+            </div>
+          </div>
 
-          <input
-            type="number"
-            name="stock_quantity"
-            placeholder="Số lượng tồn kho"
-            value={form.stock_quantity}
-            onChange={handleChange}
-            className="w-full border rounded-xl px-3 py-2"
-          />
+          {/* --- Mô tả --- */}
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">
+              Mô tả ngắn
+            </label>
+            <textarea
+              name="short_description"
+              value={form.short_description}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2 h-20"
+            />
 
-          <select
-            name="status"
-            value={form.status}
-            onChange={handleChange}
-            className="w-full border rounded-xl px-3 py-2"
-          >
-            <option value="active">Đang bán</option>
-            <option value="inactive">Ngừng bán</option>
-          </select>
+            <label className="block text-sm text-gray-600 mb-1 mt-4">
+              Mô tả chi tiết
+            </label>
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2 h-28"
+            />
+          </div>
+
+          {/* --- Danh mục, nổi bật, xuất xứ --- */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                Danh mục
+              </label>
+              <select
+                name="category_id"
+                value={form.category_id}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="">-- Chọn danh mục --</option>
+                {categories.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Xuất xứ</label>
+              <input
+                type="text"
+                name="hometown_origin"
+                value={form.hometown_origin}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2"
+              />
+            </div>
+          </div>
 
           <div className="flex items-center gap-2">
             <input
@@ -225,79 +285,60 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
               onChange={handleChange}
               id="featured"
             />
-            <label htmlFor="featured">Nổi bật</label>
+            <label htmlFor="featured" className="text-sm text-gray-700">
+              Sản phẩm nổi bật
+            </label>
           </div>
 
-          <input
-            type="text"
-            name="hometown_origin"
-            placeholder="Xuất xứ"
-            value={form.hometown_origin}
-            onChange={handleChange}
-            className="w-full border rounded-xl px-3 py-2"
-          />
-
-          <select
-            name="category_id"
-            value={form.category_id}
-            onChange={handleChange}
-            className="w-full border rounded-xl px-3 py-2"
-          >
-            <option value="">Chọn danh mục</option>
-            {categories.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Upload ảnh */}
-          <div className="flex flex-col gap-2">
-            <label className="cursor-pointer bg-gray-200 px-2 py-1 rounded text-sm hover:bg-gray-300 inline-block w-max">
-              {form.images.length > 0
-                ? `${form.images.length} tệp đã chọn`
-                : "Chọn tệp ảnh"}
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-                ref={fileInputRef}
-              />
+          {/* --- Upload ảnh --- */}
+          <div>
+            <label className="block text-sm text-gray-600 mb-2">
+              Ảnh sản phẩm
             </label>
-
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="flex flex-wrap gap-3">
               {previews.map((src, i) => (
                 <div key={i} className="relative">
                   <img
                     src={src}
-                    alt={`preview-${i}`}
-                    className="w-24 h-24 object-cover rounded border"
+                    className="w-24 h-24 object-cover rounded-lg border"
+                    alt=""
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(i)}
-                    className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-700"
+                    className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
                   >
                     ×
                   </button>
                 </div>
               ))}
+
+              <label className="cursor-pointer border border-dashed border-gray-300 hover:border-gray-400 rounded-lg w-24 h-24 flex items-center justify-center text-gray-500 text-sm">
+                +
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                />
+              </label>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-4">
+          {/* --- Buttons --- */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-gray-300 hover:bg-gray-400"
+              className="px-5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700"
+              className="px-5 py-2 rounded-full bg-gray-800 hover:bg-gray-900 text-white font-medium"
             >
               {initialData ? "Cập nhật" : "Thêm"}
             </button>
