@@ -213,12 +213,12 @@ const UserList = () => {
           <thead>
             <tr className="bg-gray-100">
               <th className="p-3 text-left text-gray-700 w-12">#</th>
-              <th className="p-3 text-left text-gray-700 w-48">Name</th>
+              <th className="p-3 text-left text-gray-700 w-48">Tên</th>
               <th className="p-3 text-left text-gray-700 w-56">Email</th>
-              <th className="p-3 text-left text-gray-700 w-28">Role</th>
-              <th className="p-3 text-left text-gray-700 w-28">Active</th>
-              <th className="p-3 text-left text-gray-700 w-36">CreatedAt</th>
-              <th className="p-3 text-center text-gray-700 w-48">Actions</th>
+              <th className="p-3 text-left text-gray-700 w-28">Vai trò</th>
+              <th className="p-3 text-left text-gray-700 w-28">Trạng thái</th>
+              <th className="p-3 text-left text-gray-700 w-36">Ngày tạo</th>
+              <th className="p-3 text-center text-gray-700 w-48">Thao tác</th>
             </tr>
           </thead>
           <tbody>

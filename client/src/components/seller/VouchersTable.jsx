@@ -70,13 +70,8 @@ const VouchersTable = ({ vouchers, onEdit, onDelete, isLoading }) => {
       <table className="w-full text-left">
         <thead className="bg-gray-200">
           <tr>
-            <th
-              className="py-3 px-4 text-gray-700 cursor-pointer hover:bg-gray-200 transition"
-              onClick={() => handleSort("code")}
-            >
-              <div className="flex items-center gap-2">
-                Mã voucher {getSortIcon("code")}
-              </div>
+            <th className="py-3 px-4 text-gray-700 ">
+              <div className="flex items-center gap-2">Mã voucher</div>
             </th>
             <th className="py-3 px-4 text-gray-700 text-center">Loại</th>
             <th
@@ -85,6 +80,19 @@ const VouchersTable = ({ vouchers, onEdit, onDelete, isLoading }) => {
             >
               <div className="flex items-center justify-center gap-2">
                 Giá trị giảm {getSortIcon("discountValue")}
+              </div>
+            </th>
+            <th
+              className="py-3 px-4 text-gray-700 text-center cursor-pointer hover:bg-gray-200 transition"
+              onClick={() => handleSort("usageLimit")}
+            >
+              <div className="flex items-center justify-center gap-2">
+                Giới hạn {getSortIcon("usageLimit")}
+              </div>
+            </th>
+            <th className="py-3 px-4 text-gray-700 text-center cursor-pointer hover:bg-gray-200 transition">
+              <div className="flex items-center justify-center gap-2">
+                Lượt dùng
               </div>
             </th>
             <th
@@ -156,6 +164,12 @@ const VouchersTable = ({ vouchers, onEdit, onDelete, isLoading }) => {
                         )} ₫`}
                   </td>
                   <td className="py-3 px-4 text-center text-gray-700">
+                    {voucher.usageLimit ? voucher.usageLimit : "Không giới hạn"}
+                  </td>
+                  <td className="py-3 px-4 text-center text-gray-700">
+                    {voucher.usedCount ? voucher.usedCount : "0"}
+                  </td>
+                  <td className="py-3 px-4 text-center text-gray-700">
                     {voucher.startDate
                       ? new Date(voucher.startDate).toLocaleDateString("vi-VN")
                       : "-"}
@@ -166,16 +180,31 @@ const VouchersTable = ({ vouchers, onEdit, onDelete, isLoading }) => {
                       : "-"}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    {/* text-only status like UserList */}
-                    {voucher.active ? (
-                      <span className="text-sm font-medium text-green-600">
-                        Hoạt động
-                      </span>
-                    ) : (
-                      <span className="text-sm font-medium text-red-600">
-                        Không hoạt động
-                      </span>
-                    )}
+                    {/* trạng thái: ưu tiên "Đã hết hạn" nếu endDate < now */}
+                    {(() => {
+                      const end = voucher.endDate
+                        ? new Date(voucher.endDate)
+                        : null;
+                      const isExpired = end
+                        ? end.getTime() < Date.now()
+                        : false;
+                      if (isExpired) {
+                        return (
+                          <span className="text-sm font-medium text-gray-500">
+                            Đã hết hạn
+                          </span>
+                        );
+                      }
+                      return voucher.active ? (
+                        <span className="text-sm font-medium text-green-600">
+                          Hoạt động
+                        </span>
+                      ) : (
+                        <span className="text-sm font-medium text-red-600">
+                          Không hoạt động
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="py-3 px-4 text-center">
                     <div className="flex justify-center gap-2">
@@ -201,7 +230,7 @@ const VouchersTable = ({ vouchers, onEdit, onDelete, isLoading }) => {
           ) : (
             <tr>
               <td
-                colSpan="7"
+                colSpan="9"
                 className="py-12 text-center text-gray-500 bg-white"
               >
                 <div className="flex flex-col items-center gap-4">
