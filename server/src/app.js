@@ -15,6 +15,7 @@ import ratingRoutes from "./routes/rating.route.js";
 import notificationRoutes from "./routes/notification.route.js";
 import chatbotRoutes from './routes/chatbot.route.js';
 import supportChatRoutes from './routes/supportChat.route.js';
+import hometownPostRoutes from './routes/hometownPost.routes.js';
 import cors from "cors";
 import {
   User,
@@ -85,4 +86,5 @@ app.use("/api/notifications", notificationRoutes)
 // Thêm vào phần routes
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/support', supportChatRoutes);
+app.use('/api/hometown-posts', hometownPostRoutes);
 export default app;
