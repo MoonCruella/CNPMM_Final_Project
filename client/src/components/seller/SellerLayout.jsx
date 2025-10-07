@@ -4,17 +4,21 @@ import {
   IconKey,
   IconLogout,
   IconReceipt2,
+  IconUser,
   IconMessages,
+  IconSalad,
+  IconTicket,
+  IconArticle,
   IconMessageReply,
-  IconMessage,
+  IconPackage,
 } from "@tabler/icons-react";
 import { assets } from "../../assets/assets";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
 import SellerNotificationBell from "./SellerNotificationBell";
 import { toast } from "sonner";
-import { useDispatch } from 'react-redux';
-import { logout } from '../../redux/authSlice';
+import { useDispatch } from "react-redux";
+import { logout } from "../../redux/authSlice";
 
 const SellerLayout = () => {
   const { logoutAll } = useAppContext();
@@ -26,27 +30,43 @@ const SellerLayout = () => {
     { link: "/seller", label: "Dashboard", icon: IconReceipt2 },
     {
       link: "/seller/notifications",
-      label: "Notifications",
+      label: "Thông báo",
       icon: IconBellRinging,
     },
-    { link: "/seller/products", label: "Product List", icon: IconReceipt2 },
-    { link: "/seller/orders", label: "Orders", icon: IconFingerprint },
-    { link: "/seller/vouchers", label: "Vouchers", icon: IconKey },
-    { link: "/seller/support", label: "Support Chat", icon: IconMessages },
-    { link: "/seller/ratings", label: "Ratings", icon: IconMessageReply },
-    { link: "/seller/my-account", label: "My Account", icon: IconKey },
-    { link: "/seller/manage-user", label: "Quản lý người dùng", icon: IconKey },
     {
-      label: 'Quản lý Blog',
-      icon: (
-        IconKey
-      ),
-      link: '/seller/blog',
-      active: activePath === '/seller/blog', // Thay pathname bằng activePath
+      link: "/seller/products",
+      label: "Quản lý sản phẩm",
+      icon: IconSalad,
+    },
+    {
+      link: "/seller/orders",
+      label: "Quản lý đơn hàng",
+      icon: IconPackage,
+    },
+    { link: "/seller/vouchers", label: "Quản lý voucher", icon: IconTicket },
+    { link: "/seller/support", label: "Hỗ trợ khách hàng", icon: IconMessages },
+    {
+      link: "/seller/ratings",
+      label: "Quản lý đánh giá",
+      icon: IconMessageReply,
+    },
+    {
+      link: "/seller/manage-user",
+      label: "Quản lý người dùng",
+      icon: IconUser,
+    },
+    {
+      label: "Quản lý Blog",
+      icon: IconArticle,
+      link: "/seller/blog",
+      active: activePath === "/seller/blog", // Thay pathname bằng activePath
+    },
+    {
+      link: "/seller/my-account",
+      label: "Tài khoản của tôi",
+      icon: IconFingerprint,
     },
   ];
-
-  
 
   // Cập nhật logout handler để chuyển hướng về trang đăng nhập với mode=seller
   const handleLogout = async () => {
@@ -96,15 +116,17 @@ const SellerLayout = () => {
                   to={item.link}
                   key={item.label}
                   className={`flex items-center text-sm px-4 py-3 rounded-md font-medium transition-colors
-                    ${isActive
-                      ? "bg-white text-gray-900 shadow"
-                      : "text-gray-300 hover:bg-gray-800"
+                    ${
+                      isActive
+                        ? "bg-white text-gray-900 shadow"
+                        : "text-gray-300 hover:bg-gray-800"
                     }`}
                 >
                   <item.icon
                     stroke={1.5}
-                    className={`mr-4 w-6 h-6 ${isActive ? "text-gray-700" : "text-gray-400"
-                      }`}
+                    className={`mr-4 w-6 h-6 ${
+                      isActive ? "text-gray-700" : "text-gray-400"
+                    }`}
                   />
                   <span>{item.label}</span>
                 </Link>
@@ -130,7 +152,11 @@ const SellerLayout = () => {
         {/* Header Bar */}
         <div className="bg-white shadow-sm p-4 flex justify-between items-center border-b">
           <h1 className="text-xl font-semibold text-green-700">
-            {data.find(item => item.link === activePath || activePath.startsWith(item.link + '/'))?.label || 'Dashboard'}
+            {data.find(
+              (item) =>
+                item.link === activePath ||
+                activePath.startsWith(item.link + "/")
+            )?.label || "Dashboard"}
           </h1>
           <div className="flex items-center gap-4">
             <SellerNotificationBell />

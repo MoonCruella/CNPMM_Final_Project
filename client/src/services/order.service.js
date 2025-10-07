@@ -14,6 +14,7 @@ class OrderService {
       );
 
       if (response.data.success) {
+        console.log("Get user orders response Service:", response.data);
         return {
           success: true,
           data: response.data.data,
@@ -223,6 +224,48 @@ class OrderService {
       return {
         success: false,
         message: error.response?.data?.message || "Có lỗi xảy ra khi tìm kiếm",
+        error: error.message,
+      };
+    }
+  };
+
+  getUserOrdersByAdmin = async (
+    status = "all",
+    page = 1,
+    limit = 10,
+    userId
+  ) => {
+    try {
+      // safer: ensure userId, encode và let axios handle params
+      if (!userId) {
+        throw new Error("Missing userId");
+      }
+
+      const response = await privateApi.get(
+        `/api/orders/user/${encodeURIComponent(String(userId))}`,
+        {
+          params: { status, page, limit },
+        }
+      );
+
+      if (response.data.success) {
+        console.log("Get user orders response Service:", response.data);
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message,
+        };
+      } else {
+        throw new Error(
+          response.data.message || "Không thể lấy danh sách đơn hàng"
+        );
+      }
+    } catch (error) {
+      console.error("Get user orders error:", error);
+      return {
+        success: false,
+        message:
+          error.response?.data?.message || "Có lỗi xảy ra khi lấy đơn hàng",
         error: error.message,
       };
     }

@@ -104,6 +104,109 @@ export const getUserOrders = async (req, res) => {
   }
 };
 
+export const getUserOrdersByAdmin = async (req, res) => {
+  try {
+    const userId = req.params?.userId ?? req.query?.userId ?? null;
+    const {
+      status = "all",
+      page = 1,
+      limit = 10,
+      sort = "created_at",
+      order = "desc",
+    } = req.query;
+
+    // validate userId
+    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+      return response.sendError(res, "ID người dùng không hợp lệ", 400);
+    }
+
+    // Build filter object
+    const filter = { user_id: userId };
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    // Build sort object
+    const sortObj = {};
+    sortObj[sort] = order === "desc" ? -1 : 1;
+
+    // Calculate skip value for pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Get orders with pagination
+    const orders = await Order.find(filter)
+      .populate({
+        path: "items.product_id",
+        select: "name images price category brand",
+      })
+      .sort(sortObj)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    // Get total count for pagination
+    const totalOrders = await Order.countDocuments(filter);
+    const totalPages = Math.ceil(totalOrders / parseInt(limit));
+
+    // Calculate order statistics
+    const allUserOrders = await Order.find({ user_id: userId }).lean();
+    const orderStats = {
+      total: allUserOrders.length,
+      pending: allUserOrders.filter((order) => order.status === "pending")
+        .length,
+      confirmed: allUserOrders.filter((order) => order.status == "confirmed")
+        .length,
+      processing: allUserOrders.filter((order) => order.status === "processing")
+        .length,
+      shipped: allUserOrders.filter((order) => order.status === "shipped")
+        .length,
+      delivered: allUserOrders.filter((order) => order.status === "delivered")
+        .length,
+      cancel_request: allUserOrders.filter((o) => o.status === "cancel_request")
+        .length,
+      cancelled: allUserOrders.filter((order) => order.status === "cancelled")
+        .length,
+      totalAmount: allUserOrders.reduce(
+        (sum, order) => sum + (order.total_amount || 0),
+        0
+      ),
+    };
+
+    const data = {
+      orders,
+      pagination: {
+        current_page: parseInt(page),
+        total_pages: totalPages,
+        total_orders: totalOrders,
+        per_page: parseInt(limit),
+        has_next: parseInt(page) < totalPages,
+        has_prev: parseInt(page) > 1,
+      },
+      stats: orderStats,
+      filter: {
+        status,
+        sort,
+        order,
+      },
+    };
+
+    return response.sendSuccess(
+      res,
+      data,
+      "Lấy danh sách đơn hàng thành công",
+      200
+    );
+  } catch (error) {
+    console.error("Get user orders error:", error);
+    return response.sendError(
+      res,
+      "Có lỗi xảy ra khi lấy danh sách đơn hàng",
+      500,
+      error.message
+    );
+  }
+};
+
 // Get order by ID
 export const getOrderById = async (req, res) => {
   try {
