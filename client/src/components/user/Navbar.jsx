@@ -190,19 +190,7 @@ const Navbar = () => {
           Blog
         </NavLink>
 
-        {/* Search Bar */}
-        <div className="hidden lg:flex items-center text-sm gap-2 border border-gray-300 px-3 rounded-full">
-          <input
-            className="py-1.5 w-full bg-transparent font-normal outline-none placeholder-gray-500"
-            type="text"
-            placeholder="Search products"
-          />
-          <img
-            src={assets.search_icon}
-            alt="search"
-            className="w-4 h-4 opacity-60 cursor-pointer"
-          />
-        </div>
+        
 
         {/* Cart */}
         <div className="relative cursor-pointer">
@@ -306,7 +294,7 @@ const Navbar = () => {
 
               {/* Menu Items */}
               <button
-                onClick={() => handleMenuNavigation("/my-profile")}
+                onClick={() => handleMenuNavigation("/user/account/profile")}
                 className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 transition-colors"
               >
                 <span>👤</span> My Profile
