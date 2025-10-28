@@ -1,7 +1,13 @@
 import React from "react";
 import { assets } from "@/assets/assets";
 
-const CartItemRow = ({ item, updateQuantity, removeFromCart }) => {
+const CartItemRow = ({ 
+  item, 
+  updateQuantity, 
+  removeFromCart,
+  isSelected = false, // ✅ NEW
+  onToggleSelect // ✅ NEW
+}) => {
   const quantity = Number(item.quantity) || 0;
   const price = Number(item.product_id?.price) || 0;
   const salePrice = Number(item.product_id?.sale_price) || 0;
@@ -12,38 +18,58 @@ const CartItemRow = ({ item, updateQuantity, removeFromCart }) => {
     assets.placeholder;
 
   return (
-    <tr className="border-t hover:bg-gray-50 transition">
-      {/* Product info */}
-      <td className="py-4 px-4 flex items-center gap-4">
-        <img
-          src={image}
-          alt={name}
-          className="w-16 h-16 object-cover rounded"
+    <tr className={`border-t transition ${isSelected ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
+      {/* ✅ NEW: Checkbox column */}
+      <td className="py-4 px-4">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
         />
-        <div>
-          <h4 className="font-medium">{name}</h4>
-          <p className="text-sm text-gray-500">
-            {salePrice ? (
-              <>
-                <span className="text-green-700">
-                  {salePrice.toLocaleString("vi-VN")}₫
-                </span>{" "}
-                <span className="line-through text-gray-400">
+      </td>
+
+      {/* Product info */}
+      <td className="py-4 px-4">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <img
+              src={image}
+              alt={name}
+              className="w-16 h-16 object-cover rounded"
+            />
+            {/* ✅ Selected badge overlay */}
+            {isSelected && (
+              <div className="absolute -top-1 -right-1 bg-green-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                ✓
+              </div>
+            )}
+          </div>
+          <div>
+            <h4 className="font-medium">{name}</h4>
+            <p className="text-sm text-gray-500">
+              {salePrice ? (
+                <>
+                  <span className="text-green-700 font-semibold">
+                    {salePrice.toLocaleString("vi-VN")}₫
+                  </span>{" "}
+                  <span className="line-through text-gray-400">
+                    {price.toLocaleString("vi-VN")}₫
+                  </span>
+                </>
+              ) : (
+                <span className="text-green-700 font-semibold">
                   {price.toLocaleString("vi-VN")}₫
                 </span>
-              </>
-            ) : (
-              <span className="text-green-700">
-                {price.toLocaleString("vi-VN")}₫
-              </span>
-            )}
-          </p>
-          <button
-            onClick={() => removeFromCart(item._id)}
-            className="text-xs text-red-600 hover:underline mt-1"
-          >
-            Xóa
-          </button>
+              )}
+            </p>
+            <button
+              onClick={() => removeFromCart(item._id)}
+              className="text-xs text-red-600 hover:underline mt-1"
+            >
+              Xóa
+            </button>
+          </div>
         </div>
       </td>
 
@@ -75,8 +101,10 @@ const CartItemRow = ({ item, updateQuantity, removeFromCart }) => {
       </td>
 
       {/* Subtotal */}
-      <td className="py-4 px-4 text-right font-semibold">
-        {(displayPrice * quantity).toLocaleString("vi-VN")}₫
+      <td className="py-4 px-4 text-right">
+        <span className={`font-semibold ${isSelected ? 'text-green-700' : 'text-gray-800'}`}>
+          {(displayPrice * quantity).toLocaleString("vi-VN")}₫
+        </span>
       </td>
     </tr>
   );

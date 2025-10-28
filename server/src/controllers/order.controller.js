@@ -5,6 +5,12 @@ import Voucher from "../models/voucher.model.js";
 import mongoose from "mongoose";
 import response from "../helpers/response.js";
 import * as notificationService from "../services/notification.service.js";
+import { 
+  createFuzzyMongoQuery, 
+  sortByRelevance, 
+  removeVietnameseTones,
+  createVietnameseRegex 
+} from "../utils/fuzzySearch.js";
 //Get user orders with filter and pagination
 export const getUserOrders = async (req, res) => {
   try {
@@ -848,158 +854,120 @@ export const getAllOrders = async (req, res) => {
 export const searchOrders = async (req, res) => {
   try {
     const {
-      q, // từ khóa chung
-      order_number, // mã đơn hàng
-      customer_name, // tên khách hàng
-      customer_phone, // SĐT khách hàng
-      customer_email, // email khách hàng
-      product_name, // tên sản phẩm
-      status, // trạng thái đơn hàng
-      payment_method, // phương thức thanh toán
-      payment_status, // trạng thái thanh toán
-      date_from, // từ ngày (YYYY-MM-DD)
-      date_to, // đến ngày (YYYY-MM-DD)
-      min_amount, // giá trị đơn tối thiểu
-      max_amount, // giá trị đơn tối đa
+      q,
+      status,
       page = 1,
       limit = 10,
       sort = "created_at",
       order = "desc",
     } = req.query;
 
-    // Build search filter
-    const filter = {};
-    const andConditions = [];
+    if (!q || q.trim() === '') {
+      return response.sendError(res, "Vui lòng nhập từ khóa tìm kiếm", 400);
+    }
 
-    // Tìm kiếm theo mã đơn hàng
+    console.log('\n🔍 Searching orders with query:', q);
+
+    const normalizedQuery = removeVietnameseTones(q.toLowerCase());
+    const words = normalizedQuery.split(/\s+/).filter(Boolean);
+
+    console.log('📝 Normalized words:', words);
+
+    // Build base filter
+    const filter = {};
+    
     if (req.user.role === "user") {
       filter.user_id = req.user.userId;
     }
-    if (order_number) {
-      filter.order_number = { $regex: order_number, $options: "i" };
-    }
 
-    // Tìm kiếm theo thông tin khách hàng
-    if (customer_name) {
-      andConditions.push({
-        $or: [
-          { "shipping_info.name": { $regex: customer_name, $options: "i" } },
-          { "billing_info.name": { $regex: customer_name, $options: "i" } },
-        ],
-      });
-    }
-
-    if (customer_phone) {
-      andConditions.push({
-        $or: [
-          { "shipping_info.phone": { $regex: customer_phone, $options: "i" } },
-          { "billing_info.phone": { $regex: customer_phone, $options: "i" } },
-        ],
-      });
-    }
-
-    if (customer_email) {
-      andConditions.push({
-        $or: [
-          { "shipping_info.email": { $regex: customer_email, $options: "i" } },
-          { "billing_info.email": { $regex: customer_email, $options: "i" } },
-        ],
-      });
-    }
-
-    // Trạng thái
     if (status && status !== "all") {
       filter.status = status;
     }
 
-    if (payment_method) {
-      filter.payment_method = payment_method;
+    // ✅ STEP 1: Tạo regex patterns cho CẢ có dấu VÀ không dấu
+    const productSearchConditions = words.flatMap(word => {
+      // Pattern 1: Tìm không dấu (normalize)
+      const normalizedPattern = { name: { $regex: word, $options: 'i' } };
+      
+      // Pattern 2: Tìm có dấu - ✅ SỬ DỤNG createVietnameseRegex
+      const vietnamesePattern = createVietnameseRegex(word);
+      
+      return [
+        normalizedPattern,
+        { name: vietnamesePattern }
+      ];
+    });
+
+    console.log('🔎 Product search conditions (first 4):', 
+      JSON.stringify(productSearchConditions.slice(0, 4), null, 2)
+    );
+
+    const matchingProducts = await Product.find({
+      $or: productSearchConditions
+    }).select('_id name').lean();
+
+    console.log(`✅ Found ${matchingProducts.length} matching products:`, 
+      matchingProducts.map(p => p.name).slice(0, 5)
+    );
+
+    const matchingProductIds = matchingProducts.map(p => p._id);
+
+    // ✅ STEP 2: Order number search với cả có dấu và không dấu
+    const orderNumberSearchConditions = words.flatMap(word => {
+      return [
+        { order_number: { $regex: word, $options: 'i' } },
+        { order_number: createVietnameseRegex(word) } // ✅ SỬ DỤNG createVietnameseRegex
+      ];
+    });
+
+    console.log('🔎 Order number search conditions (first 4):', 
+      JSON.stringify(orderNumberSearchConditions.slice(0, 4), null, 2)
+    );
+
+    // ✅ STEP 3: Combine queries
+    const searchConditions = [];
+
+    if (orderNumberSearchConditions.length > 0) {
+      searchConditions.push({ $or: orderNumberSearchConditions });
     }
 
-    if (payment_status) {
-      filter.payment_status = payment_status;
-    }
-
-    // Khoảng thời gian
-    if (date_from || date_to) {
-      filter.created_at = {};
-      if (date_from) {
-        filter.created_at.$gte = new Date(date_from);
-      }
-      if (date_to) {
-        const endDate = new Date(date_to);
-        endDate.setHours(23, 59, 59, 999); // cuối ngày
-        filter.created_at.$lte = endDate;
-      }
-    }
-
-    // Khoảng giá
-    if (min_amount || max_amount) {
-      filter.total_amount = {};
-      if (min_amount) filter.total_amount.$gte = parseFloat(min_amount);
-      if (max_amount) filter.total_amount.$lte = parseFloat(max_amount);
-    }
-
-    // Tìm kiếm chung (q) - tìm trong nhiều field
-    if (q) {
-      const searchRegex = { $regex: q, $options: "i" };
-      andConditions.push({
-        $or: [
-          { order_number: searchRegex },
-          { "shipping_info.name": searchRegex },
-          { "shipping_info.phone": searchRegex },
-          { "shipping_info.email": searchRegex },
-          { "shipping_info.address": searchRegex },
-          { notes: searchRegex },
-        ],
+    if (matchingProductIds.length > 0) {
+      searchConditions.push({
+        'items.product_id': { $in: matchingProductIds }
       });
     }
 
-    // Tìm kiếm theo tên sản phẩm (cần populate)
-    let productFilter = {};
-    if (product_name) {
-      // Tìm products có tên chứa từ khóa
-      const products = await Product.find(
-        { name: { $regex: product_name, $options: "i" } },
-        { _id: 1 }
-      );
-      const productIds = products.map((p) => p._id);
-
-      if (productIds.length > 0) {
-        filter["items.product_id"] = { $in: productIds };
-      } else {
-        // Không tìm thấy sản phẩm nào -> return empty
-        return response.sendSuccess(
-          res,
-          {
-            orders: [],
-            pagination: {
-              current_page: parseInt(page),
-              total_pages: 0,
-              total_orders: 0,
-              per_page: parseInt(limit),
-            },
-            search_params: req.query,
+    if (searchConditions.length === 0) {
+      console.log('❌ No matching products or orders');
+      return response.sendSuccess(
+        res,
+        {
+          orders: [],
+          pagination: {
+            current_page: parseInt(page),
+            total_pages: 0,
+            total_orders: 0,
+            per_page: parseInt(limit),
           },
-          "Không tìm thấy đơn hàng nào",
-          200
-        );
-      }
+          search_query: q,
+          normalized_query: normalizedQuery,
+          matches: {
+            by_order_number: 0,
+            by_product_name: 0,
+          }
+        },
+        "Không tìm thấy đơn hàng nào",
+        200
+      );
     }
 
-    // Combine conditions
-    if (andConditions.length > 0) {
-      filter.$and = andConditions;
-    }
+    filter.$or = searchConditions;
 
-    // Sorting
-    const sortObj = {};
-    sortObj[sort] = order === "desc" ? -1 : 1;
+    console.log('📋 Final filter has', searchConditions.length, 'conditions');
 
-    // Pagination
+    // ✅ STEP 4: Execute query with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Execute search
     const orders = await Order.find(filter)
       .populate({
         path: "items.product_id",
@@ -1007,74 +975,84 @@ export const searchOrders = async (req, res) => {
       })
       .populate({
         path: "user_id",
-        select: req.user.role === "user" ? "name" : "name email phone",
+        select: "name email phone",
       })
-      .sort(sortObj)
+      .sort({ [sort]: order === "desc" ? -1 : 1 })
       .skip(skip)
       .limit(parseInt(limit))
       .lean();
 
+    console.log(`✅ Found ${orders.length} orders from database`);
+
     const totalOrders = await Order.countDocuments(filter);
     const totalPages = Math.ceil(totalOrders / parseInt(limit));
 
-    // Search statistics
-    const searchStats = await Order.aggregate([
-      { $match: filter },
-      {
-        $group: {
-          _id: null,
-          total_orders: { $sum: 1 },
-          total_amount: { $sum: "$total_amount" },
-          avg_amount: { $avg: "$total_amount" },
-          statuses: {
-            $push: "$status",
-          },
-        },
-      },
+    // ✅ STEP 5: Sort by relevance (tính điểm phù hợp)
+    const sortedResults = sortByRelevance(orders, q, [
+      'order_number',
+      'items.product_id.name'
     ]);
 
-    const statusBreakdown = {};
-    if (searchStats.length > 0) {
-      const statuses = searchStats[0].statuses;
-      [
-        "pending",
-        "confirmed",
-        "processing",
-        "shipped",
-        "delivered",
-        "cancelled",
-        "cancel_request",
-      ].forEach((status) => {
-        statusBreakdown[status] = statuses.filter((s) => s === status).length;
-      });
-    }
+    console.log('🎯 Top 3 relevance scores:', 
+      sortedResults.slice(0, 3).map(r => ({
+        order: r.item.order_number,
+        product: r.item.items[0]?.product_id?.name,
+        score: r.score.toFixed(2)
+      }))
+    );
+
+    const ordersWithScores = sortedResults.map(result => ({
+      ...result.item,
+      relevance_score: result.score.toFixed(2)
+    }));
+
+    // ✅ STEP 6: Calculate statistics
+    const matchedByOrderNumber = orders.filter(order => {
+      const normalized = removeVietnameseTones(order.order_number.toLowerCase());
+      return words.some(word => normalized.includes(word));
+    }).length;
+
+    const matchedByProductName = orders.filter(order =>
+      order.items.some(item => {
+        const productName = removeVietnameseTones(item.product_id?.name || '').toLowerCase();
+        return words.some(word => productName.includes(word));
+      })
+    ).length;
+
+    console.log(`📊 Stats: ${matchedByOrderNumber} by order#, ${matchedByProductName} by product\n`);
 
     return response.sendSuccess(
       res,
       {
-        orders,
+        orders: ordersWithScores,
         pagination: {
           current_page: parseInt(page),
           total_pages: totalPages,
           total_orders: totalOrders,
           per_page: parseInt(limit),
+          has_next: parseInt(page) < totalPages,
+          has_prev: parseInt(page) > 1,
         },
-        search_params: req.query,
-        statistics:
-          searchStats.length > 0
-            ? {
-                total_orders: searchStats[0].total_orders,
-                total_amount: searchStats[0].total_amount,
-                avg_amount: Math.round(searchStats[0].avg_amount || 0),
-                status_breakdown: statusBreakdown,
-              }
-            : null,
+        search_query: q,
+        normalized_query: normalizedQuery,
+        search_words: words,
+        matches: {
+          by_order_number: matchedByOrderNumber,
+          by_product_name: matchedByProductName,
+          total: totalOrders,
+        },
+        filter: {
+          status,
+          sort,
+          order,
+        }
       },
-      `Tìm thấy ${totalOrders} đơn hàng`,
+      `Tìm thấy ${totalOrders} đơn hàng phù hợp`,
       200
     );
+
   } catch (error) {
-    console.error("Search orders error:", error);
+    console.error("❌ Search orders error:", error);
     return response.sendError(
       res,
       "Có lỗi xảy ra khi tìm kiếm đơn hàng",

@@ -1,13 +1,17 @@
 import privateApi from "./privateApi.js";
 
 class OrderService {
-  // ✅ Get user orders with filter
+  //  Get user orders with filter
   getUserOrders = async (status = "all", page = 1, limit = 10) => {
     try {
-      const params = new URLSearchParams();
-      if (status && status !== "all") params.append("status", status);
-      params.append("page", page);
-      params.append("limit", limit);
+      const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (status !== "all") {
+      params.append("status", status);
+    }
 
       const response = await privateApi.get(
         `/api/orders/user?${params.toString()}`
@@ -94,7 +98,7 @@ class OrderService {
     }
   };
 
-  // ✅ Get order by ID
+  // Get order by ID
   sale_price = async (orderId) => {
     try {
       const response = await privateApi.get(`/api/orders/${orderId}`);
@@ -120,7 +124,7 @@ class OrderService {
     }
   };
 
-  // ✅ Cancel order
+  //  Cancel order
   cancelOrder = async (orderId, reason = "") => {
     try {
       const response = await privateApi.put(`/api/orders/${orderId}/cancel`, {
@@ -147,7 +151,7 @@ class OrderService {
     }
   };
 
-  // ✅ Reorder
+  // Reorder
   reorder = async (orderId) => {
     try {
       const response = await privateApi.post(`/api/orders/${orderId}/reorder`);
@@ -172,7 +176,7 @@ class OrderService {
     }
   };
 
-  // ✅ Create new order
+  // Create new order
   createOrder = async (orderData) => {
     try {
       const response = await privateApi.post("/api/orders", orderData);
@@ -225,6 +229,15 @@ class OrderService {
         message: error.response?.data?.message || "Có lỗi xảy ra khi tìm kiếm",
         error: error.message,
       };
+    }
+  };
+  getOrderById = async (orderId) => {
+    try {
+      const response = await privateApi.get(`/api/orders/${orderId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Get order by ID error:", error);
+      throw error;
     }
   };
 }

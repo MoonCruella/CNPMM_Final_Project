@@ -71,18 +71,17 @@ const App = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/user/*" element={<Dashboard />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/verify-otp" element={<VerifyOTPPage />} />
         <Route path="/reset-password" element={<NewPasswordPage />} />
         <Route path="/upload-to-cloudinary" element={<UploadImages />} />
 
-        <Route path="/token-tester" element={<TokenTester />} />
-
+        <Route path="/token-tester" element={<TokenTester />} />        
         <Route path="/cart" element={<CartPage />} />
         <Route path="/products" element={<AllProducts />} />
-        <Route path="/my-orders" element={<MyOrdersPage />} />
+        <Route path="/user/purchase" element={<MyOrdersPage />} />
         <Route path="/my-profile" element={<ProfilePage />} />
         <Route path="/voucher-list" element={<VoucherCard />} />
         <Route path="/checkout" element={<CheckoutPage />} />

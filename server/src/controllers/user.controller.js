@@ -19,8 +19,7 @@ export const getUsers = async (req, res, next) => {
 
 export const getUserByEmail = async (req, res, next) => {
   try {
-    const { email } = req.params;
-
+    let email = req.user.email;
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -40,16 +39,17 @@ export const getUserByEmail = async (req, res, next) => {
     return response.sendSuccess(
       res,
       {
-        _id: user._id,
+        userId: user._id,
         email: user.email,
-        name: user.name,
-        coin: user.coin || 0,
-        username: user.username,
-        phone: user.phone,
         role: user.role,
+        coin: user.coin,
+        name: user.name,
         active: user.active,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
+        address: user.address,
+        phone: user.phone,
+        gender: user.gender,
+        date_of_birth: user.date_of_birth,
+        avatar: user.avatar,
       },
       "Tìm user thành công",
       200

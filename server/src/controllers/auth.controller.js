@@ -115,7 +115,7 @@ export const Login = async (req, res, next) => {
         address: user.address,
         gender: user.gender,
         date_of_birth: user.date_of_birth,
-        avatar: user.avatar_public_id,
+        avatar: user.avatar,
       };
 
       const { accessToken, refreshToken } = generateTokenPair(payload);
@@ -142,7 +142,7 @@ export const Login = async (req, res, next) => {
             phone: user.phone,
             gender: user.gender,
             date_of_birth: user.date_of_birth,
-            avatar: user.avatar_public_id,
+            avatar: user.avatar,
           },
           accessToken,
           refreshToken,
@@ -169,14 +169,21 @@ export const refreshToken = async (req, res) => {
     // Verify refresh token
     const decoded = verifyRefreshToken(refreshToken);
 
-    // Tìm user
-    const user = await userModel.findById(decoded.userId);
+    // Tìm user và select tất cả fields cần thiết
+    const user = await userModel
+      .findById(decoded.userId)
+      .select('-password') // Loại trừ password
+      .lean(); // Chuyển về plain object để dễ xử lý
+
     if (!user) {
       return response.sendError(res, "User không tồn tại", 401);
     }
 
+    // Lấy user document để kiểm tra token
+    const userDoc = await userModel.findById(decoded.userId);
+
     // Kiểm tra refresh token có trong database không
-    const tokenExists = user.refresh_tokens.find(
+    const tokenExists = userDoc.refresh_tokens.find(
       (item) => item.token === refreshToken
     );
     if (!tokenExists) {
@@ -185,36 +192,39 @@ export const refreshToken = async (req, res) => {
 
     // Kiểm tra token hết hạn
     if (new Date() > tokenExists.expires_at) {
-      await user.removeRefreshToken(refreshToken);
+      await userDoc.removeRefreshToken(refreshToken);
       return response.sendError(res, "Refresh token đã hết hạn", 401);
     }
 
-    // Generate new tokens
+    // Generate new tokens với DATA MỚI NHẤT từ database
     const payload = {
-      userId: user._id,
-      email: user.email,
-      role: user.role,
-      coin: user.coin,
-      name: user.name,
-      active: user.active,
-      address: user.address,
-      phone: user.phone,
-      gender: user.gender,
-      date_of_birth: user.date_of_birth,
-      avatar: user.avatar_public_id,
+      userId: userDoc._id,
+      email: userDoc.email,
+      role: userDoc.role,
+      coin: userDoc.coin,
+      name: userDoc.name,
+      active: userDoc.active,
+      address: userDoc.address,
+      phone: userDoc.phone,
+      gender: userDoc.gender,
+      date_of_birth: userDoc.date_of_birth,
+      avatar: userDoc.avatar,
     };
+
+    console.log('🔄 Refresh token - New payload:', payload);
 
     const { accessToken, refreshToken: newRefreshToken } =
       generateTokenPair(payload);
 
     // Remove old refresh token và add new
-    await user.removeRefreshToken(refreshToken);
+    await userDoc.removeRefreshToken(refreshToken);
     const deviceInfo = req.get("User-Agent") || "Unknown Device";
-    await user.addRefreshToken(newRefreshToken, deviceInfo);
+    await userDoc.addRefreshToken(newRefreshToken, deviceInfo);
 
     return response.sendSuccess(
       res,
       {
+        user: payload, // ✅ Trả về user data mới nhất
         accessToken,
         refreshToken: newRefreshToken,
       },

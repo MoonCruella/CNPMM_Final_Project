@@ -8,7 +8,7 @@ import zalopayService from "@/services/zalopay.service";
 import VoucherModal from "@/components/user/modal/VoucherModal";
 import voucherService from "@/services/voucherService";
 import { assets } from "@/assets/assets";
-import { ta } from "zod/v4/locales";
+import { toast } from "sonner";
 
 const CheckoutSummary = ({
   cartItems,
@@ -18,15 +18,15 @@ const CheckoutSummary = ({
 }) => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { clearCart } = useCartContext();
+  const { removeMultipleItems } = useCartContext(); 
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Voucher modal / selection (support freeship + discount)
+  // Voucher states
   const [showVoucherModal, setShowVoucherModal] = useState(false);
-  const [selectedFreeship, setSelectedFreeship] = useState(null); // voucher object
-  const [selectedDiscount, setSelectedDiscount] = useState(null); // voucher object
-  const [voucherPreviewDiscount, setVoucherPreviewDiscount] = useState(null); // { discount, finalAmount, ... }
+  const [selectedFreeship, setSelectedFreeship] = useState(null);
+  const [selectedDiscount, setSelectedDiscount] = useState(null);
+  const [voucherPreviewDiscount, setVoucherPreviewDiscount] = useState(null);
   const [applyingVoucher, setApplyingVoucher] = useState(false);
 
   const defaultShippingFee = 30000;
@@ -48,7 +48,18 @@ const CheckoutSummary = ({
   const discountAmount = voucherPreviewDiscount?.discount ?? 0;
   const total = Math.max(0, subtotal + shippingFee - discountAmount);
 
-  // handle payment redirects (VNPay / ZaloPay)
+  const selectedItemsCount = Array.isArray(cartItems) ? cartItems.length : 0;
+
+  // Helper function to remove checked out items
+  const removeCheckedOutItems = async () => {
+    if (!Array.isArray(cartItems) || cartItems.length === 0) return;
+    
+    const itemIdsToRemove = cartItems.map(item => item._id);
+    
+    await removeMultipleItems(itemIdsToRemove);
+  };
+
+  // Handle payment redirects
   useEffect(() => {
     const query = new URLSearchParams(location.search);
 
@@ -56,7 +67,7 @@ const CheckoutSummary = ({
     const success = query.get("success");
     const orderId = query.get("orderId");
     if (success === "false" && orderId) {
-      alert("Thanh toán VNPay thất bại hoặc bị hủy!");
+      toast.error("Thanh toán VNPay thất bại hoặc bị hủy!");
       localStorage.removeItem("pendingOrderData");
       navigate("/checkout");
       setLoading(false);
@@ -67,12 +78,12 @@ const CheckoutSummary = ({
         setLoading(true);
         orderService.createOrder(orderData).then(async (res) => {
           if (res.success) {
-            alert("Thanh toán VNPay thành công và đơn hàng đã được lưu!");
-            await clearCart();
+            toast.success("Thanh toán VNPay thành công!");
+            await removeCheckedOutItems(); 
             localStorage.removeItem("pendingOrderData");
-            navigate("/my-orders");
+            navigate("/user/purchase");
           } else {
-            alert("Lưu đơn hàng thất bại: " + res.message);
+            toast.error("Lưu đơn hàng thất bại: " + res.message);
           }
           setLoading(false);
         });
@@ -92,27 +103,27 @@ const CheckoutSummary = ({
           if (statusRes.success && statusRes.data?.return_code === 1) {
             const res = await orderService.createOrder(pendingOrderData);
             if (res.success) {
-              alert("Thanh toán ZaloPay thành công!");
-              await clearCart();
+              toast.success("Thanh toán ZaloPay thành công!");
+              await removeCheckedOutItems(); 
               localStorage.removeItem("pendingOrderData");
-              navigate("/my-orders");
+              navigate("/user/purchase");
             } else {
-              alert("Thanh toán thành công nhưng lưu đơn thất bại!");
+              toast.error("Thanh toán thành công nhưng lưu đơn thất bại!");
             }
           } else {
-            alert("Thanh toán ZaloPay thất bại!");
+            toast.error("Thanh toán ZaloPay thất bại!");
             localStorage.removeItem("pendingOrderData");
           }
           setLoading(false);
         });
       } else {
-        alert("Thanh toán ZaloPay đã bị hủy!");
+        toast.error("Thanh toán ZaloPay đã bị hủy!");
         localStorage.removeItem("pendingOrderData");
         navigate("/checkout");
         setLoading(false);
       }
     }
-  }, [location, navigate, clearCart]);
+  }, [location, navigate]);
 
   const handleVoucherApplyFromModal = async (selection) => {
     setShowVoucherModal(false);
@@ -127,7 +138,6 @@ const CheckoutSummary = ({
 
     setApplyingVoucher(true);
     try {
-      // use current shippingFee (already computed from selectedFreeship)
       const res = await voucherService.apply(
         discount.code,
         subtotal,
@@ -138,9 +148,10 @@ const CheckoutSummary = ({
         discount: payload.discount ?? payload.data?.discount ?? 0,
         finalAmount: payload.finalAmount ?? payload.data?.finalAmount ?? null,
       });
+      toast.success('Áp dụng voucher thành công!');
     } catch (err) {
       console.error("Apply discount voucher failed", err);
-      alert(
+      toast.error(
         err?.response?.data?.message || "Áp dụng voucher giảm giá thất bại"
       );
       setSelectedDiscount(null);
@@ -151,8 +162,18 @@ const CheckoutSummary = ({
   };
 
   const handlePayNow = async () => {
-    if (!selectedAddress) return alert("Vui lòng chọn địa chỉ");
-    if (!paymentMethod) return alert("Vui lòng chọn phương thức thanh toán");
+    if (!selectedAddress) {
+      toast.error("Vui lòng chọn địa chỉ giao hàng");
+      return;
+    }
+    if (!paymentMethod) {
+      toast.error("Vui lòng chọn phương thức thanh toán");
+      return;
+    }
+    if (selectedItemsCount === 0) {
+      toast.error("Không có sản phẩm nào để thanh toán");
+      return;
+    }
 
     try {
       const orderData = {
@@ -176,11 +197,15 @@ const CheckoutSummary = ({
       };
 
       console.log("Creating order with data:", orderData);
+
       if (paymentMethod === "vnpay") {
         setLoading(true);
         const tempOrderId = new Date().getTime();
         orderData.orderId = tempOrderId;
+        
+        //     Store cart items in localStorage for later removal
         localStorage.setItem("pendingOrderData", JSON.stringify(orderData));
+        localStorage.setItem("pendingCartItems", JSON.stringify(cartItems.map(i => i._id)));
 
         const { success, url, message } = await vnpayService.createPayment(
           orderData.orderId,
@@ -191,13 +216,16 @@ const CheckoutSummary = ({
           window.location.href = url;
         } else {
           setLoading(false);
-          alert("Tạo thanh toán thất bại: " + message);
+          toast.error("Tạo thanh toán thất bại: " + message);
         }
       } else if (paymentMethod === "zalopay") {
         setLoading(true);
         const tempOrderId = new Date().getTime();
         orderData.orderId = tempOrderId;
+        
+        //     Store cart items in localStorage for later removal
         localStorage.setItem("pendingOrderData", JSON.stringify(orderData));
+        localStorage.setItem("pendingCartItems", JSON.stringify(cartItems.map(i => i._id)));
 
         const { success, data, message } = await zalopayService.createPayment(
           orderData.orderId,
@@ -210,30 +238,29 @@ const CheckoutSummary = ({
           window.location.href = data.paymentUrl;
         } else {
           setLoading(false);
-          alert("Tạo thanh toán thất bại: " + message);
+          toast.error("Tạo thanh toán thất bại: " + message);
           localStorage.removeItem("pendingOrderData");
+          localStorage.removeItem("pendingCartItems");
         }
       } else {
         // COD -> create order directly
         setLoading(true);
         const res = await orderService.createOrder(orderData);
         if (res.success) {
-          alert("Đặt hàng thành công!");
-          await clearCart();
-          navigate("/my-orders");
+          toast.success("Đặt hàng thành công!");
+          await removeCheckedOutItems(); //     FIX: Only remove selected items
+          navigate("/user/purchase");
         } else {
-          alert("Đặt hàng thất bại: " + res.message);
+          toast.error("Đặt hàng thất bại: " + res.message);
         }
         setLoading(false);
       }
     } catch (err) {
       console.error("Create order error:", err);
-      alert("Đặt hàng thất bại: " + err.message);
+      toast.error("Đặt hàng thất bại: " + err.message);
       setLoading(false);
     }
   };
-
-  const openVoucherModal = () => setShowVoucherModal(true);
 
   return (
     <div>
@@ -249,11 +276,17 @@ const CheckoutSummary = ({
       )}
 
       <div>
-        <h3 className="text-lg font-semibold mb-4">Tất cả sản phẩm</h3>
+        {/*     Header with item count */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Sản phẩm đã chọn</h3>
+          <span className="text-sm text-gray-600 bg-green-50 px-3 py-1 rounded-full">
+            {selectedItemsCount} sản phẩm
+          </span>
+        </div>
 
         <div className="overflow-y-auto max-h-[500px] shadow rounded-xl bg-white custom-scrollbar">
           <table className="w-full text-sm text-left">
-            <thead className="bg-yellow-500 ">
+            <thead className="bg-green-600 sticky top-0">
               <tr>
                 <th className="py-3 px-4 text-white">Sản phẩm</th>
                 <th className="py-3 px-4 text-white">Số lượng</th>
@@ -269,7 +302,7 @@ const CheckoutSummary = ({
                     colSpan="3"
                     className="py-6 text-center text-gray-500 font-medium"
                   >
-                    Giỏ hàng rỗng.
+                    Chưa có sản phẩm nào được chọn
                   </td>
                 </tr>
               )}
@@ -279,21 +312,19 @@ const CheckoutSummary = ({
 
         {/* Voucher selection */}
         <div
-          onClick={openVoucherModal}
+          onClick={() => setShowVoucherModal(true)}
           className="my-5 flex items-center justify-between border rounded-lg px-4 py-4 bg-white shadow-sm cursor-pointer hover:shadow-md transition"
         >
-          {/* Left: fixed label */}
           <div className="flex items-center gap-2">
             <img
               src={assets.promo_code_icon}
               alt="Voucher"
               className="w-6 h-6"
             />
-            <span className=" font-bold text-sm text-gray-800">
+            <span className="font-bold text-sm text-gray-800">
               PySpecials Voucher
             </span>
           </div>
-          {/* Right: selected vouchers or placeholder */}
           <div className="flex items-center gap-2">
             {selectedFreeship || selectedDiscount ? (
               <>
@@ -316,30 +347,29 @@ const CheckoutSummary = ({
                 )}
               </>
             ) : (
-              <span className="px-3 py-1 text-sm font-medium text-gray-600 ">
+              <span className="px-3 py-1 text-sm font-medium text-gray-600">
                 Chọn voucher
               </span>
             )}
           </div>
         </div>
 
-        <div className="space-y-3 text-sm">
+        {/* Price Summary */}
+        <div className="space-y-3 text-sm border-t pt-4">
           <div className="flex justify-between">
-            <span>Tổng tiền hàng</span>
-            <span>{subtotal.toLocaleString("vi-VN")}₫</span>
+            <span className="text-gray-600">Tổng tiền hàng</span>
+            <span className="font-medium">{subtotal.toLocaleString("vi-VN")}₫</span>
           </div>
 
-          {/* show actual shipping fee after freeship */}
           <div className="flex justify-between">
-            <span>Phí vận chuyển</span>
-            <span>{defaultShippingFee.toLocaleString("vi-VN")}₫</span>
+            <span className="text-gray-600">Phí vận chuyển</span>
+            <span className="font-medium">{defaultShippingFee.toLocaleString("vi-VN")}₫</span>
           </div>
 
-          {/* show freeship discount only when applicable */}
           {freeshipAmount > 0 && (
             <div className="flex justify-between">
-              <span>Giảm giá phí vận chuyển</span>
-              <span className="text-green-600">
+              <span className="text-gray-600">Giảm giá phí vận chuyển</span>
+              <span className="text-green-600 font-medium">
                 -{freeshipAmount.toLocaleString("vi-VN")}₫
               </span>
             </div>
@@ -347,25 +377,26 @@ const CheckoutSummary = ({
 
           {discountAmount > 0 && (
             <div className="flex justify-between">
-              <span>Voucher giảm giá</span>
-              <span className="text-orange-600">
+              <span className="text-gray-600">Voucher giảm giá</span>
+              <span className="text-orange-600 font-medium">
                 -{discountAmount.toLocaleString("vi-VN")}₫
               </span>
             </div>
           )}
-          <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+
+          <div className="flex justify-between font-semibold text-lg pt-3 border-t">
             <span>Tổng thanh toán</span>
-            <span>{total.toLocaleString("vi-VN")}₫</span>
+            <span className="text-green-700">{total.toLocaleString("vi-VN")}₫</span>
           </div>
         </div>
       </div>
 
       {/* Terms */}
       <div className="mt-6">
-        <label className="flex items-center">
+        <label className="flex items-center cursor-pointer">
           <input
             type="checkbox"
-            className="w-4 h-4 accent-green-600 focus:ring-0"
+            className="w-4 h-4 accent-green-600 focus:ring-0 cursor-pointer"
             checked={termsAccepted}
             onChange={(e) => setTermsAccepted(e.target.checked)}
           />
@@ -380,17 +411,18 @@ const CheckoutSummary = ({
         <button
           type="submit"
           onClick={handlePayNow}
-          disabled={!termsAccepted || loading}
+          disabled={!termsAccepted || loading || selectedItemsCount === 0}
           className={`w-3/4 font-bold text-white py-3 rounded-xl transition ${
-            termsAccepted
-              ? "bg-green-600 hover:bg-green-700"
+            termsAccepted && selectedItemsCount > 0
+              ? "bg-green-600 hover:bg-green-700 active:scale-95"
               : "bg-gray-400 cursor-not-allowed"
           }`}
         >
-          Pay Now
+          {loading ? "Đang xử lý..." : `Thanh toán ${selectedItemsCount} sản phẩm`}
         </button>
       </div>
 
+      {/* Voucher Modal */}
       <VoucherModal
         isOpen={showVoucherModal}
         onClose={() => setShowVoucherModal(false)}

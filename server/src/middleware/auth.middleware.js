@@ -18,7 +18,13 @@ export const authenticateToken = async (req, res, next) => {
       return response.sendError(res, 'User không hợp lệ hoặc đã bị khóa', 401);
     }
 
-    req.user = decoded;
+    req.user = {
+      ...decoded,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+      avatar: user.avatar,
+    };
     
     next();
   } catch (error) {

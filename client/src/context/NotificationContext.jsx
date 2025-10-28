@@ -158,43 +158,84 @@ export const NotificationProvider = ({ children }) => {
 
   // Xử lý khi click vào thông báo
   const handleViewNotification = useCallback((notification) => {
+    console.log('🔔 Full notification object:', notification);
+    console.log('🔔 Notification details:', {
+      type: notification.type,
+      reference_id: notification.reference_id,
+      title: notification.title,
+      message: notification.message
+    });
+
     markAsRead(notification._id);
     
-    // Chuyển hướng dựa vào loại thông báo
-    switch (notification.type) {
-      // Tất cả các thông báo liên quan đến đơn hàng
-      case 'new_order':
-      case 'order_created':
-      case 'order_confirmed':
-      case 'order_processing':
-      case 'order_shipped':
-      case 'order_delivered':
-      case 'order_cancelled':
-      case 'payment_received':
-        // Nếu có ID đơn hàng cụ thể, chuyển đến trang chi tiết đơn hàng
-        if (notification.reference_id) {
-          navigate(`/my-orders?order=${notification.reference_id}`);
-        } else {
-          // Không có ID cụ thể, chuyển đến trang danh sách đơn hàng
-          navigate('/my-orders');
-        }
-        break;
-        
-      case 'new_product':
-        navigate(`/product/${notification.reference_id}`);
-        break;
-        
-      case 'new_rating':
-        navigate(`/product/${notification.reference_id}`, {
+    // ✅ CHECK: Log notification type để debug
+    const notificationType = notification.type;
+    console.log('📌 Notification type:', notificationType);
+    console.log('📌 Type of type:', typeof notificationType);
+    
+    // ✅ FIX: List tất cả các order-related types
+    const orderTypes = [
+      'new_order',
+      'order_created', 
+      'order_confirmed',
+      'order_processing',
+      'order_shipped',
+      'order_delivered',
+      'order_cancelled',
+      'payment_received',
+      'order_status' // ✅ Thêm type này (có thể backend dùng)
+    ];
+    
+    console.log('📌 Is order type?', orderTypes.includes(notificationType));
+    
+    // ✅ IMPROVED: Kiểm tra xem có phải order notification không
+    if (orderTypes.includes(notificationType)) {
+      console.log('✅ Matched order type, navigating...');
+      
+      if (notification.reference_id) {
+        const url = `/user/purchase?orderId=${notification.reference_id}`;
+        console.log('➡️ Navigate to:', url);
+        navigate(url);
+        return; // ✅ QUAN TRỌNG: return để không chạy xuống default
+      } else {
+        console.log('⚠️ No reference_id, navigate to all orders');
+        navigate('/user/purchase');
+        return;
+      }
+    }
+    
+    // Product notifications
+    if (notificationType === 'new_product') {
+      console.log('✅ Matched product type');
+      if (notification.reference_id) {
+        navigate(`/products/${notification.reference_id}`);
+        return;
+      } else {
+        navigate('/products');
+        return;
+      }
+    }
+    
+    // Rating notifications
+    if (notificationType === 'new_rating') {
+      console.log('✅ Matched rating type');
+      if (notification.reference_id) {
+        navigate(`/products/${notification.reference_id}`, {
           state: { scrollToReviews: true }
         });
-        break;
-        
-      default:
-        navigate('/dashboard', {
-          state: { activeSection: 'notifications' }
-        });
+        return;
+      } else {
+        navigate('/products');
+        return;
+      }
     }
+    
+    // ✅ Default case
+    console.log('⚠️ No match, navigate to dashboard (type:', notificationType, ')');
+    navigate('/user/dashboard', {
+      state: { activeSection: 'notifications' }
+    });
+    
   }, [navigate, markAsRead]);
 
   return (

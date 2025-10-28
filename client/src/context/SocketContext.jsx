@@ -34,13 +34,11 @@ export const SocketProvider = ({ children }) => {
   const createSocketConnection = useCallback(() => {
     // Ngăn chặn kết nối liên tục
     if (preventReconnectRef.current) {
-      console.log('🛑 Preventing reconnect loop');
       return null;
     }
 
     // Đóng kết nối cũ nếu có
     if (socketRef.current) {
-      console.log('Closing existing socket connection');
       socketRef.current.removeAllListeners(); // Quan trọng: xóa tất cả listeners
       socketRef.current.disconnect();
     }
@@ -69,7 +67,6 @@ export const SocketProvider = ({ children }) => {
 
     // Lưu trạng thái hiện tại
     prevAuthRef.current = { userId: currentUserId, token };
-    console.log('Creating new socket connection for user:', currentUserId);
 
     // Tạo kết nối socket mới
     const socketInstance = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000', {
@@ -85,7 +82,6 @@ export const SocketProvider = ({ children }) => {
 
     // Xử lý các sự kiện
     socketInstance.on('connect', () => {
-      console.log('✅ Socket connected:', socketInstance.id, 'for user:', currentUserId);
       setIsConnected(true);
       connectAttemptsRef.current = 0;
       initializedRef.current = true; // Đánh dấu đã kết nối thành công
@@ -159,11 +155,6 @@ export const SocketProvider = ({ children }) => {
       const prevUserId = prevAuthRef.current.userId;
       
       if (!isConnected || currentUserId !== prevUserId) {
-        console.log('🔑 Auth state changed:', { 
-          connected: isConnected, 
-          currentUser: currentUserId,
-          prevUser: prevUserId
-        });
         
         // Đặt timeout ngắn để tránh gọi nhiều lần
         connectTimeoutRef.current = setTimeout(() => {
@@ -194,7 +185,7 @@ export const SocketProvider = ({ children }) => {
   const reconnectWithNewToken = useCallback(() => {
     try {
       if (preventReconnectRef.current) {
-        console.log('🛑 Reconnect prevented to avoid loop');
+        console.log('Reconnect prevented to avoid loop');
         return;
       }
       

@@ -35,7 +35,7 @@ router.get('/:orderId', getOrderById);
 // POST /api/orders
 router.post('/', createOrder);
 
-// ✅ Cancel order
+// Cancel order
 // PUT /api/orders/:orderId/cancel
 router.put('/:orderId/cancel', cancelOrder);
 
