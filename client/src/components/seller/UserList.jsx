@@ -7,6 +7,7 @@ import {
   IconLock,
   IconLockOpen,
 } from "@tabler/icons-react";
+import UserModal from "./modal/UserModal";
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
@@ -18,6 +19,10 @@ const UserList = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // user modal state (modal will lazy-load orders itself)
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // filters
   const [search, setSearch] = useState("");
@@ -117,6 +122,19 @@ const UserList = () => {
     setPage(p);
   };
 
+  // view user details
+  const handleView = async (u) => {
+    if (!u) return;
+    // just set user and open modal — UserModal will fetch orders lazily on open
+    setSelectedUser(u);
+    setIsUserModalOpen(true);
+  };
+
+  const closeUserModal = () => {
+    setIsUserModalOpen(false);
+    setSelectedUser(null);
+  };
+
   return (
     <div className="p-6 bg-white rounded shadow-sm">
       {/* Filter bar */}
@@ -195,12 +213,12 @@ const UserList = () => {
           <thead>
             <tr className="bg-gray-100">
               <th className="p-3 text-left text-gray-700 w-12">#</th>
-              <th className="p-3 text-left text-gray-700 w-48">Name</th>
+              <th className="p-3 text-left text-gray-700 w-48">Tên</th>
               <th className="p-3 text-left text-gray-700 w-56">Email</th>
-              <th className="p-3 text-left text-gray-700 w-28">Role</th>
-              <th className="p-3 text-left text-gray-700 w-28">Active</th>
-              <th className="p-3 text-left text-gray-700 w-36">CreatedAt</th>
-              <th className="p-3 text-center text-gray-700 w-48">Actions</th>
+              <th className="p-3 text-left text-gray-700 w-28">Vai trò</th>
+              <th className="p-3 text-left text-gray-700 w-28">Trạng thái</th>
+              <th className="p-3 text-left text-gray-700 w-36">Ngày tạo</th>
+              <th className="p-3 text-center text-gray-700 w-48">Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -249,6 +267,7 @@ const UserList = () => {
                     <div className="inline-flex items-center gap-3 justify-center">
                       {/* View */}
                       <button
+                        onClick={() => handleView(u)}
                         className="w-20 h-10 flex items-center justify-center gap-2 rounded-full bg-blue-50 border border-blue-100 text-black-800 hover:bg-blue-100 shadow-sm transition transform hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-300 whitespace-nowrap"
                         title="Xem"
                       >
@@ -277,6 +296,13 @@ const UserList = () => {
           </tbody>
         </table>
       </div>
+
+      {/* User detail modal */}
+      <UserModal
+        isOpen={isUserModalOpen}
+        onClose={closeUserModal}
+        user={selectedUser}
+      />
 
       {/* Pagination */}
       <div className="flex items-center justify-between mt-4">

@@ -11,7 +11,10 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
     stock_quantity: "",
     status: "active",
     featured: false,
-    hometown_origin: "",
+    hometown_origin: {
+      district: "",
+      terrain: "",
+    },
     category_id: "",
     images: [],
   });
@@ -23,52 +26,54 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
     if (initialData) {
       setForm({
         name: initialData.name || "",
-        slug: initialData.slug || "",
+        price: initialData.price || 0,
+        category_id: initialData.category_id?._id || "",
+        hometown_origin: {
+          district: initialData.hometown_origin?.district || "",
+          terrain: initialData.hometown_origin?.terrain || "",
+        },
         description: initialData.description || "",
-        short_description: initialData.short_description || "",
-        price: initialData.price || "",
-        sale_price: initialData.sale_price || "",
-        stock_quantity: initialData.stock_quantity || "",
-        status: initialData.status || "active",
-        featured: initialData.featured || false,
-        hometown_origin: initialData.hometown_origin || "",
-        category_id: initialData.category_id || "",
-        images: initialData.images || [],
+        stock: initialData.stock || 0,
+        is_active: initialData.is_active ?? true,
       });
-
-      setPreviews(
-        initialData.images?.map((img) => img.image_url || img.url) || []
-      );
     } else {
+      // 🧹 Reset form khi ở chế độ thêm mới
       setForm({
         name: "",
-        slug: "",
-        description: "",
-        short_description: "",
-        price: "",
-        sale_price: "",
-        stock_quantity: "",
-        status: "active",
-        featured: false,
-        hometown_origin: "",
+        price: 0,
         category_id: "",
-        images: [],
+        hometown_origin: { district: "", terrain: "" },
+        description: "",
+        stock: 0,
+        is_active: true,
       });
-      setPreviews([]);
     }
   }, [initialData]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : type === "number"
-          ? Number(value)
-          : value,
-    }));
+
+    // xử lý riêng cho hometown_origin.*
+    if (name.startsWith("hometown_origin.")) {
+      const field = name.split(".")[1];
+      setForm((prev) => ({
+        ...prev,
+        hometown_origin: {
+          ...prev.hometown_origin,
+          [field]: value,
+        },
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        [name]:
+          type === "checkbox"
+            ? checked
+            : type === "number"
+            ? Number(value)
+            : value,
+      }));
+    }
   };
 
   const handleFileChange = async (e) => {
@@ -96,7 +101,10 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
           images: [...prev.images, ...uploaded],
         }));
 
-        setPreviews((prev) => [...prev, ...uploaded.map((img) => img.image_url)]);
+        setPreviews((prev) => [
+          ...prev,
+          ...uploaded.map((img) => img.image_url),
+        ]);
       } else {
         alert("Upload ảnh thất bại!");
       }
@@ -266,14 +274,42 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Xuất xứ</label>
-              <input
-                type="text"
-                name="hometown_origin"
-                value={form.hometown_origin}
+              <label className="block text-sm text-gray-600 mb-1">
+                Khu vực
+              </label>
+              <select
+                name="hometown_origin.district"
+                value={form.hometown_origin.district}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2 mb-3"
+              >
+                <option value="">-- Chọn huyện/thị xã --</option>
+                <option value="phu_yen_city">TP. Tuy Hòa</option>
+                <option value="dong_hoa">TX. Đông Hòa</option>
+                <option value="tuy_an">Tuy An</option>
+                <option value="son_hoa">Sơn Hòa</option>
+                <option value="song_hinh">Sông Hinh</option>
+                <option value="tay_hoa">Tây Hòa</option>
+                <option value="phu_hoa">Phú Hòa</option>
+                <option value="dong_xuan">Đồng Xuân</option>
+                <option value="song_cau">Sông Cầu</option>
+              </select>
+
+              <label className="block text-sm text-gray-600 mb-1">
+                Địa hình
+              </label>
+              <select
+                name="hometown_origin.terrain"
+                value={form.hometown_origin.terrain}
                 onChange={handleChange}
                 className="w-full border rounded-lg px-3 py-2"
-              />
+              >
+                <option value="">-- Chọn địa hình --</option>
+                <option value="bien">Biển</option>
+                <option value="ven_bien">Vén biển</option>
+                <option value="dong_bang">Đồng bằng</option>
+                <option value="nui">Núi</option>
+              </select>
             </div>
           </div>
 

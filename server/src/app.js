@@ -13,9 +13,11 @@ import zalopayRoutes from "./routes/zalopay.route.js";
 import voucherRoutes from "./routes/voucher.route.js";
 import ratingRoutes from "./routes/rating.route.js";
 import notificationRoutes from "./routes/notification.route.js";
-import chatbotRoutes from './routes/chatbot.route.js';
-import supportChatRoutes from './routes/supportChat.route.js';
-import hometownPostRoutes from './routes/hometownPost.routes.js';
+import chatbotRoutes from "./routes/chatbot.route.js";
+import supportChatRoutes from "./routes/supportChat.route.js";
+import hometownPostRoutes from "./routes/hometownPost.routes.js";
+import revenueRoutes from "./routes/revenue.route.js";
+
 import cors from "cors";
 import {
   User,
@@ -82,9 +84,12 @@ app.use("/api/vouchers", voucherRoutes);
 // Rating
 app.use("/api/ratings", ratingRoutes);
 
-app.use("/api/notifications", notificationRoutes)
+// Revenue
+app.use("/api/revenue", revenueRoutes);
+
+app.use("/api/notifications", notificationRoutes);
 // Thêm vào phần routes
-app.use('/api/chatbot', chatbotRoutes);
-app.use('/api/support', supportChatRoutes);
-app.use('/api/hometown-posts', hometownPostRoutes);
+app.use("/api/chatbot", chatbotRoutes);
+app.use("/api/support", supportChatRoutes);
+app.use("/api/hometown-posts", hometownPostRoutes);
 export default app;
