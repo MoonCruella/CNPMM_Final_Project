@@ -351,10 +351,19 @@ export const cancelOrder = async (req, res) => {
       now - order.created_at <= 30 * 60 * 1000;
 
     if (canCancel) {
+      // Direct cancel
       order.status = "cancelled";
       order.cancelled_at = now;
       order.cancel_reason = reason;
       await order.save();
+      
+      // Send notification to user
+      try {
+        await notificationService.notifyOrderCancelled(order);
+      } catch (notifyError) {
+        console.error("Error sending cancellation notification:", notifyError);
+      }
+      
       return response.sendSuccess(
         res,
         { order },
@@ -362,9 +371,28 @@ export const cancelOrder = async (req, res) => {
         200
       );
     } else if (order.status === "processing") {
-      // Chuyển sang trạng thái yêu cầu hủy
+      // Cancel request
       order.status = "cancel_request";
+      order.cancel_reason = reason;
+      order.cancel_requested_at = now;
+      
+      // Add to history
+      order.history = order.history || [];
+      order.history.push({
+        status: "cancel_request",
+        date: now,
+        note: reason || "Yêu cầu hủy đơn hàng",
+      });
+      
       await order.save();
+      
+      // Send notification to sellers
+      try {
+        await notificationService.notifyCancelRequest(order);
+      } catch (notifyError) {
+        console.error("Error sending cancel request notification:", notifyError);
+      }
+      
       return response.sendSuccess(
         res,
         { order },
@@ -388,16 +416,31 @@ export const cancelOrder = async (req, res) => {
   }
 };
 export const autoConfirmOrders = async () => {
-  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-  const orders = await Order.find({
-    status: "pending",
-    created_at: { $lte: thirtyMinutesAgo },
-  });
+  try {
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const orders = await Order.find({
+      status: "pending",
+      created_at: { $lte: thirtyMinutesAgo },
+    });
 
-  for (const order of orders) {
-    order.status = "confirmed";
-    order.confirmed_at = new Date();
-    await order.save();
+    for (const order of orders) {
+      order.status = "confirmed";
+      order.confirmed_at = new Date();
+      await order.save();
+      
+      // Send notification to user
+      try {
+        await notificationService.notifyOrderAutoConfirmed(order);
+        console.log(`Sent auto-confirm notification for order ${order.order_number}`);
+      } catch (notifyError) {
+        console.error(`Error sending auto-confirm notification for order ${order.order_number}:`, notifyError);
+      }
+    }
+    
+    return orders.length;
+  } catch (error) {
+    console.error("Auto-confirm orders error:", error);
+    throw error;
   }
 };
 
@@ -486,7 +529,7 @@ export const reorder = async (req, res) => {
         
         await cartItem.save();
       } else {
-        // ✅ Create new cart item
+        // Create new cart item
         cartItem = new CartItem({
           user_id: userId,
           product_id: productId,
@@ -500,12 +543,11 @@ export const reorder = async (req, res) => {
       addedCount++;
     }
 
-    // ✅ Get all cart items for response
+    //  Get all cart items for response
     const cartItems = await CartItem.find({ user_id: userId })
       .populate("product_id", "name images price sale_price stock status")
       .sort({ updated_at: -1 });
 
-    console.log("✅ Cart now has", cartItems.length, "items");
 
     const data = {
       cart: { items: cartItems }, // ✅ Wrap in object for consistency

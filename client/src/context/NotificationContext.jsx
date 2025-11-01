@@ -195,8 +195,6 @@ export const NotificationProvider = ({ children }) => {
     const isSeller = user?.role === 'seller';
     const isAdmin = user?.role === 'admin';
     
-    console.log('👤 User role:', user?.role);
-    console.log('📋 Notification type:', notificationType);
     
     // List tất cả các order-related types
     const orderTypes = [
@@ -208,7 +206,8 @@ export const NotificationProvider = ({ children }) => {
       'order_delivered',
       'order_cancelled',
       'payment_received',
-      'order_status' 
+      'order_status' ,
+      'cancel_request'
     ];
         
     if (orderTypes.includes(notificationType)) {
@@ -240,6 +239,8 @@ export const NotificationProvider = ({ children }) => {
         return;
       }
     }
+
+   
     
     // Rating notifications
     if (notificationType === 'new_rating') {
@@ -253,13 +254,12 @@ export const NotificationProvider = ({ children }) => {
         return;
       }
     }
+
     
     //  Default navigation based on role
     if (isSeller || isAdmin) {
-      console.log('🔗 Navigating to seller notifications');
       navigate('/seller/notifications');
     } else {
-      console.log('🔗 Navigating to user dashboard');
       navigate('/user/dashboard', {
         state: { activeSection: 'notifications' }
       });

@@ -18,15 +18,12 @@ const ProductList = () => {
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  // Filters
   const [status, setStatus] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchName, setSearchName] = useState("");
   
-  // Debounce search value
   const debouncedSearchName = useDebounce(searchName, 500);
 
-  // Pagination from backend
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -35,52 +32,56 @@ const ProductList = () => {
   const loadCategories = async () => {
     try {
       const res = await categoryService.getAll();
-      if (res.success) setCategories(res.data);
+      console.log("Categories response:", res);
+      
+      if (res.success) {
+        // Check if data is array or nested object
+        const categoriesData = Array.isArray(res.data) 
+          ? res.data 
+          : res.data?.categories || [];
+        
+        setCategories(categoriesData);
+      } else {
+        setCategories([]);
+      }
     } catch (error) {
       console.error("Lỗi tải category:", error);
+      setCategories([]);
     }
   };
 
-  // Load products from backend with pagination
   const loadProducts = async () => {
     try {
       setIsLoading(true);
       
-      // Build query params với debouncedSearchName
       const params = {
         page,
         limit,
         status: status !== "all" ? status : undefined,
         category: categoryFilter !== "all" ? categoryFilter : undefined,
-        search: debouncedSearchName.trim() !== "" ? debouncedSearchName : undefined, // Use debounced value
+        search: debouncedSearchName.trim() !== "" ? debouncedSearchName : undefined,
       };
 
-      //  Remove undefined values
       Object.keys(params).forEach(key => {
         if (params[key] === undefined) delete params[key];
       });
 
-
-      // Call API with query params
       const res = await productService.getAll(params);
       
       if (res.success) {
         const { products: fetchedProducts, pagination } = res.data;
         
-        // Format products with category name and primary image
         const formatted = fetchedProducts.map((p) => ({
           ...p,
           primary_image: p.images?.find((img) => img.is_primary)?.image_url || p.images?.[0]?.image_url,
-          categoryName: categories.find((c) => c._id === p.category_id)?.name || "Chưa xác định",
+          categoryName: Array.isArray(categories) 
+            ? categories.find((c) => c._id === p.category_id)?.name || "Chưa xác định"
+            : "Chưa xác định",
         }));
 
         setProducts(formatted);
-        
-        // Set pagination from backend
         setTotalPages(pagination?.total_pages || 1);
         setTotalProducts(pagination?.total_items || 0);
-        
-      
       } else {
         toast.error(res.message || "Không tải được sản phẩm");
       }
@@ -92,19 +93,16 @@ const ProductList = () => {
     }
   };
 
-  // Load categories first
   useEffect(() => {
     loadCategories();
   }, []);
 
-  // Load products when dependencies change - use debouncedSearchName
   useEffect(() => {
     if (categories.length > 0) {
       loadProducts();
     }
   }, [categories, page, status, categoryFilter, debouncedSearchName]); 
 
-  // Reset to page 1 when filters change - use debouncedSearchName
   useEffect(() => {
     setPage(1);
   }, [status, categoryFilter, debouncedSearchName]);
@@ -193,7 +191,6 @@ const ProductList = () => {
       {/* Filters Section */}
       <section className="container mx-auto px-4 pt-8">
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-center justify-between">
-          {/* Status Filter */}
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -204,21 +201,23 @@ const ProductList = () => {
             <option value="inactive">Ngừng bán</option>
           </select>
 
-          {/* Category Filter */}
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
             <option value="all">Tất cả danh mục</option>
-            {categories.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.name}
-              </option>
-            ))}
+            {Array.isArray(categories) && categories.length > 0 ? (
+              categories.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))
+            ) : (
+              <option disabled>Đang tải...</option>
+            )}
           </select>
 
-          {/* Search */}
           <div className="relative">
             <input
               type="text"
@@ -244,7 +243,6 @@ const ProductList = () => {
 
           <div className="flex-1"></div>
 
-          {/* Reset Button */}
           <button
             onClick={() => {
               setStatus("all");
@@ -256,7 +254,6 @@ const ProductList = () => {
             🔄 Xóa bộ lọc
           </button>
 
-          {/* Add Product Button */}
           <button
             onClick={handleAddProduct}
             className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition font-medium flex items-center gap-2"
@@ -264,7 +261,6 @@ const ProductList = () => {
             ➕ Thêm sản phẩm
           </button>
         </div>
-        
       </section>
 
       {/* Products Table */}
@@ -349,7 +345,6 @@ const ProductList = () => {
         )}
       </section>
 
-      {/* Form & Detail Dialogs */}
       <ProductFormDialog
         open={openForm}
         onClose={() => setOpenForm(false)}

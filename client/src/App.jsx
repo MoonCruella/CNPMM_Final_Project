@@ -40,7 +40,7 @@ import BlogPostPage from './pages/user/BlogPostPage';
 import SellerBlogPage from './pages/seller/SellerBlogPage';
 import OrderDetail from "./components/seller/OrderDetail";
 import GoogleAuthCallback from './pages/user/GoogleAuthCallback';
-
+import CategoryManagement from "./components/seller/CategoryManagement";
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
   const { showUserLogin } = useAppContext();
@@ -63,7 +63,22 @@ const App = () => {
     <div>
       {isSellerPath ? null : <Navbar />}
 
-      <Toaster />
+      <Toaster 
+        position="bottom-right"
+        expand={true}
+        richColors
+        closeButton
+        toastOptions={{
+          style: {
+            color: '#1f2937',
+            fontSize: '14px',
+            fontWeight: '500',
+          },
+          className: 'toast-custom',
+          duration: 4000,
+        }}
+      />
+      
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -103,7 +118,7 @@ const App = () => {
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route path="/auth/google/success" element={<GoogleAuthCallback />} />
-        {/* Seller routes */}
+        
         <Route path="/seller" element={
           <SellerRoute>
             <SellerLayout />
@@ -113,7 +128,8 @@ const App = () => {
           <Route index element={<DashboardSeller />} />
           <Route path="products" element={<ProductList />} />
           <Route path="orders" element={<Orders />} />
-          <Route path= "/seller/orders/:orderId" element= {<OrderDetail/>} />
+          <Route path="categories" element={<CategoryManagement />} />
+          <Route path="/seller/orders/:orderId" element={<OrderDetail/>} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="my-account" element={<MyAccount />} />
           <Route path="vouchers" element={<Vouchers />} />

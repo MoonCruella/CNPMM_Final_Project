@@ -1,10 +1,9 @@
-// src/services/categoryService.js
 import api from "./api";
 
 const categoryService = {
-  // Lấy tất cả categories
-  getAll: async () => {
-    const res = await api.get("/api/categories");
+  // Lấy tất cả categories với params
+  getAll: async (params = {}) => {
+    const res = await api.get("/api/categories", { params });
     return res.data;
   },
 

@@ -8,7 +8,6 @@ const createNotification = async (data) => {
   try {
     const { recipient_id, type, title, message, reference_id, reference_model, sender_id } = data;
     
-    // Tạo thông báo trong database
     const notification = await Notification.create({
       recipient_id,
       type,
@@ -19,15 +18,12 @@ const createNotification = async (data) => {
       sender_id: sender_id || null
     });
     
-    // Populate sender nếu có
     const populatedNotification = await Notification.findById(notification._id)
       .populate('sender_id', 'name avatar');
     
-    // Emit event qua socket
     const io = getIO();
     io.to(`user:${recipient_id}`).emit('new_notification', populatedNotification);
     
-    // Emit số lượng thông báo chưa đọc
     const unreadCount = await Notification.countUnread(recipient_id);
     io.to(`user:${recipient_id}`).emit('notification_count', { count: unreadCount });
     
@@ -43,10 +39,8 @@ const notifySellers = async (data) => {
   try {
     const { type, title, message, reference_id, reference_model, sender_id } = data;
     
-    // Lấy danh sách seller
     const sellers = await User.find({ role: 'seller' });
     
-    // Tạo thông báo cho từng seller
     const notifications = [];
     for (const seller of sellers) {
       const notification = await createNotification({
@@ -61,7 +55,6 @@ const notifySellers = async (data) => {
       notifications.push(notification);
     }
     
-    // Emit event đến room seller
     const io = getIO();
     io.to('seller').emit('seller_notification', {
       type,
@@ -91,6 +84,80 @@ const notifyNewOrder = async (order) => {
   });
 };
 
+// Thông báo yêu cầu hủy đơn cho seller
+const notifyCancelRequest = async (order) => {
+  return notifySellers({
+    type: 'cancel_request',
+    title: 'Yêu cầu hủy đơn hàng',
+    message: `Khách hàng yêu cầu hủy đơn #${order.order_number}. Lý do: ${order.cancel_reason || 'Không có lý do'}`,
+    reference_id: order._id,
+    reference_model: 'Order',
+    sender_id: order.user_id
+  });
+};
+
+// Thông báo đơn hàng đã bị hủy cho user
+const notifyOrderCancelled = async (order) => {
+  try {
+    const populatedOrder = await Order.findById(order._id)
+      .populate('user_id', 'name email');
+    
+    const notification = await createNotification({
+      recipient_id: populatedOrder.user_id._id,
+      type: 'order_cancelled',
+      title: 'Đơn hàng đã hủy',
+      message: `Đơn hàng #${order.order_number} của bạn đã bị hủy${order.cancel_reason ? `. Lý do: ${order.cancel_reason}` : ''}`,
+      reference_id: order._id,
+      reference_model: 'Order'
+    });
+    
+    const io = getIO();
+    io.to(`user:${populatedOrder.user_id._id}`).emit('order_cancelled', {
+      order_id: order._id,
+      order_number: order.order_number,
+      cancel_reason: order.cancel_reason,
+      cancelled_at: new Date()
+    });
+    
+    return notification;
+  } catch (error) {
+    console.error('Error notifying order cancellation:', error);
+    throw error;
+  }
+};
+
+// Thông báo đơn hàng tự động xác nhận cho user
+const notifyOrderAutoConfirmed = async (order) => {
+  try {
+    const populatedOrder = await Order.findById(order._id)
+      .populate('user_id', 'name email');
+    
+    const notification = await createNotification({
+      recipient_id: populatedOrder.user_id._id,
+      type: 'order_confirmed',
+      title: 'Đơn hàng đã xác nhận',
+      message: `Đơn hàng #${order.order_number} của bạn đã được xác nhận tự động và đang chờ xử lý`,
+      reference_id: order._id,
+      reference_model: 'Order'
+    });
+    
+    const io = getIO();
+    io.to(`user:${populatedOrder.user_id._id}`).emit('order_status_update', {
+      order_id: order._id,
+      order_number: order.order_number,
+      previous_status: 'pending',
+      new_status: 'confirmed',
+      updated_at: new Date(),
+      auto_confirmed: true
+    });
+    
+    return notification;
+  } catch (error) {
+    console.error('Error notifying auto-confirmation:', error);
+    throw error;
+  }
+};
+
 // Thông báo đánh giá mới cho seller
 const notifyNewRating = async (rating) => {
   return notifySellers({
@@ -106,10 +173,8 @@ const notifyNewRating = async (rating) => {
 // Thông báo sản phẩm mới cho người dùng
 const notifyNewProduct = async (product) => {
   try {
-    // Lấy danh sách user không phải seller
     const users = await User.find({ role: { $ne: 'seller' } });
     
-    // Tạo thông báo cho từng user
     const notifications = [];
     for (const user of users) {
       const notification = await createNotification({
@@ -144,10 +209,8 @@ const notifyNewComment = async (comment, productId, productName) => {
 
 const notifyOrderStatusUpdate = async (order, previousStatus) => {
   try {
-    // Lấy thông tin đầy đủ của đơn hàng
     const populatedOrder = await order.populate('user_id', 'name email');
     
-    // Tạo tiêu đề và nội dung thông báo dựa trên trạng thái mới
     let title, message;
     switch(order.status) {
       case 'confirmed':
@@ -175,7 +238,6 @@ const notifyOrderStatusUpdate = async (order, previousStatus) => {
         message = `Đơn hàng #${order.order_number} của bạn đã được cập nhật từ ${previousStatus} sang ${order.status}`;
     }
     
-    // Tạo thông báo cho người dùng
     const notification = await createNotification({
       recipient_id: order.user_id._id,
       type: 'order_status',
@@ -185,7 +247,6 @@ const notifyOrderStatusUpdate = async (order, previousStatus) => {
       reference_model: 'Order'
     });
     
-    // Gửi cập nhật trực tiếp đến phòng của người dùng cụ thể
     const io = getIO();
     io.to(`user:${order.user_id._id}`).emit('order_status_update', {
       order_id: order._id,
@@ -211,5 +272,8 @@ export {
   notifyNewRating, 
   notifyNewProduct,
   notifyNewComment,
-  notifyOrderStatusUpdate
+  notifyOrderStatusUpdate,
+  notifyCancelRequest,
+  notifyOrderCancelled,
+  notifyOrderAutoConfirmed
 };

@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useUserContext } from "@/context/UserContext";
 import { useCartContext } from "@/context/CartContext"; //    Add CartContext
 import orderService from "@/services/order.service";
+import CancelOrderModal from "../../components/user/modal/CancelOrderModal";
+
 import { toast } from "sonner";
 
 const OrderDetailPage = () => {
@@ -13,6 +15,8 @@ const OrderDetailPage = () => {
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isReordering, setIsReordering] = useState(false); 
+   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated && orderId) {
@@ -95,6 +99,32 @@ const OrderDetailPage = () => {
     } catch (error) {
       console.error("Cancel order error:", error);
       toast.error("Có lỗi xảy ra khi hủy đơn hàng");
+    }
+  };
+  const handleOpenCancelModal = () => {
+    setShowCancelModal(true);
+  };
+
+  const handleCloseCancelModal = () => {
+    setShowCancelModal(false);
+  };
+  const handleSubmitCancelRequest = async (orderId, reason) => {
+    try {
+      setIsSubmittingCancel(true);
+      const response = await orderService.cancelOrder(orderId, reason);
+      
+      if (response.success) {
+        toast.success(response.message || "Đã gửi yêu cầu hủy đơn hàng");
+        loadOrderDetail();
+      } else {
+        toast.error(response.message || "Không thể gửi yêu cầu hủy");
+      }
+    } catch (error) {
+      console.error("Cancel request error:", error);
+      toast.error("Có lỗi xảy ra");
+      throw error;
+    } finally {
+      setIsSubmittingCancel(false);
     }
   };
 
@@ -181,6 +211,7 @@ const OrderDetailPage = () => {
 
   const statusInfo = getStatusInfo(order.status);
   const canCancel = ["pending", "confirmed"].includes(order.status);
+  const canRequestCancel = order.status === "processing";
   const canReorder = ["delivered", "cancelled"].includes(order.status);
 
   return (
@@ -513,6 +544,14 @@ const OrderDetailPage = () => {
                     ❌ Hủy đơn hàng
                   </button>
                 )}
+                {canRequestCancel && (
+                  <button
+                    onClick={handleOpenCancelModal}
+                    className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium cursor-pointer"
+                  >
+                    🔄 Yêu cầu hủy đơn
+                  </button>
+                )}
                 {canReorder && (
                   <button
                     onClick={handleReorder}
@@ -533,7 +572,7 @@ const OrderDetailPage = () => {
                   </button>
                 )}
                 <button
-                  onClick={() => navigate("/user/purchase")}
+                  onClick={() => navigate("/user/orders")}
                   className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium cursor-pointer"
                 >
                   📋 Quay lại danh sách
@@ -543,6 +582,13 @@ const OrderDetailPage = () => {
           </div>
         </div>
       </div>
+      <CancelOrderModal
+        isOpen={showCancelModal}
+        onClose={handleCloseCancelModal}
+        onSubmit={handleSubmitCancelRequest}
+        orderNumber={order?.order_number || order?._id?.slice(-8).toUpperCase()}
+        orderId={orderId}
+      />
     </main>
   );
 };
