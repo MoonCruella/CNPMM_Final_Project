@@ -30,6 +30,17 @@ const cartService = {
     const res = await privateApi.delete("/api/cart");
     return res.data;
   },
+  removeMultipleItems: async (itemIds) => {
+    try {
+      const response = await privateApi.delete("/api/cart/items/batch", {
+        data: { itemIds } 
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Remove multiple items error:", error);
+      throw error;
+    }
+  },
 };
 
 export default cartService;

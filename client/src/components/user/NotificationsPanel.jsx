@@ -64,7 +64,7 @@ const NotificationsPanel = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10">
+    <div className="w-full pr-8 ">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Tất cả thông báo</h1>
         
@@ -86,7 +86,7 @@ const NotificationsPanel = () => {
             <div 
               key={notification._id}
               onClick={() => handleViewNotification(notification)}
-              className={`p-4 flex items-start border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition ${
+              className={`p-4 flex items-start border-b border-gray-200 cursor-pointer hover:bg-gray-200 transition ${
                 !notification.is_read ? 'bg-blue-50' : ''
               }`}
             >

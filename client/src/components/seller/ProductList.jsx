@@ -5,10 +5,12 @@ import categoryService from "../../services/categoryService.js";
 import ProductsTable from "./ProductsTable.jsx";
 import ProductFormDialog from "./ProductForm.jsx";
 import ProductDetailDialog from "./ProductDetailDialog.jsx";
+import { assets } from "@/assets/assets";
+import { Link } from "react-router-dom";
+import { useDebounce } from "@/hooks/useDebounce"; // ✅ Import useDebounce
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
-  const [displayProducts, setDisplayProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,11 +22,15 @@ const ProductList = () => {
   const [status, setStatus] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchName, setSearchName] = useState("");
+  
+  // ✅ Debounce search value
+  const debouncedSearchName = useDebounce(searchName, 500);
 
-  // Pagination
+  // ✅ Pagination from backend
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
 
   const loadCategories = async () => {
     try {
@@ -35,32 +41,51 @@ const ProductList = () => {
     }
   };
 
+  // ✅ Load products from backend with pagination
   const loadProducts = async () => {
     try {
       setIsLoading(true);
-      const res = await productService.getAll();
+      
+      // ✅ Build query params với debouncedSearchName
+      const params = {
+        page,
+        limit,
+        status: status !== "all" ? status : undefined,
+        category: categoryFilter !== "all" ? categoryFilter : undefined,
+        search: debouncedSearchName.trim() !== "" ? debouncedSearchName : undefined, // ✅ Use debounced value
+      };
+
+      // ✅ Remove undefined values
+      Object.keys(params).forEach(key => {
+        if (params[key] === undefined) delete params[key];
+      });
+
+      console.log('📋 Fetching products with params:', params);
+
+      // ✅ Call API with query params
+      const res = await productService.getAll(params);
+      
       if (res.success) {
-        const formatted = res.data.map((p) => ({
+        const { products: fetchedProducts, pagination } = res.data;
+        
+        // ✅ Format products with category name and primary image
+        const formatted = fetchedProducts.map((p) => ({
           ...p,
-          primary_image: p.images?.find((img) => img.is_primary)?.image_url,
-          categoryName:
-            categories.find((c) => c._id === p.category_id)?.name ||
-            "Chưa xác định",
+          primary_image: p.images?.find((img) => img.is_primary)?.image_url || p.images?.[0]?.image_url,
+          categoryName: categories.find((c) => c._id === p.category_id)?.name || "Chưa xác định",
         }));
 
-        let filtered = formatted;
-        if (status !== "all") filtered = filtered.filter((p) => p.status === status);
-        if (categoryFilter !== "all")
-          filtered = filtered.filter((p) => p.category_id === categoryFilter);
-        if (searchName.trim() !== "")
-          filtered = filtered.filter((p) =>
-            p.name.toLowerCase().includes(searchName.toLowerCase())
-          );
-
-        setProducts(filtered);
-        setTotalPages(Math.ceil(filtered.length / limit));
-        setPage(1);
-      } else toast.error(res.message || "Không tải được sản phẩm");
+        setProducts(formatted);
+        
+        // ✅ Set pagination from backend
+        setTotalPages(pagination?.total_pages || 1);
+        setTotalProducts(pagination?.total_items || 0);
+        
+        console.log('✅ Loaded products:', formatted.length);
+        console.log('📄 Pagination:', pagination);
+      } else {
+        toast.error(res.message || "Không tải được sản phẩm");
+      }
     } catch (error) {
       console.error("Lỗi tải sản phẩm:", error);
       toast.error("Có lỗi xảy ra khi tải sản phẩm");
@@ -69,19 +94,22 @@ const ProductList = () => {
     }
   };
 
-  useEffect(() => {
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    setDisplayProducts(products.slice(start, end));
-  }, [products, page, limit]);
-
+  // ✅ Load categories first
   useEffect(() => {
     loadCategories();
   }, []);
 
+  // ✅ Load products when dependencies change - use debouncedSearchName
   useEffect(() => {
-    if (categories.length > 0) loadProducts();
-  }, [categories, status, categoryFilter, searchName]);
+    if (categories.length > 0) {
+      loadProducts();
+    }
+  }, [categories, page, status, categoryFilter, debouncedSearchName]); // ✅ Changed dependency
+
+  // ✅ Reset to page 1 when filters change - use debouncedSearchName
+  useEffect(() => {
+    setPage(1);
+  }, [status, categoryFilter, debouncedSearchName]); // ✅ Changed dependency
 
   const handleAddProduct = () => {
     setSelectedProduct(null);
@@ -105,7 +133,9 @@ const ProductList = () => {
       if (res.success) {
         toast.success("Xóa sản phẩm thành công");
         loadProducts();
-      } else toast.error(res.message || "Xóa sản phẩm thất bại");
+      } else {
+        toast.error(res.message || "Xóa sản phẩm thất bại");
+      }
     } catch (error) {
       console.error(error);
       toast.error("Lỗi xóa sản phẩm");
@@ -122,10 +152,14 @@ const ProductList = () => {
       }
 
       if (res.success) {
-        toast.success(selectedProduct ? "Cập nhật sản phẩm thành công" : "Thêm sản phẩm thành công");
+        toast.success(
+          selectedProduct ? "Cập nhật sản phẩm thành công" : "Thêm sản phẩm thành công"
+        );
         setOpenForm(false);
         loadProducts();
-      } else toast.error(res.message || "Có lỗi xảy ra");
+      } else {
+        toast.error(res.message || "Có lỗi xảy ra");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Có lỗi xảy ra khi lưu sản phẩm");
@@ -134,31 +168,50 @@ const ProductList = () => {
 
   return (
     <main className="bg-gray-50 min-h-screen">
-      {/* Bộ lọc */}
+      {/* Header Banner */}
+      <section
+        className="bg-cover bg-center py-20 text-center text-white relative"
+        style={{ backgroundImage: `url(${assets.page_banner})` }}
+      >
+        <div className="absolute inset-0 bg-black/40"></div>
+        <div className="relative z-10">
+          <h1 className="text-5xl font-bold drop-shadow-lg">Quản lý sản phẩm</h1>
+          <ul className="flex justify-center gap-2 mt-2 text-sm">
+            <li>
+              <Link to="/seller" className="hover:underline font-medium">
+                Dashboard
+              </Link>
+            </li>
+            <li className="font-medium">/ Quản lý sản phẩm</li>
+          </ul>
+          {/* ✅ Show total products count */}
+          {!isLoading && totalProducts > 0 && (
+            <p className="text-gray-200 text-sm mt-2">
+              Hiển thị {((page - 1) * limit + 1)} - {Math.min(page * limit, totalProducts)} trong tổng số {totalProducts} sản phẩm
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Filters Section */}
       <section className="container mx-auto px-4 pt-8">
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-center justify-between">
-          {/* Trạng thái */}
+          {/* Status Filter */}
           <select
             value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
-            }}
-            className="border rounded-lg px-3 py-2"
+            onChange={(e) => setStatus(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
             <option value="all">Tất cả trạng thái</option>
             <option value="active">Đang bán</option>
             <option value="inactive">Ngừng bán</option>
           </select>
 
-          {/* Danh mục */}
+          {/* Category Filter */}
           <select
             value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              setPage(1);
-            }}
-            className="border rounded-lg px-3 py-2"
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
             <option value="all">Tất cả danh mục</option>
             {categories.map((c) => (
@@ -168,105 +221,139 @@ const ProductList = () => {
             ))}
           </select>
 
-          {/* Tìm kiếm */}
-          <input
-            type="text"
-            placeholder="Tìm theo tên sản phẩm..."
-            value={searchName}
-            onChange={(e) => {
-              setSearchName(e.target.value);
-              setPage(1);
-            }}
-            className="border rounded-lg px-3 py-2 w-56"
-          />
+          {/* Search */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Tìm theo tên sản phẩm..."
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            />
+            {searchName && (
+              <button
+                onClick={() => setSearchName("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            )}
+            {/* ✅ Show searching indicator */}
+            {searchName !== debouncedSearchName && (
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              </span>
+            )}
+          </div>
 
-          {/* Nút reset */}
+          <div className="flex-1"></div>
+
+          {/* Reset Button */}
           <button
             onClick={() => {
               setStatus("all");
               setCategoryFilter("all");
               setSearchName("");
-              setPage(1);
             }}
-            className="flex items-center gap-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition"
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition font-medium flex items-center gap-2"
           >
-            Xóa bộ lọc
+            🔄 Xóa bộ lọc
           </button>
 
-          {/* Nút thêm */}
+          {/* Add Product Button */}
           <button
             onClick={handleAddProduct}
-            className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition"
+            className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition font-medium flex items-center gap-2"
           >
-            + Thêm sản phẩm
+            ➕ Thêm sản phẩm
           </button>
         </div>
+        
       </section>
 
-      {/* Bảng sản phẩm */}
+      {/* Products Table */}
       <section className="pb-16 container mx-auto px-4">
         {isLoading ? (
-          <div className="p-8 text-center">
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
             <div className="w-8 h-8 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-700">Đang tải sản phẩm...</p>
           </div>
         ) : (
           <>
-            <ProductsTable
-              products={displayProducts}
-              onEdit={handleEditProduct}
-              onDelete={handleDeleteProduct}
-              onView={handleViewProduct}
-              isLoading={isLoading}
-            />
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <ProductsTable
+                products={products}
+                onEdit={handleEditProduct}
+                onDelete={handleDeleteProduct}
+                onView={handleViewProduct}
+                isLoading={false}
+              />
 
-            {/* Phân trang */}
+              {products.length === 0 && !isLoading && (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-4xl">📦</span>
+                  </div>
+                  <h3 className="text-xl font-medium text-gray-700 mb-2">
+                    Không có sản phẩm nào
+                  </h3>
+                  <p className="text-gray-500 text-sm">
+                    {searchName || status !== "all" || categoryFilter !== "all"
+                      ? "Không tìm thấy sản phẩm phù hợp với bộ lọc"
+                      : "Chưa có sản phẩm nào. Hãy thêm sản phẩm đầu tiên!"}
+                  </p>
+                </div>
+              )}
+            </div>
+
             {totalPages > 1 && (
-              <div className="flex justify-center mt-4 gap-2">
-                <button
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
-                  className={`px-3 py-1 rounded ${
-                    page === 1
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-gray-800 text-white"
-                  }`}
-                >
-                  {"<"}
-                </button>
-
-                {[...Array(totalPages)].map((_, idx) => (
+              <div className="flex justify-center mt-6">
+                <div className="flex items-center gap-2">
                   <button
-                    key={idx + 1}
-                    onClick={() => setPage(idx + 1)}
-                    className={`px-3 py-1 rounded ${
-                      page === idx + 1
-                        ? "bg-gray-800 text-white"
-                        : "bg-gray-200"
+                    disabled={page === 1}
+                    onClick={() => setPage(page - 1)}
+                    className={`px-3 py-1 rounded transition ${
+                      page === 1
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-gray-800 text-white hover:bg-gray-900"
                     }`}
                   >
-                    {idx + 1}
+                    {"<"}
                   </button>
-                ))}
 
-                <button
-                  disabled={page === totalPages}
-                  onClick={() => setPage(page + 1)}
-                  className={`px-3 py-1 rounded ${
-                    page === totalPages
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-gray-800 text-white"
-                  }`}
-                >
-                  {">"}
-                </button>
+                  {[...Array(totalPages)].map((_, idx) => (
+                    <button
+                      key={idx + 1}
+                      onClick={() => setPage(idx + 1)}
+                      className={`px-3 py-1 rounded transition ${
+                        page === idx + 1
+                          ? "bg-gray-800 text-white"
+                          : "bg-gray-200 hover:bg-gray-300"
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+
+                  <button
+                    disabled={page === totalPages}
+                    onClick={() => setPage(page + 1)}
+                    className={`px-3 py-1 rounded transition ${
+                      page === totalPages
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-gray-800 text-white hover:bg-gray-900"
+                    }`}
+                  >
+                    {">"}
+                  </button>
+                </div>
               </div>
             )}
           </>
         )}
       </section>
 
-      {/* Form & Chi tiết */}
+      {/* Form & Detail Dialogs */}
       <ProductFormDialog
         open={openForm}
         onClose={() => setOpenForm(false)}

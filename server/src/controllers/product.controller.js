@@ -153,17 +153,90 @@ export const deleteProduct = async (req, res) => {
 // Lấy tất cả sản phẩm
 export const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find({ status: "active" });
+    // ✅ Lấy page và limit từ query params
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
+    // ✅ Optional: Filter parameters
+    const { category, minPrice, maxPrice, search, sort } = req.query;
+    
+    // ✅ Build filter query
+    const filter = { status: "active" };
+    
+    if (category) {
+      filter.category_id = category;
+    }
+    
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = parseFloat(minPrice);
+      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+    }
+    
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // ✅ Build sort options
+    let sortOptions = {};
+    switch (sort) {
+      case 'price_asc':
+        sortOptions = { price: 1 };
+        break;
+      case 'price_desc':
+        sortOptions = { price: -1 };
+        break;
+      case 'newest':
+        sortOptions = { created_at: -1 };
+        break;
+      case 'popular':
+        sortOptions = { sold_quantity: -1 };
+        break;
+      case 'rating':
+        sortOptions = { avg_rating: -1 };
+        break;
+      default:
+        sortOptions = { created_at: -1 }; // Default: newest first
+    }
+
+    // ✅ Fetch products with pagination
+    const products = await Product.find(filter)
+      .populate('category_id', 'name slug')
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // ✅ Count total products
+    const totalProducts = await Product.countDocuments(filter);
+    const totalPages = Math.ceil(totalProducts / limit);
+
+    // ✅ Response with pagination info
     res.status(200).json({
       success: true,
-      data: products,
+      data: {
+        products,
+        pagination: {
+          current_page: page,
+          total_pages: totalPages,
+          total_items: totalProducts,
+          items_per_page: limit,
+          has_previous: page > 1,
+          has_next: page < totalPages
+        }
+      },
+      message: "Lấy danh sách sản phẩm thành công"
     });
   } catch (err) {
     console.error("Error fetching all products:", err);
     res.status(500).json({
       success: false,
       message: "Server error",
+      error: err.message
     });
   }
 };

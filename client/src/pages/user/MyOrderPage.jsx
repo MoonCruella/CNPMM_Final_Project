@@ -1,81 +1,270 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import { useUserContext } from "@/context/UserContext";
-import OrdersTable from "@/components/user/OrdersTable";
-import OrdersSummary from "@/components/user/OrdersSummary";
+import OrderCard from "@/components/user/OrderCard";
 import orderService from "@/services/order.service";
 import { toast } from "sonner";
 
 const MyOrdersPage = () => {
   const { user, isAuthenticated } = useUserContext();
   const [orders, setOrders] = useState([]);
-  const [allOrders, setAllOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [filter, setFilter] = useState("all");
-  const [searchTerm, setSearchTerm] = useState(""); 
+  const [searchTerm, setSearchTerm] = useState("");
   const searchInputRef = useRef(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const orderIdFromUrl = searchParams.get('orderId');
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchDebounceTimer, setSearchDebounceTimer] = useState(null);
+  const [initialOrderLoaded, setInitialOrderLoaded] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const ORDERS_PER_PAGE = 10;
+
+  // Intersection Observer ref for infinite scroll
+  const loadMoreTriggerRef = useRef(null);
+
   const [orderStats, setOrderStats] = useState({
-      total: 0,
-      pending: 0,
-      confirmed: 0,
-      processing: 0,
-      shipped: 0,
-      delivered: 0,
-      cancelled: 0,
-      cancel_request:0
-    });
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0,
+    cancel_request: 0,
+  });
 
-   const filteredOrdersByStatus = useMemo(() => {
-    if (!Array.isArray(allOrders)) return [];
-    
-    if (filter === "all") {
-      return allOrders;
-    }
-    return allOrders.filter(order => order.status === filter);
-  }, [allOrders, filter]);
-
-  // Search orders by product name using useMemo
-  const searchedOrders = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return filteredOrdersByStatus;
-    }
-
-    const searchLower = searchTerm.toLowerCase().trim();
-    
-    return filteredOrdersByStatus.filter(order => {
-      // Search in product names
-      const hasMatchingProduct = order.items?.some(item => 
-        item.product_id?.name?.toLowerCase().includes(searchLower)
-      );
-      
-      // Optional: search in order number too
-      const matchesOrderNumber = order.order_number?.toLowerCase().includes(searchLower);
-      
-      return hasMatchingProduct || matchesOrderNumber;
-    });
-  }, [filteredOrdersByStatus, searchTerm]);
-
-   useEffect(() => {
-    setOrders(searchedOrders);
-  }, [searchedOrders]);
-
-  // Load orders on component mount
   useEffect(() => {
-    if (isAuthenticated && user) {
-      loadOrders();
+    if (orderIdFromUrl && isAuthenticated) {
+      loadSpecificOrder(orderIdFromUrl);
+    }
+  }, [orderIdFromUrl, isAuthenticated]);
+
+  const loadSpecificOrder = async (orderId) => {
+    try {
+      setIsLoading(true);
+
+      const response = await orderService.getOrderById(orderId);
+
+      if (response.success) {
+        const order = response.data.order || response.data;
+
+        if (!order._id) {
+          console.error('❌ Order missing _id:', order);
+          toast.error("Dữ liệu đơn hàng không hợp lệ");
+          setSearchParams({});
+          return;
+        }
+
+        setSelectedOrderId(orderId);
+
+        setOrders(prev => {
+          const exists = prev.find(o => o._id === orderId);
+          if (exists) {
+            return prev;
+          }
+          return [order, ...prev];
+        });
+
+        // ✅ Load other orders immediately
+        await loadOtherOrders(orderId);
+
+        // ✅ Mark as loaded to enable infinite scroll
+        setInitialOrderLoaded(true);
+
+        // Scroll after render
+        setTimeout(() => {
+          const elementId = `order-${orderId}`;
+          const orderCard = document.getElementById(elementId);
+
+          if (orderCard) {
+            orderCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            orderCard.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
+            setTimeout(() => {
+              orderCard.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
+            }, 3000);
+          }
+
+          const modal = document.querySelector('[role="dialog"]');
+
+        }, 1500);
+
+      } else {
+        console.error('❌ API failed');
+        toast.error("Không tìm thấy đơn hàng");
+        setSearchParams({});
+      }
+    } catch (error) {
+      console.error("❌ Error:", error);
+      toast.error("Có lỗi xảy ra");
+      setSearchParams({});
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadOtherOrders = async (excludeOrderId) => {
+    try {
+
+      const response = await orderService.getUserOrders(filter, 1, ORDERS_PER_PAGE);
+
+      if (response.success) {
+        const { orders: newOrders, stats, pagination } = response.data;
+
+        // Filter out the order we already have
+        const filteredOrders = newOrders.filter(o => o._id !== excludeOrderId);
+
+
+        setOrders(prev => {
+          // Keep the specific order at top, add others below
+          const specificOrder = prev.find(o => o._id === excludeOrderId);
+          if (specificOrder) {
+            return [specificOrder, ...filteredOrders];
+          }
+          return filteredOrders;
+        });
+
+        setOrderStats(stats || {});
+        setTotalOrders(pagination?.total || 0);
+        setHasMore((pagination?.current_page || 1) < (pagination?.total_pages || 1));
+      }
+    } catch (error) {
+      console.error("Load other orders error:", error);
+    }
+  };
+
+  // Initial load - skip if loading specific order
+  useEffect(() => {
+    if (isAuthenticated && user && !orderIdFromUrl) {
+      resetAndLoadOrders();
     }
   }, [isAuthenticated, user, filter]);
 
-  // Load orders from API
-  const loadOrders = async () => {
+  // ✅ Search effect với debounce
+  useEffect(() => {
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+    }
+
+    if (searchTerm.trim() !== "") {
+      const timer = setTimeout(() => {
+        handleSearch();
+      }, 500);
+      setSearchDebounceTimer(timer);
+    } else {
+      resetAndLoadOrders();
+    }
+
+    return () => {
+      if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+      }
+    };
+  }, [searchTerm]);
+
+  // Intersection Observer - Enable after initial load
+  useEffect(() => {
+    // Allow infinite scroll if:
+    // 1. No orderIdFromUrl, OR
+    // 2. orderIdFromUrl exists BUT initialOrderLoaded is true
+    const shouldDisableScroll = orderIdFromUrl && !initialOrderLoaded;
+
+    if (!loadMoreTriggerRef.current || !hasMore || isLoadingMore || isLoading || shouldDisableScroll) {
+      if (shouldDisableScroll) {
+      }
+      return;
+    }
+
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const firstEntry = entries[0];
+
+        if (firstEntry.isIntersecting && hasMore && !isLoadingMore && !isLoading) {
+          loadMoreOrders();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px',
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(loadMoreTriggerRef.current);
+
+    return () => {
+      if (loadMoreTriggerRef.current) {
+        observer.unobserve(loadMoreTriggerRef.current);
+      }
+    };
+  }, [hasMore, isLoadingMore, isLoading, currentPage, orderIdFromUrl, initialOrderLoaded]);
+
+  // Handle Search
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      setIsSearching(false);
+      resetAndLoadOrders();
+      return;
+    }
+
     try {
+      setIsSearching(true);
       setIsLoading(true);
-      const response = await orderService.getUserOrders(filter);
+
+      const searchParams = {
+        q: searchTerm.trim(),
+        status: filter !== "all" ? filter : undefined,
+        page: 1,
+        limit: ORDERS_PER_PAGE,
+        sort: "created_at",
+        order: "desc",
+      };
+
+      const response = await orderService.searchOrders(searchParams, true);
 
       if (response.success) {
-        setOrders(response.data.orders || []);
-        setOrderStats(response.data.stats || {});
+        const { orders: searchResults, pagination } = response.data;
+        setOrders(searchResults || []);
+        setCurrentPage(1);
+        setTotalOrders(pagination?.total_orders || 0);
+        setHasMore((pagination?.current_page || 1) < (pagination?.total_pages || 1));
+      } else {
+        toast.error(response.message || "Không thể tìm kiếm đơn hàng");
+        setOrders([]);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      toast.error("Có lỗi xảy ra khi tìm kiếm");
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Reset and load orders
+  const resetAndLoadOrders = async () => {
+    try {
+      setIsLoading(true);
+      setIsSearching(false);
+      setCurrentPage(1);
+      setOrders([]);
+
+      const response = await orderService.getUserOrders(filter, 1, ORDERS_PER_PAGE);
+
+      if (response.success) {
+        const { orders: newOrders, stats, pagination } = response.data;
+        setOrders(newOrders || []);
+        setOrderStats(stats || {});
+        setTotalOrders(pagination?.total || 0);
+        setHasMore((pagination?.current_page || 1) < (pagination?.total_pages || 1));
       } else {
         toast.error(response.message || "Không thể tải danh sách đơn hàng");
       }
@@ -87,26 +276,82 @@ const MyOrdersPage = () => {
     }
   };
 
-  // ✅ Handle search input change
+  // Load more orders (auto-triggered by intersection observer)
+  const loadMoreOrders = useCallback(async () => {
+    if (isLoadingMore || !hasMore || isLoading) return;
+
+    try {
+      setIsLoadingMore(true);
+      const nextPage = currentPage + 1;
+
+      // Nếu đang search
+      if (isSearching && searchTerm.trim()) {
+        const searchParams = {
+          q: searchTerm.trim(),
+          status: filter !== "all" ? filter : undefined,
+          page: nextPage,
+          limit: ORDERS_PER_PAGE,
+          sort: "created_at",
+          order: "desc",
+        };
+
+        const response = await orderService.searchOrders(searchParams, true);
+
+        if (response.success) {
+          const { orders: newOrders, pagination } = response.data;
+
+          if (newOrders && newOrders.length > 0) {
+            setOrders((prev) => [...prev, ...newOrders]);
+            setCurrentPage(nextPage);
+            setHasMore((pagination?.current_page || nextPage) < (pagination?.total_pages || 1));
+          } else {
+            setHasMore(false);
+          }
+        }
+      }
+      // Browse bình thường
+      else {
+        const response = await orderService.getUserOrders(filter, nextPage, ORDERS_PER_PAGE);
+
+        if (response.success) {
+          const { orders: newOrders, pagination } = response.data;
+
+          if (newOrders && newOrders.length > 0) {
+            setOrders((prev) => [...prev, ...newOrders]);
+            setCurrentPage(nextPage);
+            setHasMore((pagination?.current_page || nextPage) < (pagination?.total_pages || 1));
+          } else {
+            setHasMore(false);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Load more orders error:", error);
+      toast.error("Có lỗi xảy ra khi tải thêm đơn hàng");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [currentPage, filter, hasMore, isLoadingMore, isLoading, orders.length, isSearching, searchTerm]);
+
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  // ✅ Clear search
   const handleClearSearch = () => {
     setSearchTerm("");
+    setIsSearching(false);
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
+    resetAndLoadOrders();
   };
 
-  // ✅ Handle filter change (also clears search)
   const handleFilterChange = (newFilter) => {
     setFilter(newFilter);
-    setSearchTerm(""); // Clear search when changing filter
+    setSearchTerm("");
+    setIsSearching(false);
   };
 
-  // Cancel order
   const handleCancelOrder = async (orderId) => {
     if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
       return;
@@ -114,10 +359,13 @@ const MyOrdersPage = () => {
 
     try {
       const response = await orderService.cancelOrder(orderId);
-
       if (response.success) {
         toast.success("Hủy đơn hàng thành công");
-        loadOrders(); // Reload orders
+        if (isSearching && searchTerm.trim()) {
+          handleSearch();
+        } else {
+          resetAndLoadOrders();
+        }
       } else {
         toast.error(response.message || "Không thể hủy đơn hàng");
       }
@@ -127,11 +375,9 @@ const MyOrdersPage = () => {
     }
   };
 
-  // Reorder
   const handleReorder = async (orderId) => {
     try {
       const response = await orderService.reorder(orderId);
-
       if (response.success) {
         toast.success("Đã thêm sản phẩm vào giỏ hàng");
       } else {
@@ -143,7 +389,31 @@ const MyOrdersPage = () => {
     }
   };
 
-  
+  const handleUpdateShippingStatus = async (orderId, newStatus) => {
+    try {
+      const response = await orderService.updateShippingStatus(orderId, newStatus);
+      if (response.success) {
+        toast.success("Cập nhật trạng thái thành công");
+        if (isSearching && searchTerm.trim()) {
+          handleSearch();
+        } else {
+          resetAndLoadOrders();
+        }
+      } else {
+        toast.error(response.message || "Không thể cập nhật trạng thái");
+      }
+    } catch (error) {
+      console.error("Update status error:", error);
+      toast.error("Có lỗi xảy ra khi cập nhật trạng thái");
+    }
+  };
+
+  const handleCloseOrderDetail = () => {
+    setSelectedOrderId(null);
+    setSearchParams({});
+    setInitialOrderLoaded(false);
+    resetAndLoadOrders();
+  };
 
   if (!isAuthenticated) {
     return (
@@ -168,22 +438,10 @@ const MyOrdersPage = () => {
 
   return (
     <main className="bg-gray-50 min-h-screen">
-      {/* Banner */}
-      <section
-        className="bg-cover bg-center py-20 text-center text-white"
-        style={{ backgroundImage: `url(${assets.page_banner})` }}
-      >
-        <h1 className="text-5xl font-bold">My Orders</h1>
-        <ul className="flex justify-center gap-2 mt-2 text-sm">
-          <li>
-            <Link to="/" className="hover:underline font-medium">
-              Home
-            </Link>
-          </li>
-          <li className="font-medium">/ My Orders</li>
-        </ul>
-      </section>
-      <section className="container mx-auto px-4 pt-8">
+    <div className="max-w-[1215px] mx-auto px-4">
+      {/* Notification Banner */}
+      <section className="">       
+        {/* Search Bar - Matching width */}
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
@@ -204,81 +462,42 @@ const MyOrdersPage = () => {
                 </button>
               )}
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>🔍</span>
-              <span>{orders.length} kết quả</span>
-            </div>
+            
           </div>
-          
-          {/* ✅ Search results info */}
-          {searchTerm && (
-            <div className="mt-3 text-sm text-blue-600">
-              🔍 Tìm kiếm: "<strong>{searchTerm}</strong>" - 
-              Tìm thấy <strong>{orders.length}</strong> đơn hàng
-            </div>
-          )}
+
         </div>
       </section>
 
-      {/* Filter Tabs */}
-      <section className="container mx-auto px-4 pt-8">
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+      {/* Filter Tabs - Matching width, no extra space */}
+      <section>
+        <div className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden"> 
+          <div className="flex gap-2 p-2 overflow-x-auto"> {/* ✅ overflow-x-auto only on flex */}
             {[
-              { key: "all", label: "Tất cả", count: orderStats.total, icon: "📦" },
-              {
-                key: "pending",
-                label: "Chờ xác nhận",
-                count: orderStats.pending,
-                 icon: "⏰"
-              },
-              {
-                key: "confirmed",
-                label: "Đã xác nhận",
-                count: orderStats.confirmed,
-                icon: "✔️"
-              },
-              {
-                key: "processing",
-                label: "Đang xử lý",
-                count: orderStats.processing,
-                icon: "🛒"
-              },
-              { key: "shipped", label: "Đang giao", count: orderStats.shipped,icon: "🚚" },
-              {
-                key: "delivered",
-                label: "Đã giao",
-                count: orderStats.delivered,
-                icon: "✅"
-              },
-              {
-                key: "cancel_request",
-                label: "Yêu cầu huỷ",
-                count: orderStats.cancel_request,
-                icon: "✅"
-              },
-              {
-                key: "cancelled",
-                label: "Đã hủy",
-                count: orderStats.cancelled,
-                icon: "❌"
-              },
+              { key: "all", label: "Tất cả", count: orderStats.total },
+              { key: "pending", label: "Chờ xác nhận", count: orderStats.pending },
+              { key: "confirmed", label: "Đã xác nhận", count: orderStats.confirmed },
+              { key: "processing", label: "Đang xử lý", count: orderStats.processing },
+              { key: "shipped", label: "Đang giao", count: orderStats.shipped },
+              { key: "delivered", label: "Đã giao", count: orderStats.delivered },
+              { key: "cancel_request", label: "Yêu cầu hủy", count: orderStats.cancel_request },
+              { key: "cancelled", label: "Đã hủy", count: orderStats.cancelled },
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setFilter(tab.key)}
-                className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${filter === tab.key
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                onClick={() => handleFilterChange(tab.key)}
+                className={`px-4 py-2.5 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2 flex-shrink-0 ${
+                  filter === tab.key
+                    ? "bg-green-600 text-white shadow-md scale-105 hover:bg-green-700 cursor-pointer"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer"
+                }`}
               >
-                <span className="text-xl">{tab.icon}</span>
-                {tab.label}
+                <span>{tab.label}</span>
                 <span
-                  className={`px-2 py-1 rounded-full text-xs ${filter === tab.key
+                  className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                    filter === tab.key
                       ? "bg-white text-green-600"
-                      : "bg-gray-300 text-gray-600"
-                    }`}
+                      : "bg-gray-200 text-gray-600"
+                  }`}
                 >
                   {tab.count}
                 </span>
@@ -288,31 +507,107 @@ const MyOrdersPage = () => {
         </div>
       </section>
 
-      {/* Orders Section */}
-      <section className="pb-16 container mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2">
-          {isLoading ? (
-            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-              <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600">Đang tải đơn hàng...</p>
-            </div>
-          ) : (
-            <OrdersTable
-              orders={orders}
-              onCancelOrder={handleCancelOrder}
-              onReorder={handleReorder}
-              isLoading={isLoading}
-            />
-          )}
-        </div>
+      {/* Orders List - Matching width */}
+      <section className="pb-16">
+        {isLoading && !isLoadingMore ? (
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+            <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">
+              {orderIdFromUrl
+                ? "Đang tải đơn hàng..."
+                : isSearching
+                  ? "Đang tìm kiếm..."
+                  : "Đang tải đơn hàng..."}
+            </p>
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+            <div className="text-6xl mb-4">📦</div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              Chưa có đơn hàng
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {searchTerm
+                ? `Không tìm thấy đơn hàng phù hợp với "${searchTerm}"`
+                : "Bạn chưa có đơn hàng nào"}
+            </p>
+            <Link
+              to="/products"
+              className="inline-block bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
+            >
+              Mua sắm ngay
+            </Link>
+          </div>
+        ) : (
+          <>
+            {/* Orders List */}
+            <div className="space-y-4">
+              {orders.map((order, index) => {
+                if (!order?._id) {
+                  console.warn('⚠️ Order without _id at index', index, order);
+                }
 
-        <OrdersSummary
-          orderStats={orderStats}
-          currentFilter={filter}
-          onFilterChange={setFilter}
-        />
+                const shouldAutoOpen = selectedOrderId && order._id === selectedOrderId;
+
+                const orderKey = shouldAutoOpen
+                  ? `${order._id}-highlighted-${Date.now()}`
+                  : order._id || `order-${index}`;
+
+                return (
+                  <OrderCard
+                    key={orderKey}
+                    orderId={order._id}
+                    order={order}
+                    onCancelOrder={handleCancelOrder}
+                    onReorder={handleReorder}
+                    onUpdateShippingStatus={handleUpdateShippingStatus}
+                    user={user}
+                    autoOpen={shouldAutoOpen}
+                    onModalClose={handleCloseOrderDetail}
+                  />
+                );
+              })}
+            </div>
+
+            {hasMore && (
+              <div
+                ref={loadMoreTriggerRef}
+                className="flex justify-center items-center py-8 min-h-[80px]"
+              >
+                {isLoadingMore ? (
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    <p className="text-sm text-gray-600">Đang tải thêm...</p>
+                  </div>
+                ) : orderIdFromUrl && !initialOrderLoaded ? (
+                  <div className="text-center text-gray-400 text-sm">
+                    <div className="w-8 h-8 border-4 border-gray-300 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    <p>Đang tải đơn hàng...</p>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-400 text-sm invisible">
+                    <p>Cuộn xuống để tải thêm...</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!hasMore && orders.length > 0 && (
+              <div className="text-center py-8">
+                <div className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 rounded-full">
+                  <span className="text-2xl">🎉</span>
+                  <p className="text-gray-600 font-medium">
+                    Đã hiển thị tất cả {orders.length} đơn hàng
+                    {isSearching && searchTerm && ` cho "${searchTerm}"`}
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        )}  
       </section>
-    </main>
+    </div>
+  </main>
   );
 };
 

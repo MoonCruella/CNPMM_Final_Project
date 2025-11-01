@@ -1,46 +1,89 @@
-import React, { useState, useMemo } from "react";
-import OrderItemRow from "./item/OrderItemRow";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading, onUpdateShippingStatus, user }) => {
-  const [sortBy, setSortBy] = useState("created_at");
-  const [sortOrder, setSortOrder] = useState("desc");
+const OrdersTable = ({ 
+  orders, 
+  isLoading, 
+  user, 
+  isSeller = false,
+  onViewOrder,
+  onUpdateStatus,
+  onDeleteOrder,
+  onSort // ✅ Add callback for sorting
+}) => {
+  const navigate = useNavigate();
 
-  // Memoize sorted orders để tránh re-sort mỗi render
-  const sortedOrders = useMemo(() => {
-    if (!Array.isArray(orders)) return [];
-
-    return [...orders].sort((a, b) => {
-      let aValue = a[sortBy];
-      let bValue = b[sortBy];
-
-      if (sortBy === "created_at") {
-        aValue = new Date(aValue);
-        bValue = new Date(bValue);
-      } else if (sortBy === "total_amount") {
-        aValue = Number(aValue) || 0;
-        bValue = Number(bValue) || 0;
-      }
-
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-  }, [orders, sortBy, sortOrder]); // Chỉ re-compute khi dependencies thay đổi
+  // ✅ Remove useMemo - let backend handle sorting
+  const displayOrders = Array.isArray(orders) ? orders : [];
 
   const handleSort = (field) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(field);
-      setSortOrder("desc");
+    // ✅ Call parent component to fetch sorted data from backend
+    if (onSort) {
+      onSort(field);
     }
   };
 
-  const getSortIcon = (field) => {
-    if (sortBy !== field) return "↕️";
-    return sortOrder === "asc" ? "↑" : "↓";
+  const getSortIcon = (field, currentSortBy, currentSortOrder) => {
+    if (currentSortBy !== field) return "↕️";
+    return currentSortOrder === "asc" ? "↑" : "↓";
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      pending: { label: "Chờ xác nhận", color: "bg-yellow-100 text-yellow-700" },
+      confirmed: { label: "Đã xác nhận", color: "bg-blue-100 text-blue-700" },
+      processing: { label: "Đang xử lý", color: "bg-purple-100 text-purple-700" },
+      shipped: { label: "Đang giao", color: "bg-indigo-100 text-indigo-700" },
+      delivered: { label: "Đã giao", color: "bg-green-100 text-green-700" },
+      cancelled: { label: "Đã hủy", color: "bg-red-100 text-red-700" },
+      cancel_request: { label: "Yêu cầu hủy", color: "bg-orange-100 text-orange-700" },
+    };
+
+    const config = statusConfig[status] || { label: status, color: "bg-gray-100 text-gray-700" };
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.color}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("vi-VN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
+  const handleRowClick = (orderId) => {
+    if (onViewOrder) {
+      onViewOrder(orderId);
+    } else if (user?.role === "seller") {
+      navigate(`/seller/orders/${orderId}`);
+    } else {
+      navigate(`/user/orders/${orderId}`);
+    }
+  };
+
+  const getNextStatusOptions = (currentStatus) => {
+    const statusFlow = {
+      pending: ["confirmed", "cancelled"],
+      confirmed: ["processing", "cancelled"],
+      processing: ["shipped", "cancelled"],
+      shipped: ["delivered"],
+      cancel_request: ["cancelled"],
+    };
+    return statusFlow[currentStatus] || [];
   };
 
   if (isLoading) {
@@ -53,68 +96,87 @@ const OrdersTable = ({ orders, onCancelOrder, onReorder, isLoading, onUpdateShip
   }
 
   return (
-     <div className="overflow-x-auto shadow rounded-xl bg-white">
-      <table className="w-full text-left bg-green-700">
-        <thead className="bg-green-700">
+    <div className="overflow-x-auto">
+      <table className="w-full text-left">
+        <thead className="bg-gray-800">
           <tr>
+            <th className="py-3 px-4 text-white">
+              <div className="flex items-center gap-2">
+                Mã đơn hàng
+              </div>
+            </th>
+            <th className="py-3 px-4 text-white text-center">
+              Trạng thái
+            </th>
             <th
-              className="py-3 px-4 text-white cursor-pointer hover:bg-green-800 transition"
+              className="py-3 px-4 text-white cursor-pointer hover:bg-gray-700 transition"
               onClick={() => handleSort("created_at")}
             >
               <div className="flex items-center gap-2">
-                Đơn hàng {getSortIcon("created_at")}
+                Ngày tạo đơn <span className="text-sm">↕️</span>
               </div>
             </th>
-            <th className="py-3 px-4 text-white text-center">Sản phẩm</th>
-            <th className="py-3 px-4 text-white text-center">Trạng thái</th>
             <th
-              className="py-3 px-4 text-white text-center cursor-pointer hover:bg-green-800 transition"
+              className="py-3 px-4 text-white text-right cursor-pointer hover:bg-gray-700 transition"
               onClick={() => handleSort("total_amount")}
             >
               <div className="flex items-center justify-end gap-2">
-                Tổng tiền {getSortIcon("total_amount")}
+                Tổng tiền <span className="text-sm">↕️</span>
               </div>
             </th>
-            <th className="py-3 px-4 text-white text-center">Thao tác</th>
-            {user?.role === "seller" && (
-              <th className="py-3 px-4 text-white text-center">Cập nhật trạng thái</th>
-            )}
+            
           </tr>
         </thead>
-        <tbody className="bg-white">
-          {sortedOrders.length > 0 ? (
-            sortedOrders.map((order) => (
-              <OrderItemRow
+        <tbody className="bg-white divide-y divide-gray-200">
+          {displayOrders.length > 0 ? (
+            displayOrders.map((order) => (
+              <tr
                 key={order._id}
-                order={order}
-                onCancelOrder={onCancelOrder}
-                onReorder={onReorder}
-                onUpdateShippingStatus={onUpdateShippingStatus}
-              />
+                className="hover:bg-gray-50 transition-colors"
+              >
+                <td 
+                  className="py-4 px-4 cursor-pointer"
+                  onClick={() => handleRowClick(order._id)}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium text-gray-800">
+                      {order.order_number}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {order.items?.length || 0} sản phẩm
+                    </span>
+                  </div>
+                </td>
+
+                <td className="py-4 px-4 text-center">
+                  {getStatusBadge(order.status)}
+                </td>
+
+                <td 
+                  className="py-4 px-4 cursor-pointer"
+                  onClick={() => handleRowClick(order._id)}
+                >
+                  <span className="text-gray-700">
+                    {formatDate(order.created_at)}
+                  </span>
+                </td>
+
+                <td 
+                  className="py-4 px-4 text-right cursor-pointer"
+                  onClick={() => handleRowClick(order._id)}
+                >
+                  <span className="font-semibold text-green-600">
+                    {formatCurrency(order.total_amount)}
+                  </span>
+                </td>
+
+              
+              </tr>
             ))
           ) : (
             <tr>
-              <td 
-                colSpan={user?.role === "seller" ? "6" : "5"} 
-                className="py-12 text-center text-gray-500 bg-white"
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                    📦
-                  </div>
-                  <div>
-                    <p className="font-medium text-lg">Chưa có đơn hàng nào</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Hãy bắt đầu mua sắm để tạo đơn hàng đầu tiên
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => (window.location.href = "/products")}
-                    className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
-                  >
-                    Khám phá sản phẩm
-                  </button>
-                </div>
+              <td colSpan={isSeller ? 5 : 4} className="py-8 text-center text-gray-500">
+                Không có đơn hàng nào
               </td>
             </tr>
           )}

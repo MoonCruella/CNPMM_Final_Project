@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import { useAppContext } from "../../context/AppContext.jsx";
@@ -6,48 +6,98 @@ import { useUserContext } from "../../context/UserContext.jsx";
 import { toast } from "sonner";
 import { useCartContext } from "@/context/CartContext.jsx";
 import NotificationBell from './NotificationBell';
-import { useDispatch, useSelector } from 'react-redux'; // Thêm Redux hooks
-import { logoutAsync } from '../../redux/authSlice'; // Thêm Redux action
+import { useDispatch, useSelector } from 'react-redux';
+import { logoutAsync } from '../../redux/authSlice';
+import userService from "../../services/user.service";
+import { onUserUpdated } from "../../utils/events"; 
 
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
 
-  // Giữ AppContext để tương thích ngược
-  const { navigate: contextNavigate, logout: contextLogout, logoutAll: contextLogoutAll, openLogin } =
-    useAppContext();
+  const { logout: contextLogout, logoutAll: contextLogoutAll, openLogin } = useAppContext();
 
-  // Sử dụng Redux
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, isAuthenticated, isSeller } = useSelector(state => state.auth);
+  const { isAuthenticated, isSeller, user: reduxUser } = useSelector(state => state.auth);
+  const [user, setUser] = useState(null);
 
-  const { getUserAvatarUrl } = useUserContext();
+  useEffect(() => {
+    if (reduxUser && isAuthenticated) {
+      setUser(reduxUser);
+    } else if (!isAuthenticated) {
+      setUser(null);
+    }
+  }, [reduxUser, isAuthenticated]);
+
+  
   const getAvatarUrl = (size = 40) => {
-    if (getUserAvatarUrl) {
-      return getUserAvatarUrl(size);
+    // Nếu user có avatar
+    if (user?.avatar) {
+      // Optimize Cloudinary URL
+      if (user.avatar.includes('cloudinary.com')) {
+        const parts = user.avatar.split('/upload/');
+        if (parts.length === 2) {
+          return `${parts[0]}/upload/w_${size},h_${size},c_fill,q_auto,f_auto/${parts[1]}`;
+        }
+      }
+      return user.avatar;
     }
 
-    // Fallback if getUserAvatarUrl is not available
-    const name = user?.name || user?.full_name || user?.email || "User";
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      name
-    )}&background=10b981&color=fff&size=${size}`;
+    // Fallback: UI Avatars
+    const name = user?.name || user?.email || "User";
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=${size}`;
   };
 
-  // Logout handler sử dụng cả Redux và AppContext
+  const fetchUserData = async () => {
+    try {
+      const response = await userService.getCurrentUser();
+      if (response.success && response.user) {
+        const userData = {
+          _id: response.user.userId,
+          email: response.user.email,
+          name: response.user.name,
+          role: response.user.role,
+          coin: response.user.coin,
+          active: response.user.active,
+          phone: response.user.phone,
+          gender: response.user.gender,
+          date_of_birth: response.user.date_of_birth,
+          avatar: response.user.avatar,
+          address: response.user.address,
+        };
+
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error("NavBar - Fetch user error:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && !user) {
+      fetchUserData();
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const cleanup = onUserUpdated(() => {
+      console.log('Navbar - User updated event received, refreshing...');
+      fetchUserData();
+    });
+
+    return cleanup;
+  }, []);
+
+  // Logout handler
   const handleLogout = async () => {
     try {
       const loadingToast = toast.loading("Đang đăng xuất...");
 
-      // Logout qua AppContext để đảm bảo tương thích
       await contextLogout();
-
-      // Dispatch Redux action
       await dispatch(logoutAsync()).unwrap();
 
       toast.dismiss(loadingToast);
-      toast.success("Đăng xuất thành công");
 
       navigate("/");
       setOpen(false);
@@ -59,18 +109,12 @@ const Navbar = () => {
 
   const handleLogoutAll = async () => {
     try {
-      const loadingToast = toast.loading(
-        "Đang đăng xuất khỏi tất cả thiết bị..."
-      );
+      const loadingToast = toast.loading("Đang đăng xuất khỏi tất cả thiết bị...");
 
-      // Logout qua AppContext để đảm bảo tương thích
       await contextLogoutAll();
-
-      // Dispatch Redux action
       await dispatch(logoutAsync()).unwrap();
 
       toast.dismiss(loadingToast);
-      toast.success("Đã đăng xuất khỏi tất cả thiết bị");
 
       setOpen(false);
       setIsUserMenuOpen(false);
@@ -93,12 +137,13 @@ const Navbar = () => {
   const { items, refreshCart } = useCartContext();
 
   useEffect(() => {
-    refreshCart(); // luôn sync lại khi load Navbar
-  }, []);
+    if (isAuthenticated) {
+      refreshCart();
+    }
+  }, [isAuthenticated]);
 
-  // Sử dụng Redux state cho user và isAuthenticated
-  const currentUser = user; // Từ Redux state
-  const userIsAuthenticated = isAuthenticated; // Từ Redux state
+  const currentUser = user || reduxUser; 
+  const userIsAuthenticated = isAuthenticated;
 
   return (
     <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-b border-gray-300 bg-white relative transition-all">
@@ -108,23 +153,31 @@ const Navbar = () => {
 
       {/* Desktop Menu */}
       <div className="hidden sm:flex items-center font-bold gap-8">
-        <NavLink to="/">Home</NavLink>
-        <NavLink to="/products">All Products</NavLink>
-        <NavLink to="/contact">Contact</NavLink>
-        <NavLink to="/blog">Blog</NavLink>
-        {/* Search Bar */}
-        <div className="hidden lg:flex items-center text-sm gap-2 border border-gray-300 px-3 rounded-full">
-          <input
-            className="py-1.5 w-full bg-transparent font-normal outline-none placeholder-gray-500"
-            type="text"
-            placeholder="Search products"
-          />
-          <img
-            src={assets.search_icon}
-            alt="search"
-            className="w-4 h-4 opacity-60 cursor-pointer"
-          />
-        </div>
+        <NavLink 
+          to="/"
+          className="relative border-b-2 border-transparent hover:border-green-600 transition duration-300"
+        >
+          Home
+        </NavLink>
+        <NavLink 
+          to="/products" 
+          className="relative border-b-2 border-transparent hover:border-green-600 transition duration-300"
+        >
+            All Products
+        </NavLink>
+
+        <NavLink 
+          to="/contact"
+          className="relative border-b-2 border-transparent hover:border-green-600 transition duration-300"
+        >
+          Contact
+        </NavLink>
+        <NavLink 
+          to="/blog"
+          className="relative border-b-2 border-transparent hover:border-green-600 transition duration-300"
+        >
+          Blog
+        </NavLink>
 
         {/* Cart */}
         <div className="relative cursor-pointer">
@@ -138,7 +191,8 @@ const Navbar = () => {
             {items.length}
           </button>
         </div>
-        {userIsAuthenticated && <NotificationBell />}
+
+        {isAuthenticated && <NotificationBell />}
 
         {/* User Menu */}
         {!userIsAuthenticated || !currentUser ? (
@@ -158,40 +212,39 @@ const Navbar = () => {
             <div className="relative cursor-pointer">
               <img
                 src={getAvatarUrl(40)}
-                className="w-10 h-10 rounded-full border-2 border-gray-200 hover:border-green-500 transition-colors"
+                className="w-10 h-10 rounded-full border-2 border-gray-200 hover:border-green-500 transition-colors object-cover"
                 alt="Profile"
                 onError={(e) => {
-                  // Better fallback handling
-                  const name = currentUser?.name || currentUser?.full_name || currentUser?.email || "User";
-                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    name
-                  )}&background=10b981&color=fff&size=40`;
+                  console.error('Avatar load error');
+                  e.target.src = getAvatarUrl(40);
                 }}
               />
 
               {/* Active Status Indicator */}
               <div
-                className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${currentUser.active === true ? "bg-green-500" : "bg-red-500"
-                  }`}
+                className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
+                  currentUser?.active === true ? "bg-green-500" : "bg-red-500"
+                }`}
               ></div>
             </div>
 
-            {/* Dropdown Menu with proper positioning and transitions */}
+            {/* Dropdown Menu */}
             <div
-              className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${isUserMenuOpen
+              className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${
+                isUserMenuOpen
                   ? "opacity-100 visible translate-y-0"
                   : "opacity-0 invisible -translate-y-2"
-                }`}
+              }`}
             >
               {/* User Info Header */}
               <div className="px-4 py-2 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <div>
                     <p className="font-medium text-gray-800 truncate">
-                      {currentUser.name || currentUser.full_name}
+                      {currentUser?.name || currentUser?.full_name}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {currentUser.email}
+                      {currentUser?.email}
                     </p>
                   </div>
                 </div>
@@ -199,48 +252,50 @@ const Navbar = () => {
                 {/* Status Badge */}
                 <div className="flex gap-1 mt-1">
                   <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${currentUser.role === "admin"
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      currentUser?.role === "admin"
                         ? "bg-red-100 text-red-700"
-                        : currentUser.role === "seller"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-green-100 text-green-700"
-                      }`}
+                        : currentUser?.role === "seller"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
                   >
-                    {currentUser.role === "admin"
+                    {currentUser?.role === "admin"
                       ? "Admin"
-                      : currentUser.role === "seller"
-                        ? "Seller"
-                        : "User"}
+                      : currentUser?.role === "seller"
+                      ? "Seller"
+                      : "User"}
                   </span>
 
                   <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${currentUser.active === true
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      currentUser?.active === true
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"
-                      }`}
+                    }`}
                   >
-                    {currentUser.active === true ? "Active" : "Inactive"}
+                    {currentUser?.active === true ? "Active" : "Inactive"}
                   </span>
                 </div>
               </div>
 
               {/* Menu Items */}
               <button
-                onClick={() => handleMenuNavigation("/my-profile")}
+                onClick={() => handleMenuNavigation("/user/account/profile")}
                 className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 transition-colors"
               >
                 <span>👤</span> My Profile
               </button>
 
               <button
-                onClick={() => handleMenuNavigation("/my-orders")}
+                onClick={() => handleMenuNavigation("/user/orders")}
                 className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 transition-colors"
               >
                 <span>📦</span> My Orders
               </button>
 
               {/* Admin Link */}
-              {currentUser.role === "admin" && (
+              {currentUser?.role === "admin" && (
                 <button
                   onClick={() => handleMenuNavigation("/admin")}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-purple-600 transition-colors"
@@ -250,7 +305,7 @@ const Navbar = () => {
               )}
 
               {/* Seller Dashboard */}
-              {currentUser.role === "seller" && (
+              {currentUser?.role === "seller" && (
                 <button
                   onClick={() => handleMenuNavigation("/seller")}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-blue-600 transition-colors"
@@ -303,6 +358,7 @@ const Navbar = () => {
           <NavLink to="/contact" onClick={() => setOpen(false)}>
             Contact
           </NavLink>
+
           <NavLink to="/blog" onClick={() => setOpen(false)}>
             Blog
           </NavLink>
@@ -319,36 +375,34 @@ const Navbar = () => {
                   className="w-8 h-8 rounded-full object-cover"
                   alt="Profile"
                   onError={(e) => {
-                    const name = currentUser?.name || currentUser?.full_name || currentUser?.email || "User";
-                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      name
-                    )}&background=10b981&color=fff&size=32`;
+                    e.target.src = getAvatarUrl(32);
                   }}
                 />
                 <div>
-                  <p className="font-medium text-gray-800">{currentUser.name || currentUser.full_name}</p>
+                  <p className="font-medium text-gray-800">{currentUser?.name || currentUser?.full_name}</p>
                   <div className="flex gap-1">
                     <span
-                      className={`px-1.5 py-0.5 rounded text-xs ${currentUser.active === true
+                      className={`px-1.5 py-0.5 rounded text-xs ${
+                        currentUser?.active === true
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
-                        }`}
+                      }`}
                     >
-                      {currentUser.active === true ? "Active" : "Inactive"}
+                      {currentUser?.active === true ? "Active" : "Inactive"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <NavLink to="/my-profile" onClick={() => setOpen(false)}>
+              <NavLink to="/user/account/profile" onClick={() => setOpen(false)}>
                 👤 My Profile
               </NavLink>
 
-              <NavLink to="/my-orders" onClick={() => setOpen(false)}>
+              <NavLink to="/user/orders" onClick={() => setOpen(false)}>
                 📦 My Orders
               </NavLink>
 
-              {currentUser.role === "seller" && (
+              {currentUser?.role === "seller" && (
                 <NavLink
                   to="/seller"
                   onClick={() => setOpen(false)}
@@ -373,14 +427,6 @@ const Navbar = () => {
               Login
             </button>
           )}
-        </div>
-      )}
-
-      {/* Redux Debug - chỉ hiển thị trong môi trường development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="hidden fixed bottom-4 left-4 p-2 bg-white/80 backdrop-blur-sm border border-gray-300 shadow rounded text-xs text-gray-800">
-          <p><strong>Redux Auth:</strong> {userIsAuthenticated ? 'Logged In' : 'Not Logged In'}</p>
-          <p><strong>Role:</strong> {currentUser?.role || 'N/A'}</p>
         </div>
       )}
     </nav>

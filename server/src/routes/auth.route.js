@@ -5,7 +5,9 @@ import {
   resetPassword,
   refreshToken,
   logout,
-  logoutAll
+  logoutAll,
+   googleLogin,      
+  googleCallback,
 } from "../controllers/auth.controller.js";
 
 import { authenticateToken, requireAdmin, requireOwnerOrAdmin } from "../middleware/auth.middleware.js";
@@ -15,6 +17,7 @@ import {
   sendOtpForgotPass,
   verifyOtpForgot,
   verifyOtpRegister,
+  
 } from "../controllers/otp.controller.js";
 
 const router = express.Router();
@@ -40,4 +43,6 @@ router.post("/forgot-password/send-otp", sendOtpForgotPass);
 router.post("/forgot-password/verify-otp", verifyOtpForgot);
 router.post("/forgot-password/reset", resetPassword);
 
+router.get("/google", googleLogin);
+router.get("/google/callback", googleCallback);
 export default router;

@@ -1,13 +1,17 @@
 import privateApi from "./privateApi.js";
 
 class OrderService {
-  // ✅ Get user orders with filter
+  //  Get user orders with filter
   getUserOrders = async (status = "all", page = 1, limit = 10) => {
     try {
-      const params = new URLSearchParams();
-      if (status && status !== "all") params.append("status", status);
-      params.append("page", page);
-      params.append("limit", limit);
+      const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (status !== "all") {
+      params.append("status", status);
+    }
 
       const response = await privateApi.get(
         `/api/orders/user?${params.toString()}`
@@ -35,12 +39,22 @@ class OrderService {
       };
     }
   };
-  getAllOrder = async (status = "all", page = 1, limit = 10) => {
+  getAllOrder = async (status = "all", page = 1, limit = 10, startDate = null, endDate = null, sort = "created_at", order = "desc") => {
     try {
       const params = new URLSearchParams();
       if (status && status !== "all") params.append("status", status);
       params.append("page", page);
       params.append("limit", limit);
+      params.append("sort", sort);
+      params.append("order", order);
+
+      if (startDate) {
+        params.append("startDate", startDate);
+      }
+      if (endDate) {
+        params.append("endDate", endDate);
+      }
+
       const response = await privateApi.get(
         `/api/orders/all?${params.toString()}`
       );
@@ -95,7 +109,7 @@ class OrderService {
     }
   };
 
-  // ✅ Get order by ID
+  // Get order by ID
   sale_price = async (orderId) => {
     try {
       const response = await privateApi.get(`/api/orders/${orderId}`);
@@ -121,7 +135,7 @@ class OrderService {
     }
   };
 
-  // ✅ Cancel order
+  //  Cancel order
   cancelOrder = async (orderId, reason = "") => {
     try {
       const response = await privateApi.put(`/api/orders/${orderId}/cancel`, {
@@ -148,7 +162,7 @@ class OrderService {
     }
   };
 
-  // ✅ Reorder
+  // Reorder
   reorder = async (orderId) => {
     try {
       const response = await privateApi.post(`/api/orders/${orderId}/reorder`);
@@ -173,7 +187,7 @@ class OrderService {
     }
   };
 
-  // ✅ Create new order
+  // Create new order
   createOrder = async (orderData) => {
     try {
       const response = await privateApi.post("/api/orders", orderData);
@@ -228,7 +242,58 @@ class OrderService {
       };
     }
   };
+  searchOrderAdmin = async (queryOrParams, status, page, limit, startDate, endDate) => {
+    try {
+      let params = {};
 
+      if (typeof queryOrParams === 'object' && queryOrParams !== null) {
+        params = queryOrParams;
+      } else {
+        params = {
+          q: queryOrParams,
+          status: status !== 'all' ? status : undefined,
+          page,
+          limit,
+          startDate,
+          endDate,
+          sort: 'created_at', 
+          order: 'desc'      
+        };
+      }
+
+      const qs = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== "" && v !== "all") {
+          qs.append(k, v);
+        }
+      });
+
+      console.log('🔍 searchOrderAdmin params:', Object.fromEntries(qs));
+
+      const response = await privateApi.get(`/api/orders/search?${qs.toString()}`);
+
+      if (response.data?.success) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data?.message || "Không thể tìm kiếm đơn hàng",
+        };
+      }
+    } catch (error) {
+      console.error("searchOrderAdmin error:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || "Có lỗi khi tìm kiếm",
+        error,
+      };
+    }
+  };
+  
   getUserOrdersByAdmin = async (
     status = "all",
     page = 1,
@@ -268,6 +333,15 @@ class OrderService {
           error.response?.data?.message || "Có lỗi xảy ra khi lấy đơn hàng",
         error: error.message,
       };
+    }
+  };
+  getOrderById = async (orderId) => {
+    try {
+      const response = await privateApi.get(`/api/orders/${orderId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Get order by ID error:", error);
+      throw error;
     }
   };
 }

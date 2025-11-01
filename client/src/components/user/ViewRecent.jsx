@@ -78,13 +78,13 @@ const ViewRecent = () => {
     <div>
       <h2 className="text-2xl font-semibold mb-6">Sản phẩm đã xem gần đây</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pr-8">
         {products.map((product) => (
           <div 
             key={product._id} 
             className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 transition-transform hover:shadow-lg hover:-translate-y-1"
           >
-            <div className="relative">
+            <div className="relative cursor-pointer">
               {/* Ảnh sản phẩm */}
               <img
                 src={product.images[0]?.image_url || "https://via.placeholder.com/300"}

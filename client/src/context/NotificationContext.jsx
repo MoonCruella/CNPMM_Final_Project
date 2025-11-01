@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux'; // ✅ Import useSelector
 import { useSocket } from './SocketContext';
 import { toast } from 'sonner';
 import api from '../services/api';
@@ -14,6 +15,10 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const { isAuthenticated } = useAppContext();
+  
+  // ✅ Lấy user từ Redux store
+  const { user } = useSelector((state) => state.auth);
+  
   // Lấy số thông báo chưa đọc khi component mount
   useEffect(() => {
     if (isAuthenticated) {
@@ -156,46 +161,111 @@ export const NotificationProvider = ({ children }) => {
     }
   }, []);
 
-  // Xử lý khi click vào thông báo
+  // ✅ Xóa thông báo
+  const deleteNotification = useCallback(async (notificationId) => {
+    try {
+      const { data } = await api.delete(`/api/notifications/${notificationId}`);
+      
+      if (data.success) {
+        // Remove from state
+        setNotifications((prev) => prev.filter((notif) => notif._id !== notificationId));
+        
+        // Update unread count if it was unread
+        const notification = notifications.find(n => n._id === notificationId);
+        if (notification && !notification.is_read) {
+          setUnreadCount((prev) => Math.max(0, prev - 1));
+        }
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      return false;
+    }
+  }, [notifications]);
+
+  // ✅ Xử lý khi click vào thông báo - CHECK ROLE từ Redux
   const handleViewNotification = useCallback((notification) => {
     markAsRead(notification._id);
     
-    // Chuyển hướng dựa vào loại thông báo
-    switch (notification.type) {
-      // Tất cả các thông báo liên quan đến đơn hàng
-      case 'new_order':
-      case 'order_created':
-      case 'order_confirmed':
-      case 'order_processing':
-      case 'order_shipped':
-      case 'order_delivered':
-      case 'order_cancelled':
-      case 'payment_received':
-        // Nếu có ID đơn hàng cụ thể, chuyển đến trang chi tiết đơn hàng
-        if (notification.reference_id) {
-          navigate(`/my-orders?order=${notification.reference_id}`);
-        } else {
-          // Không có ID cụ thể, chuyển đến trang danh sách đơn hàng
-          navigate('/my-orders');
-        }
-        break;
+    const notificationType = notification.type;
+    
+    // ✅ Check user role từ Redux
+    const isSeller = user?.role === 'seller';
+    const isAdmin = user?.role === 'admin';
+    
+    console.log('👤 User role:', user?.role);
+    console.log('📋 Notification type:', notificationType);
+    
+    // List tất cả các order-related types
+    const orderTypes = [
+      'new_order',
+      'order_created', 
+      'order_confirmed',
+      'order_processing',
+      'order_shipped',
+      'order_delivered',
+      'order_cancelled',
+      'payment_received',
+      'order_status' 
+    ];
         
-      case 'new_product':
-        navigate(`/product/${notification.reference_id}`);
-        break;
+    if (orderTypes.includes(notificationType)) {
+      if (notification.reference_id) {
+        // ✅ Navigate based on role
+        const url = (isSeller || isAdmin) 
+          ? `/seller/orders/${notification.reference_id}`
+          : `/user/orders/${notification.reference_id}`;
         
-      case 'new_rating':
-        navigate(`/product/${notification.reference_id}`, {
+        console.log('🔗 Navigating to:', url);
+        navigate(url);
+        return;
+      } else {
+        // ✅ Navigate to orders list based on role
+        const url = (isSeller || isAdmin) ? '/seller/orders' : '/user/orders';
+        console.log('🔗 Navigating to orders list:', url);
+        navigate(url);
+        return;
+      }
+    }
+    
+    // Product notifications
+    if (notificationType === 'new_product') {
+      if (notification.reference_id) {
+        navigate(`/products/${notification.reference_id}`);
+        return;
+      } else {
+        navigate('/products');
+        return;
+      }
+    }
+    
+    // Rating notifications
+    if (notificationType === 'new_rating') {
+      if (notification.reference_id) {
+        navigate(`/products/${notification.reference_id}`, {
           state: { scrollToReviews: true }
         });
-        break;
-        
-      default:
-        navigate('/dashboard', {
-          state: { activeSection: 'notifications' }
-        });
+        return;
+      } else {
+        navigate('/products');
+        return;
+      }
     }
-  }, [navigate, markAsRead]);
+    
+    // ✅ Default navigation based on role
+    if (isSeller || isAdmin) {
+      console.log('🔗 Navigating to seller notifications');
+      navigate('/seller/notifications');
+    } else {
+      console.log('🔗 Navigating to user dashboard');
+      navigate('/user/dashboard', {
+        state: { activeSection: 'notifications' }
+      });
+    }
+    
+  }, [navigate, markAsRead, user]);
 
   return (
     <NotificationContext.Provider value={{
@@ -205,6 +275,7 @@ export const NotificationProvider = ({ children }) => {
       fetchNotifications,
       markAsRead,
       markAllAsRead,
+      deleteNotification, 
       handleViewNotification
     }}>
       {children}

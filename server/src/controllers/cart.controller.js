@@ -23,8 +23,7 @@ export const addToCart = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { product_id, quantity } = req.body;
-    console.log("User ID:", userId);
-    console.log("Product found:", product_id);
+    
     // Kiểm tra product có tồn tại không
     const product = await Product.findById(product_id);
     if (!product) {
@@ -111,5 +110,53 @@ export const clearCart = async (req, res) => {
     res.json({ success: true, message: "Cart cleared" });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+export const removeMultipleItems = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { itemIds } = req.body;
+
+    // Validate input
+    if (!Array.isArray(itemIds) || itemIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "itemIds must be a non-empty array",
+      });
+    }
+
+    console.log('🗑️ Removing multiple items:', {
+      userId,
+      itemIds,
+      count: itemIds.length
+    });
+
+    // Xóa các items thuộc về user và có _id trong danh sách
+    const result = await CartItem.deleteMany({
+      user_id: userId,
+      _id: { $in: itemIds },
+    });
+
+   
+
+    // Lấy lại giỏ hàng còn lại
+    const remainingItems = await CartItem.find({ user_id: userId })
+      .populate("product_id", "name price sale_price images")
+      .sort({ updated_at: -1 });
+
+    res.json({
+      success: true,
+      message: `${result.deletedCount} items removed successfully`,
+      data: {
+        deletedCount: result.deletedCount,
+        items: remainingItems,
+      },
+    });
+  } catch (err) {
+    console.error('❌ Remove multiple items error:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: err.message 
+    });
   }
 };

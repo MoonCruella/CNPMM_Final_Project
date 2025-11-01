@@ -25,27 +25,20 @@ export const SupportChatProvider = ({ children }) => {
   // Join socket room khi có conversation và socket connected
   useEffect(() => {
     if (!socket || !isConnected || !conversation) {
-      console.log('⚠️ Not ready to join room:', {
-        hasSocket: !!socket,
-        isConnected,
-        hasConversation: !!conversation
-      });
+      
       return;
     }
 
     const roomName = `support:${conversation.conversationId}`;
-    console.log('🔌 Joining room:', roomName);
     
     socket.emit('join_support_room', conversation.conversationId);
 
     // Verify after a short delay
     setTimeout(() => {
-      console.log('📍 Verifying room join...');
       // Socket.io client doesn't expose rooms, but server will log it
     }, 500);
 
     return () => {
-      console.log('👋 Leaving room:', roomName);
       socket.emit('leave_support_room', conversation.conversationId);
     };
   }, [socket, isConnected, conversation]);
@@ -53,17 +46,14 @@ export const SupportChatProvider = ({ children }) => {
   // Khởi tạo conversation
   const startConversation = async () => {
     if (!user) {
-      console.log('⚠️ No user found');
       return;
     }
     
     try {
       setIsLoading(true);
-      console.log('🚀 Starting conversation...');
       const response = await supportChatService.startConversation();
       
       if (response.success) {
-        console.log('✅ Conversation created:', response.data);
         setConversation(response.data);
         await loadMessages(response.data.conversationId);
       }
@@ -77,10 +67,8 @@ export const SupportChatProvider = ({ children }) => {
   // Load messages
   const loadMessages = async (conversationId) => {
     try {
-      console.log('📥 Loading messages for:', conversationId);
       const response = await supportChatService.getMessages(conversationId);
       if (response.success) {
-        console.log('✅ Loaded messages:', response.data.messages.length);
         setMessages(response.data.messages);
         setUnreadCount(0);
       }
@@ -92,7 +80,6 @@ export const SupportChatProvider = ({ children }) => {
   // Gửi tin nhắn
   const sendMessage = useCallback(async (message, messageType = 'text', productRef = null) => {
     if (!conversation || !message.trim()) {
-      console.log('⚠️ Cannot send: no conversation or empty message');
       return false;
     }
 
@@ -103,24 +90,20 @@ export const SupportChatProvider = ({ children }) => {
         ...(productRef && { productRef })
       };
 
-      console.log('📤 Sending message:', messageData);
       const response = await supportChatService.sendMessage(
         conversation.conversationId,
         messageData
       );
 
       if (response.success) {
-        console.log('✅ Message sent successfully:', response.data);
         
         // Thêm message ngay lập tức vào UI
         const newMessage = response.data;
         setMessages(prev => {
           const exists = prev.some(msg => msg._id === newMessage._id);
           if (exists) {
-            console.log('⚠️ Message already exists in state');
             return prev;
           }
-          console.log('➕ Adding message to state immediately');
           return [...prev, newMessage];
         });
         
@@ -143,22 +126,15 @@ export const SupportChatProvider = ({ children }) => {
   // Socket listener cho tin nhắn mới
   useEffect(() => {
     if (!socket || !isConnected || !conversation) {
-      console.log('⚠️ Socket listener not ready:', {
-        hasSocket: !!socket,
-        isConnected,
-        hasConversation: !!conversation
-      });
+    
       return;
     }
 
-    console.log('👂 Setting up socket listener for conversation:', conversation.conversationId);
 
     const handleNewMessage = (newMessage) => {
-      console.log('📨 Received socket message:', newMessage);
       
       // Kiểm tra conversation ID
       if (newMessage.conversationId !== conversation.conversationId) {
-        console.log('⚠️ Message for different conversation');
         return;
       }
       
@@ -170,11 +146,9 @@ export const SupportChatProvider = ({ children }) => {
         );
         
         if (exists) {
-          console.log('⚠️ Message already in state, skipping');
           return prev;
         }
         
-        console.log('✅ Adding new message from socket to state');
         return [...prev, newMessage];
       });
       
@@ -187,7 +161,6 @@ export const SupportChatProvider = ({ children }) => {
     socket.on('support_new_message', handleNewMessage);
 
     return () => {
-      console.log('🧹 Cleaning up socket listener');
       socket.off('support_new_message', handleNewMessage);
     };
   }, [socket, isConnected, conversation, isOpen]);
