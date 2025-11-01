@@ -73,7 +73,6 @@ export const AppContextProvider = ({ children }) => {
       } else {
         // Lên lịch làm mới trong tương lai (5 phút trước khi hết hạn)
         const timeUntilRefresh = timeRemaining - refreshThreshold;
-        console.log(`Làm mới token được lên lịch sau ${Math.floor(timeUntilRefresh/1000)} giây`);
         
         refreshTimerRef.current = setTimeout(() => {
           performTokenRefresh();
@@ -92,7 +91,6 @@ export const AppContextProvider = ({ children }) => {
     tokenRefreshInProgressRef.current = true;
     
     try {
-      console.log("Đang tự động làm mới token...");
       await authService.refreshToken();
       
       // Thông báo cho các component rằng token đã được làm mới
@@ -101,7 +99,6 @@ export const AppContextProvider = ({ children }) => {
       // Thiết lập hẹn giờ cho lần làm mới tiếp theo
       setupTokenRefreshTimer();
       
-      console.log("Token đã được làm mới thành công");
     } catch (error) {
       console.error("Tự động làm mới token thất bại:", error);
       // Nếu làm mới thất bại, người dùng sẽ bị đăng xuất ở lần gọi API tiếp theo
@@ -170,13 +167,11 @@ useEffect(() => {
 // useEffect riêng cho việc thiết lập auto refresh token dựa trên trạng thái isAuthenticated
 useEffect(() => {
   if (isAuthenticated) {
-    console.log("🔒 Người dùng đã xác thực, thiết lập hệ thống tự động làm mới token");
     
     // Khởi tạo hệ thống refresh token tự động từ api.js
     tokenRefreshCleanupRef.current = initTokenRefresh();
   } else if (tokenRefreshCleanupRef.current) {
     // Dọn dẹp khi đăng xuất
-    console.log("🔓 Người dùng đã đăng xuất, dừng hệ thống tự động làm mới token");
     tokenRefreshCleanupRef.current();
     tokenRefreshCleanupRef.current = null;
   }
@@ -207,7 +202,6 @@ useEffect(() => {
 
       if (response.data.success) {
         const userData = authService.getUser();
-        console.log('User data: ' +userData);
         if (userData.role === "user") {
           syncAuthState(userData);
           setShowUserLogin(false);

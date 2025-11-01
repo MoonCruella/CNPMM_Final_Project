@@ -60,7 +60,6 @@ const ProductList = () => {
         if (params[key] === undefined) delete params[key];
       });
 
-      console.log('📋 Fetching products with params:', params);
 
       // Call API with query params
       const res = await productService.getAll(params);

@@ -125,11 +125,6 @@ export const removeMultipleItems = async (req, res) => {
       });
     }
 
-    console.log('🗑️ Removing multiple items:', {
-      userId,
-      itemIds,
-      count: itemIds.length
-    });
 
     // Xóa các items thuộc về user và có _id trong danh sách
     const result = await CartItem.deleteMany({

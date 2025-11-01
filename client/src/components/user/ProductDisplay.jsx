@@ -25,7 +25,6 @@ const ProductDisplay = ({ layout = "grid", type = "all" }) => {
           response = await productService.getAll();
         }
 
-        console.log("📦 Product response:", response);
 
         if (response.success) {
           // Handle different response structures
