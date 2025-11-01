@@ -9,15 +9,15 @@ const OrdersTable = ({
   onViewOrder,
   onUpdateStatus,
   onDeleteOrder,
-  onSort // ✅ Add callback for sorting
+  onSort
 }) => {
   const navigate = useNavigate();
 
-  // ✅ Remove useMemo - let backend handle sorting
+  // Remove useMemo - let backend handle sorting
   const displayOrders = Array.isArray(orders) ? orders : [];
 
   const handleSort = (field) => {
-    // ✅ Call parent component to fetch sorted data from backend
+    //  Call parent component to fetch sorted data from backend
     if (onSort) {
       onSort(field);
     }

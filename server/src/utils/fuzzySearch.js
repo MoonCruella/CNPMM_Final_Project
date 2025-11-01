@@ -105,7 +105,7 @@ export const createVietnameseSearchQuery = (query, fields) => {
 };
 
 /**
- * ✅ NEW: Tạo regex pattern cho tiếng Việt (khớp cả có dấu và không dấu)
+ * Tạo regex pattern cho tiếng Việt (khớp cả có dấu và không dấu)
  * @param {string} word - Từ đã normalize (không dấu)
  * @returns {RegExp} Regex pattern khớp cả có dấu và không dấu
  */

@@ -148,7 +148,6 @@ const ProductDetails = () => {
         const res = await ratingService.getRatingsByProduct(id, page, limit);
         console.log("Ratings response:", res);
         if (res.success) {
-          // ✅ Lọc chỉ những đánh giá có trạng thái visible hoặc approved
           const visibleRatings = res.ratings.filter(
             (r) => r.status === "visible" || r.status === "approved"
           );

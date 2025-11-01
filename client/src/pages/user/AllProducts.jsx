@@ -4,7 +4,7 @@ import { assets } from "@/assets/assets";
 import productService from "../../services/productService.js";
 import categoryService from "../../services/categoryService.js";
 import ProductCard from "../../components/user/item/ProductCard.jsx";
-import { useDebounce } from "../../hooks/useDebounce.jsx"; // ✅ Import useDebounce
+import { useDebounce } from "../../hooks/useDebounce.jsx"; 
 
 const AllProducts = () => {
   const [products, setProducts] = useState([]);
@@ -23,7 +23,7 @@ const AllProducts = () => {
   const location = useLocation();
   const categoryIdFromState = location.state?.categoryId || null;
 
-  // ✅ Debounce search input với delay 500ms
+  // Debounce search input với delay 500ms
   const debouncedSearch = useDebounce(searchInput, 500);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ const AllProducts = () => {
     }
   }, [categoryIdFromState]);
 
-  // ✅ Fetch categories
+  // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -48,7 +48,7 @@ const AllProducts = () => {
     fetchCategories();
   }, []);
 
-  // ✅ Fetch products từ Backend với search, filter, sort
+  //  Fetch products từ Backend với search, filter, sort
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -66,7 +66,7 @@ const AllProducts = () => {
           params.category = activeCategory;
         }
 
-        // ✅ Search query - Dùng debouncedSearch thay vì searchInput
+        // Search query - Dùng debouncedSearch thay vì searchInput
         if (debouncedSearch.trim() !== "") {
           params.search = debouncedSearch.trim();
         }
@@ -108,12 +108,12 @@ const AllProducts = () => {
     };
 
     fetchProducts();
-  }, [activeCategory, debouncedSearch, sortOption, currentPage]); // ✅ Dùng debouncedSearch
+  }, [activeCategory, debouncedSearch, sortOption, currentPage]); // Dùng debouncedSearch
 
-  // ✅ Reset page khi filter/search thay đổi
+  // Reset page khi filter/search thay đổi
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeCategory, debouncedSearch, sortOption]); // ✅ Dùng debouncedSearch
+  }, [activeCategory, debouncedSearch, sortOption]); //  Dùng debouncedSearch
 
   // Pagination
   const showingFrom = totalProducts > 0 ? (currentPage - 1) * productsPerPage + 1 : 0;
@@ -181,7 +181,7 @@ const AllProducts = () => {
                   </button>
                 )}
               </div>
-              {/* ✅ Hiển thị loading indicator khi đang debounce */}
+              {/* Hiển thị loading indicator khi đang debounce */}
               {searchInput !== debouncedSearch && (
                 <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
                   <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></span>
@@ -239,7 +239,7 @@ const AllProducts = () => {
               </select>
             </div>
 
-            {/* ✅ Loading state */}
+            {/* Loading state */}
             {loading ? (
               <div className="flex justify-center items-center py-12">
                 <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>

@@ -8,6 +8,9 @@ import {
   logoutAll,
    googleLogin,      
   googleCallback,
+  sendOtpChangePassword,     
+  verifyOtpChangePassword,    
+  changePassword, 
 } from "../controllers/auth.controller.js";
 
 import { authenticateToken, requireAdmin, requireOwnerOrAdmin } from "../middleware/auth.middleware.js";
@@ -42,6 +45,10 @@ router.post("/register/verify-otp", verifyOtpRegister);
 router.post("/forgot-password/send-otp", sendOtpForgotPass);
 router.post("/forgot-password/verify-otp", verifyOtpForgot);
 router.post("/forgot-password/reset", resetPassword);
+
+router.post("/change-password/send-otp", authenticateToken, sendOtpChangePassword);
+router.post("/change-password/verify-otp", authenticateToken, verifyOtpChangePassword);
+router.post("/change-password/reset", authenticateToken, changePassword);
 
 router.get("/google", googleLogin);
 router.get("/google/callback", googleCallback);

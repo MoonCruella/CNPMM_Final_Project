@@ -5,8 +5,8 @@ const CartTable = ({
   cartItems, 
   updateQuantity, 
   removeFromCart,
-  selectedItems = [], // ✅ NEW
-  toggleSelectItem // ✅ NEW
+  selectedItems = [], 
+  toggleSelectItem 
 }) => {
   return (
     <div className="overflow-x-auto shadow rounded-xl bg-white">
@@ -14,7 +14,6 @@ const CartTable = ({
         <table className="w-full text-left">
           <thead className="bg-green-700 sticky top-0 z-10">
             <tr>
-              {/* ✅ NEW: Checkbox column */}
               <th className="py-3 px-4 w-12">
                 <span className="sr-only">Select</span>
               </th>
@@ -31,14 +30,14 @@ const CartTable = ({
                   item={item}
                   updateQuantity={updateQuantity}
                   removeFromCart={removeFromCart}
-                  isSelected={selectedItems.includes(item._id)} // ✅ NEW
-                  onToggleSelect={() => toggleSelectItem(item._id)} // ✅ NEW
+                  isSelected={selectedItems.includes(item._id)} 
+                  onToggleSelect={() => toggleSelectItem(item._id)} 
                 />
               ))
             ) : (
               <tr>
                 <td
-                  colSpan="4" // ✅ Changed from 3 to 4
+                  colSpan="4" 
                   className="py-6 text-center text-gray-500 font-medium"
                 >
                   Giỏ hàng trống

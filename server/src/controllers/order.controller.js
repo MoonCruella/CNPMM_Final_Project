@@ -225,7 +225,7 @@ export const getOrderById = async (req, res) => {
       return response.sendError(res, "ID đơn hàng không hợp lệ", 400);
     }
 
-    // ✅ Build query based on role
+    //  Build query based on role
     let query = { _id: orderId };
     
     // Nếu không phải admin/seller, chỉ cho phép xem đơn hàng của chính mình
@@ -937,7 +937,7 @@ export const getAllOrders = async (req, res) => {
     const totalOrders = await Order.countDocuments(filter);
     const totalPages = Math.ceil(totalOrders / parseInt(limit));
 
-    // ✅ Calculate statistics (respect date filter)
+    //  Calculate statistics (respect date filter)
     const statsFilter = startDate || endDate ? {
       created_at: {
         ...(startDate ? { $gte: new Date(startDate) } : {}),

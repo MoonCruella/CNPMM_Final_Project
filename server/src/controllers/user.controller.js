@@ -148,7 +148,7 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
-// ✅ Fixed updateUserProfile using response helper
+// Fixed updateUserProfile using response helper
 export const updateUserProfile = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -208,7 +208,7 @@ export const updateUserProfile = async (req, res) => {
       }
     }
 
-    // ✅ UPDATE USER IN DATABASE using userModel
+    // UPDATE USER IN DATABASE using userModel
     const updatedUser = await userModel.findByIdAndUpdate(
       userId,
       {
@@ -247,7 +247,7 @@ export const updateUserProfile = async (req, res) => {
   }
 };
 
-// ✅ Legacy updateUser function (for backward compatibility)
+// Legacy updateUser function (for backward compatibility)
 export const updateUser = async (req, res) => {
   try {
     console.log(req.user);
@@ -262,7 +262,7 @@ export const updateUser = async (req, res) => {
   }
 };
 
-// ✅ Update user password
+//  Update user password
 export const updatePassword = async (req, res) => {
   try {
     const userId = req.user.userId || req.user._id || req.user.id;
@@ -317,7 +317,7 @@ export const updatePassword = async (req, res) => {
   }
 };
 
-// ✅ Delete user (admin only)
+//  Delete user (admin only)
 export const deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -347,7 +347,7 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// ✅ Toggle user active status (admin only)
+// Toggle user active status (admin only)
 export const toggleUserStatus = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -397,7 +397,7 @@ export const toggleUserStatus = async (req, res) => {
   }
 };
 
-// ✅ Get user statistics (admin only)
+//  Get user statistics (admin only)
 export const getUserStats = async (req, res) => {
   try {
     const [totalUsers, activeUsers, adminUsers, sellerUsers] =
