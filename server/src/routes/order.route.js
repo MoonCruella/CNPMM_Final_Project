@@ -14,6 +14,7 @@ import {
 import {
   authenticateToken,
   requireAdmin,
+  
 } from "../middleware/auth.middleware.js";
 const router = express.Router();
 router.use(authenticateToken);
@@ -33,7 +34,7 @@ router.get("/my-orders/search", authenticateToken, searchOrders);
 router.get("/search", authenticateToken, requireAdmin, searchOrders);
 // ✅ Get specific order by ID
 // GET /api/orders/:orderId
-router.get("/:orderId", getOrderById);
+router.get("/:orderId",authenticateToken, getOrderById);
 
 // Create new order
 // POST /api/orders

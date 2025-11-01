@@ -3,7 +3,6 @@ import authService from "./authService";
 import { store } from "../redux/store"; 
 import { fetchCurrentUser } from "../redux/authSlice";
 import { logout, updateToken } from "../redux/authSlice";
-
 // Config cho API calls
 const API_TIMEOUT = 30000; // 30 giây timeout cho requests
 const MAX_RETRIES = 2; // Số lần retry tối đa khi request bị lỗi mạng
@@ -455,6 +454,8 @@ export const handleApiError = (error) => {
 const initialToken = getAccessToken();
 if (initialToken) {
   setAuthHeader(initialToken);
+  // Redux: Cập nhật trạng thái ban đầu từ localStorage
+  store.dispatch(fetchCurrentUser());
 }
 
 export default api;

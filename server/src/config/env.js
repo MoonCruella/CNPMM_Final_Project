@@ -11,6 +11,9 @@ export const config = {
   email: process.env.EMAIL_USER,
   passEmail: process.env.EMAIL_PASS,
 
+  client_id: process.env.GOOGLE_CLIENT_ID,
+  client_secret_id: process.env.GOOGLE_CLIENT_SECRET,
+  client_url: process.env.CLIENT_URL,
   // thêm Cloudinary
   cloudinary: {
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,

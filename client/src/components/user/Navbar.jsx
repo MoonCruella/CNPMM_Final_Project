@@ -10,6 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logoutAsync } from '../../redux/authSlice';
 import userService from "../../services/user.service";
 import { onUserUpdated } from "../../utils/events"; 
+
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
@@ -18,11 +19,18 @@ const Navbar = () => {
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isAuthenticated, isSeller } = useSelector(state => state.auth);
+  const { isAuthenticated, isSeller, user: reduxUser } = useSelector(state => state.auth);
   const [user, setUser] = useState(null);
-  
-  const { getUserAvatarUrl } = useUserContext();
 
+  useEffect(() => {
+    if (reduxUser && isAuthenticated) {
+      setUser(reduxUser);
+    } else if (!isAuthenticated) {
+      setUser(null);
+    }
+  }, [reduxUser, isAuthenticated]);
+
+  
   const getAvatarUrl = (size = 40) => {
     // Nếu user có avatar
     if (user?.avatar) {
@@ -40,6 +48,7 @@ const Navbar = () => {
     const name = user?.name || user?.email || "User";
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=${size}`;
   };
+
   const fetchUserData = async () => {
     try {
       const response = await userService.getCurrentUser();
@@ -66,35 +75,11 @@ const Navbar = () => {
   };
 
   useEffect(() => {
-      const fetchUserData = async () => {
-        try {
-          const response = await userService.getCurrentUser();
-          if (response.success && response.user) {
-            // Normalize user data
-            const userData = {
-              _id: response.user.userId,
-              email: response.user.email,
-              name: response.user.name,
-              role: response.user.role,
-              coin: response.user.coin,
-              active: response.user.active,
-              phone: response.user.phone,
-              gender: response.user.gender,
-              date_of_birth: response.user.date_of_birth,
-              avatar: response.user.avatar,
-              address: response.user.address,
-            };
-  
-            setUser(userData);
-          }
-        } catch (error) {
-          console.error("NavBar - Fetch user error:", error);
-        } finally {
-        }
-      };
-  
+    if (isAuthenticated && !user) {
       fetchUserData();
-    }, []);
+    }
+  }, [isAuthenticated]);
+
   useEffect(() => {
     const cleanup = onUserUpdated(() => {
       console.log('Navbar - User updated event received, refreshing...');
@@ -103,6 +88,7 @@ const Navbar = () => {
 
     return cleanup;
   }, []);
+
   // Logout handler
   const handleLogout = async () => {
     try {
@@ -112,7 +98,6 @@ const Navbar = () => {
       await dispatch(logoutAsync()).unwrap();
 
       toast.dismiss(loadingToast);
-      toast.success("Đăng xuất thành công");
 
       navigate("/");
       setOpen(false);
@@ -130,7 +115,6 @@ const Navbar = () => {
       await dispatch(logoutAsync()).unwrap();
 
       toast.dismiss(loadingToast);
-      toast.success("Đã đăng xuất khỏi tất cả thiết bị");
 
       setOpen(false);
       setIsUserMenuOpen(false);
@@ -153,8 +137,13 @@ const Navbar = () => {
   const { items, refreshCart } = useCartContext();
 
   useEffect(() => {
-    refreshCart();
-  }, []);
+    if (isAuthenticated) {
+      refreshCart();
+    }
+  }, [isAuthenticated]);
+
+  const currentUser = user || reduxUser; 
+  const userIsAuthenticated = isAuthenticated;
 
   return (
     <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-b border-gray-300 bg-white relative transition-all">
@@ -190,8 +179,6 @@ const Navbar = () => {
           Blog
         </NavLink>
 
-        
-
         {/* Cart */}
         <div className="relative cursor-pointer">
           <img
@@ -208,7 +195,7 @@ const Navbar = () => {
         {isAuthenticated && <NotificationBell />}
 
         {/* User Menu */}
-        {!isAuthenticated || !user ? (
+        {!userIsAuthenticated || !currentUser ? (
           <button
             onClick={handleLoginClick}
             className="cursor-pointer px-8 py-2 btn-primary transition text-white rounded-full"
@@ -236,7 +223,7 @@ const Navbar = () => {
               {/* Active Status Indicator */}
               <div
                 className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
-                  user?.active === true ? "bg-green-500" : "bg-red-500"
+                  currentUser?.active === true ? "bg-green-500" : "bg-red-500"
                 }`}
               ></div>
             </div>
@@ -254,10 +241,10 @@ const Navbar = () => {
                 <div className="flex items-center gap-2">
                   <div>
                     <p className="font-medium text-gray-800 truncate">
-                      {user?.name || user?.full_name}
+                      {currentUser?.name || currentUser?.full_name}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {user?.email}
+                      {currentUser?.email}
                     </p>
                   </div>
                 </div>
@@ -266,28 +253,28 @@ const Navbar = () => {
                 <div className="flex gap-1 mt-1">
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      user?.role === "admin"
+                      currentUser?.role === "admin"
                         ? "bg-red-100 text-red-700"
-                        : user?.role === "seller"
+                        : currentUser?.role === "seller"
                         ? "bg-blue-100 text-blue-700"
                         : "bg-green-100 text-green-700"
                     }`}
                   >
-                    {user?.role === "admin"
+                    {currentUser?.role === "admin"
                       ? "Admin"
-                      : user?.role === "seller"
+                      : currentUser?.role === "seller"
                       ? "Seller"
                       : "User"}
                   </span>
 
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      user?.active === true
+                      currentUser?.active === true
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"
                     }`}
                   >
-                    {user?.active === true ? "Active" : "Inactive"}
+                    {currentUser?.active === true ? "Active" : "Inactive"}
                   </span>
                 </div>
               </div>
@@ -301,14 +288,14 @@ const Navbar = () => {
               </button>
 
               <button
-                onClick={() => handleMenuNavigation("/user/purchase")}
+                onClick={() => handleMenuNavigation("/user/orders")}
                 className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 transition-colors"
               >
                 <span>📦</span> My Orders
               </button>
 
               {/* Admin Link */}
-              {user?.role === "admin" && (
+              {currentUser?.role === "admin" && (
                 <button
                   onClick={() => handleMenuNavigation("/admin")}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-purple-600 transition-colors"
@@ -318,7 +305,7 @@ const Navbar = () => {
               )}
 
               {/* Seller Dashboard */}
-              {user?.role === "seller" && (
+              {currentUser?.role === "seller" && (
                 <button
                   onClick={() => handleMenuNavigation("/seller")}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-blue-600 transition-colors"
@@ -377,7 +364,7 @@ const Navbar = () => {
           </NavLink>
 
           {/* User-specific mobile menu */}
-          {isAuthenticated && user ? (
+          {userIsAuthenticated && currentUser ? (
             <>
               <hr className="w-full my-2" />
 
@@ -392,30 +379,30 @@ const Navbar = () => {
                   }}
                 />
                 <div>
-                  <p className="font-medium text-gray-800">{user?.name || user?.full_name}</p>
+                  <p className="font-medium text-gray-800">{currentUser?.name || currentUser?.full_name}</p>
                   <div className="flex gap-1">
                     <span
                       className={`px-1.5 py-0.5 rounded text-xs ${
-                        user?.active === true
+                        currentUser?.active === true
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
                       }`}
                     >
-                      {user?.active === true ? "Active" : "Inactive"}
+                      {currentUser?.active === true ? "Active" : "Inactive"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <NavLink to="/my-profile" onClick={() => setOpen(false)}>
+              <NavLink to="/user/account/profile" onClick={() => setOpen(false)}>
                 👤 My Profile
               </NavLink>
 
-              <NavLink to="/my-orders" onClick={() => setOpen(false)}>
+              <NavLink to="/user/orders" onClick={() => setOpen(false)}>
                 📦 My Orders
               </NavLink>
 
-              {user?.role === "seller" && (
+              {currentUser?.role === "seller" && (
                 <NavLink
                   to="/seller"
                   onClick={() => setOpen(false)}

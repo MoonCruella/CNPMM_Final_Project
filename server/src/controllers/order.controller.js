@@ -218,17 +218,23 @@ export const getOrderById = async (req, res) => {
   try {
     const { orderId } = req.params;
     const userId = req.user.userId;
+    const userRole = req.user.role;
 
     // Validate orderId format
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return response.sendError(res, "ID đơn hàng không hợp lệ", 400);
     }
 
-    // Find order and verify ownership
-    const order = await Order.findOne({
-      _id: orderId,
-      user_id: userId,
-    })
+    // ✅ Build query based on role
+    let query = { _id: orderId };
+    
+    // Nếu không phải admin/seller, chỉ cho phép xem đơn hàng của chính mình
+    if (userRole !== 'admin' && userRole !== 'seller') {
+      query.user_id = userId;
+    }
+
+    // Find order
+    const order = await Order.findOne(query)
       .populate({
         path: "items.product_id",
         select: "name images price category brand description",
@@ -242,7 +248,9 @@ export const getOrderById = async (req, res) => {
     if (!order) {
       return response.sendError(
         res,
-        "Không tìm thấy đơn hàng hoặc bạn không có quyền truy cập",
+        userRole === 'admin' || userRole === 'seller' 
+          ? "Không tìm thấy đơn hàng" 
+          : "Không tìm thấy đơn hàng hoặc bạn không có quyền truy cập",
         404
       );
     }
@@ -532,7 +540,7 @@ export const createOrder = async (req, res) => {
       .substr(2, 4)
       .toUpperCase()}`;
 
-    let totalAmount = 0;
+    let subtotal = 0; // Tổng tiền sản phẩm
     const orderItems = [];
 
     for (const item of items) {
@@ -564,7 +572,7 @@ export const createOrder = async (req, res) => {
       const itemTotal = product.sale_price
         ? product.sale_price * item.quantity
         : product.price * item.quantity;
-      totalAmount += itemTotal;
+      subtotal += itemTotal;
 
       orderItems.push({
         product_id: product._id,
@@ -575,17 +583,17 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    // Tính total_amount = subtotal + shipping_fee - discount - freeship
     const shippingFee = 30000;
-    totalAmount += shippingFee;
-    totalAmount -= discount_value || 0;
-    totalAmount -= freeship_value || 0;
+    const totalAmount = subtotal + shippingFee - (discount_value || 0) - (freeship_value || 0);
 
     // Tạo đơn
     const newOrder = new Order({
       user_id: userId,
       order_number: orderNumber,
       items: orderItems,
-      total_amount: totalAmount,
+      subtotal: subtotal, 
+      total_amount: totalAmount, 
       shipping_fee: shippingFee,
       freeship_value: freeship_value || 0,
       discount_value: discount_value || 0,
@@ -814,9 +822,6 @@ export const updateShippingInfo = async (req, res) => {
               { new: true }
             );
           }
-          console.log(
-            `Đã cập nhật số lượng người mua cho đơn hàng ${order._id}`
-          );
         } catch (updateError) {
           console.error("Lỗi khi cập nhật số lượng người mua:", updateError);
         }
@@ -893,11 +898,26 @@ export const getAllOrders = async (req, res) => {
       limit = 10,
       sort = "created_at",
       order = "desc",
+      startDate, // 
+      endDate,   // 
     } = req.query;
 
     const filter = {};
     if (status && status !== "all") {
       filter.status = status;
+    }
+
+    //  Add date range filter
+    if (startDate || endDate) {
+      filter.created_at = {};
+      if (startDate) {
+        filter.created_at.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        filter.created_at.$lte = endDateTime;
+      }
     }
 
     const sortObj = {};
@@ -916,8 +936,17 @@ export const getAllOrders = async (req, res) => {
 
     const totalOrders = await Order.countDocuments(filter);
     const totalPages = Math.ceil(totalOrders / parseInt(limit));
-    // Tính thống kê cho tất cả đơn hàng (không phân trang)
-    const allOrders = await Order.find({}).lean();
+
+    // ✅ Calculate statistics (respect date filter)
+    const statsFilter = startDate || endDate ? {
+      created_at: {
+        ...(startDate ? { $gte: new Date(startDate) } : {}),
+        ...(endDate ? { $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) } : {})
+      }
+    } : {};
+
+    const allOrders = await Order.find(statsFilter).lean();
+
     const stats = {
       total: allOrders.length,
       pending: allOrders.filter((o) => o.status === "pending").length,
@@ -926,10 +955,10 @@ export const getAllOrders = async (req, res) => {
       shipped: allOrders.filter((o) => o.status === "shipped").length,
       delivered: allOrders.filter((o) => o.status === "delivered").length,
       cancelled: allOrders.filter((o) => o.status === "cancelled").length,
-      cancel_request: allOrders.filter((o) => o.status === "cancel_request")
-        .length,
+      cancel_request: allOrders.filter((o) => o.status === "cancel_request").length,
       totalAmount: allOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0),
     };
+
     return response.sendSuccess(
       res,
       {
@@ -941,6 +970,13 @@ export const getAllOrders = async (req, res) => {
           per_page: parseInt(limit),
         },
         stats,
+        filter: {
+          status,
+          sort,
+          order,
+          startDate: startDate || null,
+          endDate: endDate || null,
+        },
       },
       "Lấy danh sách đơn hàng thành công",
       200
@@ -963,18 +999,17 @@ export const searchOrders = async (req, res) => {
       limit = 10,
       sort = "created_at",
       order = "desc",
+      startDate, // 
+      endDate,   // 
     } = req.query;
 
     if (!q || q.trim() === '') {
       return response.sendError(res, "Vui lòng nhập từ khóa tìm kiếm", 400);
     }
 
-    console.log('\n🔍 Searching orders with query:', q);
 
     const normalizedQuery = removeVietnameseTones(q.toLowerCase());
     const words = normalizedQuery.split(/\s+/).filter(Boolean);
-
-    console.log('📝 Normalized words:', words);
 
     // Build base filter
     const filter = {};
@@ -987,12 +1022,20 @@ export const searchOrders = async (req, res) => {
       filter.status = status;
     }
 
-    // ✅ STEP 1: Tạo regex patterns cho CẢ có dấu VÀ không dấu
+    if (startDate || endDate) {
+      filter.created_at = {};
+      if (startDate) {
+        filter.created_at.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        filter.created_at.$lte = endDateTime;
+      }
+    }
+
     const productSearchConditions = words.flatMap(word => {
-      // Pattern 1: Tìm không dấu (normalize)
       const normalizedPattern = { name: { $regex: word, $options: 'i' } };
-      
-      // Pattern 2: Tìm có dấu - ✅ SỬ DỤNG createVietnameseRegex
       const vietnamesePattern = createVietnameseRegex(word);
       
       return [
@@ -1001,33 +1044,22 @@ export const searchOrders = async (req, res) => {
       ];
     });
 
-    console.log('🔎 Product search conditions (first 4):', 
-      JSON.stringify(productSearchConditions.slice(0, 4), null, 2)
-    );
 
     const matchingProducts = await Product.find({
       $or: productSearchConditions
     }).select('_id name').lean();
 
-    console.log(`✅ Found ${matchingProducts.length} matching products:`, 
-      matchingProducts.map(p => p.name).slice(0, 5)
-    );
 
     const matchingProductIds = matchingProducts.map(p => p._id);
 
-    // ✅ STEP 2: Order number search với cả có dấu và không dấu
+    //  Order number search
     const orderNumberSearchConditions = words.flatMap(word => {
       return [
         { order_number: { $regex: word, $options: 'i' } },
-        { order_number: createVietnameseRegex(word) } // ✅ SỬ DỤNG createVietnameseRegex
+        { order_number: createVietnameseRegex(word) }
       ];
     });
 
-    console.log('🔎 Order number search conditions (first 4):', 
-      JSON.stringify(orderNumberSearchConditions.slice(0, 4), null, 2)
-    );
-
-    // ✅ STEP 3: Combine queries
     const searchConditions = [];
 
     if (orderNumberSearchConditions.length > 0) {
@@ -1041,7 +1073,6 @@ export const searchOrders = async (req, res) => {
     }
 
     if (searchConditions.length === 0) {
-      console.log('❌ No matching products or orders');
       return response.sendSuccess(
         res,
         {
@@ -1066,9 +1097,7 @@ export const searchOrders = async (req, res) => {
 
     filter.$or = searchConditions;
 
-    console.log('📋 Final filter has', searchConditions.length, 'conditions');
-
-    // ✅ STEP 4: Execute query with pagination
+    // Execute query with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const orders = await Order.find(filter)
@@ -1085,31 +1114,21 @@ export const searchOrders = async (req, res) => {
       .limit(parseInt(limit))
       .lean();
 
-    console.log(`✅ Found ${orders.length} orders from database`);
-
     const totalOrders = await Order.countDocuments(filter);
     const totalPages = Math.ceil(totalOrders / parseInt(limit));
 
-    // ✅ STEP 5: Sort by relevance (tính điểm phù hợp)
+    // STEP 5: Sort by relevance
     const sortedResults = sortByRelevance(orders, q, [
       'order_number',
       'items.product_id.name'
     ]);
-
-    console.log('🎯 Top 3 relevance scores:', 
-      sortedResults.slice(0, 3).map(r => ({
-        order: r.item.order_number,
-        product: r.item.items[0]?.product_id?.name,
-        score: r.score.toFixed(2)
-      }))
-    );
 
     const ordersWithScores = sortedResults.map(result => ({
       ...result.item,
       relevance_score: result.score.toFixed(2)
     }));
 
-    // ✅ STEP 6: Calculate statistics
+    // Calculate statistics
     const matchedByOrderNumber = orders.filter(order => {
       const normalized = removeVietnameseTones(order.order_number.toLowerCase());
       return words.some(word => normalized.includes(word));
@@ -1122,7 +1141,6 @@ export const searchOrders = async (req, res) => {
       })
     ).length;
 
-    console.log(`📊 Stats: ${matchedByOrderNumber} by order#, ${matchedByProductName} by product\n`);
 
     return response.sendSuccess(
       res,
@@ -1148,6 +1166,8 @@ export const searchOrders = async (req, res) => {
           status,
           sort,
           order,
+          startDate: startDate || null,
+          endDate: endDate || null,
         }
       },
       `Tìm thấy ${totalOrders} đơn hàng phù hợp`,
@@ -1155,7 +1175,7 @@ export const searchOrders = async (req, res) => {
     );
 
   } catch (error) {
-    console.error("❌ Search orders error:", error);
+    console.error("Search orders error:", error);
     return response.sendError(
       res,
       "Có lỗi xảy ra khi tìm kiếm đơn hàng",

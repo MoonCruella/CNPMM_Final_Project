@@ -68,7 +68,7 @@ export const requireAdmin = async (req, res, next) => {
 // Middleware kiểm tra user hoặc admin (có thể truy cập tài nguyên của chính mình)
 export const requireOwnerOrAdmin = async (req, res, next) => {
   try {
-    const resourceUserId = req.params.userId || req.body.userId;
+    const resourceUserId = req.user.userId || req.body.userId;
     
     if (req.user.role === 'seller' || req.user.userId === resourceUserId) {
       next();
@@ -77,6 +77,34 @@ export const requireOwnerOrAdmin = async (req, res, next) => {
     }
   } catch (error) {
     return response.sendError(res, 'Lỗi kiểm tra quyền truy cập', 500, error.message);
+  }
+};
+export const requireOrderOwnerOrAdmin = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    // Nếu là admin hoặc seller, cho phép truy cập tất cả đơn hàng
+    if (userRole === 'admin' || userRole === 'seller') {
+      return next();
+    }
+
+    // Nếu là user thường, kiểm tra xem có phải chủ đơn hàng không
+    const Order = require('../models/order.model.js').default;
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return response.sendError(res, 'Đơn hàng không tồn tại', 404);
+    }
+
+    if (order.user_id.toString() !== userId) {
+      return response.sendError(res, 'Không có quyền truy cập đơn hàng này', 403);
+    }
+
+    next();
+  } catch (error) {
+    return response.sendError(res, 'Lỗi kiểm tra quyền truy cập đơn hàng', 500, error.message);
   }
 };
 

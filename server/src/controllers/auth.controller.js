@@ -7,7 +7,7 @@ import redisClient from "../utils/redisClient.js";
 import response from "../helpers/response.js";
 import { config } from "../config/env.js";
 import { generateTokenPair, verifyRefreshToken } from "../utils/jwt.js";
-
+import AuthGoogleController from "./google.controller.js";
 import * as authMethod from "../method/auth.method.js";
 
 export const registerVerifyOtp = verifyOtpRegister;
@@ -313,3 +313,119 @@ export const resetPassword = async (req, res) => {
     return response.sendError(res, "Reset mật khẩu thất bại", 500, err.message);
   }
 };
+
+const googleAuthController = new AuthGoogleController();
+
+export const googleLogin = async (req, res) => {
+  try {
+    const url = googleAuthController.generateUrl();
+    return response.sendSuccess(
+      res,
+      { url },
+      "Google OAuth URL generated successfully",
+      200
+    );
+  } catch (error) {
+    console.error("Google login error:", error);
+    return response.sendError(
+      res,
+      "Failed to generate Google OAuth URL",
+      500,
+      error.message
+    );
+  }
+};
+
+export const googleCallback = async (req, res) => {
+  try {
+    const { code } = req.query;
+
+    if (!code) {
+      return res.redirect(`${config.client_url || 'http://localhost:5173'}/login?error=no_code`);
+    }
+
+    // Get user data from Google
+    const googleData = await googleAuthController.callBack(code);
+
+    if (!googleData || !googleData.email) {
+      return res.redirect(`${config.client_url || 'http://localhost:5173'}/login?error=invalid_data`);
+    }
+
+    const { email, name, picture, sub: googleId, email_verified } = googleData;
+
+    // Find or create user
+    let user = await userModel.findOne({ email });
+
+    if (user) {
+      // ✅ Check if existing user is a seller
+      if (user.role === 'seller') {
+        return res.redirect(
+          `${config.client_url || 'http://localhost:5173'}/login?error=seller_account`
+        );
+      }
+
+      // Update existing user with Google info
+      if (!user.googleId) {
+        user.googleId = googleId;
+      }
+      if (!user.avatar && picture) {
+        user.avatar = picture;
+      }
+      // If account is not active, activate it (Google verified)
+      if (!user.active && email_verified) {
+        user.active = true;
+      }
+      await user.save();
+    } else {
+      // ✅ Create new user - ALWAYS role = 'user'
+      user = await userModel.create({
+        email,
+        name: name || email.split('@')[0],
+        googleId,
+        avatar: picture,
+        role: 'user', // ✅ Force role = user
+        active: email_verified || true,
+        password: crypto.randomBytes(32).toString('hex'),
+      });
+    }
+
+    // Check if user is active
+    if (!user.active) {
+      return res.redirect(`${config.client_url || 'http://localhost:5173'}/login?error=account_inactive`);
+    }
+
+    // Generate tokens
+    const payload = {
+      userId: user._id,
+      email: user.email,
+      role: user.role, // Will always be 'user'
+      coin: user.coin,
+      active: user.active,
+      name: user.name,
+      phone: user.phone,
+      address: user.address,
+      gender: user.gender,
+      date_of_birth: user.date_of_birth,
+      avatar: user.avatar,
+    };
+
+    const { accessToken, refreshToken } = generateTokenPair(payload);
+
+    // Save refresh token
+    const deviceInfo = req.get("User-Agent") || "Google OAuth Login";
+    await user.addRefreshToken(refreshToken, deviceInfo);
+
+    // Update last login
+    await user.updateLastLogin();
+
+    // Redirect to frontend with tokens
+    const redirectUrl = `${config.client_url || 'http://localhost:5173'}/auth/google/success?accessToken=${accessToken}&refreshToken=${refreshToken}`;
+    
+    return res.redirect(redirectUrl);
+
+  } catch (error) {
+    console.error("Google callback error:", error);
+    return res.redirect(`${config.client_url || 'http://localhost:5173'}/login?error=server_error`);
+  }
+};
+

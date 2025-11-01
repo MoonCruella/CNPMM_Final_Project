@@ -64,7 +64,7 @@ const NotificationsPanel = () => {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full pr-8 ">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Tất cả thông báo</h1>
         

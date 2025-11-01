@@ -39,12 +39,22 @@ class OrderService {
       };
     }
   };
-  getAllOrder = async (status = "all", page = 1, limit = 10) => {
+  getAllOrder = async (status = "all", page = 1, limit = 10, startDate = null, endDate = null, sort = "created_at", order = "desc") => {
     try {
       const params = new URLSearchParams();
       if (status && status !== "all") params.append("status", status);
       params.append("page", page);
       params.append("limit", limit);
+      params.append("sort", sort);
+      params.append("order", order);
+
+      if (startDate) {
+        params.append("startDate", startDate);
+      }
+      if (endDate) {
+        params.append("endDate", endDate);
+      }
+
       const response = await privateApi.get(
         `/api/orders/all?${params.toString()}`
       );
@@ -232,6 +242,58 @@ class OrderService {
       };
     }
   };
+  searchOrderAdmin = async (queryOrParams, status, page, limit, startDate, endDate) => {
+    try {
+      let params = {};
+
+      if (typeof queryOrParams === 'object' && queryOrParams !== null) {
+        params = queryOrParams;
+      } else {
+        params = {
+          q: queryOrParams,
+          status: status !== 'all' ? status : undefined,
+          page,
+          limit,
+          startDate,
+          endDate,
+          sort: 'created_at', 
+          order: 'desc'      
+        };
+      }
+
+      const qs = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== "" && v !== "all") {
+          qs.append(k, v);
+        }
+      });
+
+      console.log('🔍 searchOrderAdmin params:', Object.fromEntries(qs));
+
+      const response = await privateApi.get(`/api/orders/search?${qs.toString()}`);
+
+      if (response.data?.success) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data?.message || "Không thể tìm kiếm đơn hàng",
+        };
+      }
+    } catch (error) {
+      console.error("searchOrderAdmin error:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || "Có lỗi khi tìm kiếm",
+        error,
+      };
+    }
+  };
+  
   getUserOrdersByAdmin = async (
     status = "all",
     page = 1,

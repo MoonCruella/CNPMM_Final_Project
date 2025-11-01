@@ -23,8 +23,7 @@ export const addToCart = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { product_id, quantity } = req.body;
-    console.log("User ID:", userId);
-    console.log("Product found:", product_id);
+    
     // Kiểm tra product có tồn tại không
     const product = await Product.findById(product_id);
     if (!product) {
@@ -138,10 +137,7 @@ export const removeMultipleItems = async (req, res) => {
       _id: { $in: itemIds },
     });
 
-    console.log('✅ Delete result:', {
-      deletedCount: result.deletedCount,
-      acknowledged: result.acknowledged
-    });
+   
 
     // Lấy lại giỏ hàng còn lại
     const remainingItems = await CartItem.find({ user_id: userId })
