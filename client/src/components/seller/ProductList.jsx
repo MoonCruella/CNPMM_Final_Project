@@ -49,7 +49,8 @@ const ProductList = () => {
         }));
 
         let filtered = formatted;
-        if (status !== "all") filtered = filtered.filter((p) => p.status === status);
+        if (status !== "all")
+          filtered = filtered.filter((p) => p.status === status);
         if (categoryFilter !== "all")
           filtered = filtered.filter((p) => p.category_id === categoryFilter);
         if (searchName.trim() !== "")
@@ -122,7 +123,11 @@ const ProductList = () => {
       }
 
       if (res.success) {
-        toast.success(selectedProduct ? "Cập nhật sản phẩm thành công" : "Thêm sản phẩm thành công");
+        toast.success(
+          selectedProduct
+            ? "Cập nhật sản phẩm thành công"
+            : "Thêm sản phẩm thành công"
+        );
         setOpenForm(false);
         loadProducts();
       } else toast.error(res.message || "Có lỗi xảy ra");

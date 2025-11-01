@@ -28,23 +28,23 @@ import DashboardSeller from "./components/seller/DashboardSeller";
 import { useAppContext } from "./context/AppContext";
 import VoucherCard from "./components/user/item/VoucherCard";
 import Vouchers from "./components/seller/Vouchers";
-import TokenTester from './components/TokenTester';
-import Chatbot from './components/user/Chatbot'; 
-import SupportChat from './components/user/SupportChat';
-import SupportChatSeller from './components/seller/SupportChatSeller';
-import { useSelector } from 'react-redux'; 
+import TokenTester from "./components/TokenTester";
+import Chatbot from "./components/user/Chatbot";
+import SupportChat from "./components/user/SupportChat";
+import SupportChatSeller from "./components/seller/SupportChatSeller";
+import { useSelector } from "react-redux";
 import UserList from "./components/seller/UserList";
 import Ratings from "./components/seller/Ratings";
 
-import BlogPage from './pages/user/BlogPage';
-import BlogPostPage from './pages/user/BlogPostPage';
-import SellerBlogPage from './pages/seller/SellerBlogPage';
+import BlogPage from "./pages/user/BlogPage";
+import BlogPostPage from "./pages/user/BlogPostPage";
+import SellerBlogPage from "./pages/seller/SellerBlogPage";
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
   const { showUserLogin } = useAppContext();
-  
+
   // Sử dụng Redux selector để lấy trạng thái đăng nhập và role
-  const { isAuthenticated, isSeller } = useSelector(state => state.auth);
+  const { isAuthenticated, isSeller } = useSelector((state) => state.auth);
 
   // SellerRoute component xử lý việc chuyển hướng cho seller routes
   const SellerRoute = ({ children }) => {
@@ -52,12 +52,12 @@ const App = () => {
       // Nếu chưa đăng nhập, chuyển hướng đến trang login với mode=seller
       return <Navigate to="/login?mode=seller" replace />;
     }
-    
+
     if (!isSeller) {
       // Nếu đã đăng nhập nhưng không phải seller, chuyển hướng đến trang login với mode=seller
       return <Navigate to="/login?mode=seller" replace />;
     }
-    
+
     // Nếu đã đăng nhập và là seller, hiển thị nội dung seller
     return children;
   };
@@ -90,12 +90,14 @@ const App = () => {
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
         {/* Thay thế route /seller để sử dụng SellerRoute */}
-        <Route path="/seller" element={
-          <SellerRoute>
-            <SellerLayout />
-          </SellerRoute>
-          
-        }>
+        <Route
+          path="/seller"
+          element={
+            <SellerRoute>
+              <SellerLayout />
+            </SellerRoute>
+          }
+        >
           <Route path="/seller/blog" element={<SellerBlogPage />} />
           <Route index element={<DashboardSeller />} />
           <Route path="products" element={<ProductList />} />
@@ -106,7 +108,6 @@ const App = () => {
           <Route path="manage-user" element={<UserList />} />
           <Route path="support" element={<SupportChatSeller />} />
           <Route path="ratings" element={<Ratings />} />
-          
         </Route>
       </Routes>
       {!isSellerPath && <Footer />}
