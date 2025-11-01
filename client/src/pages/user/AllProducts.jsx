@@ -23,7 +23,6 @@ const AllProducts = () => {
   const location = useLocation();
   const categoryIdFromState = location.state?.categoryId || null;
 
-  // Debounce search input với delay 500ms
   const debouncedSearch = useDebounce(searchInput, 500);
 
   useEffect(() => {
@@ -37,41 +36,45 @@ const AllProducts = () => {
     const fetchCategories = async () => {
       try {
         const categoryRes = await categoryService.getAll();
+        console.log("Categories response:", categoryRes);
+        
         if (categoryRes.success) {
-          setCategories(categoryRes.data);
+          // Check if data is array or nested object
+          const categoriesData = Array.isArray(categoryRes.data) 
+            ? categoryRes.data 
+            : categoryRes.data?.categories || [];
+          
+          setCategories(categoriesData);
         }
       } catch (err) {
         console.error("Error fetching categories:", err);
+        setCategories([]);
       }
     };
 
     fetchCategories();
   }, []);
 
-  //  Fetch products từ Backend với search, filter, sort
+  // Fetch products từ Backend với search, filter, sort
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
 
-        // Build params cho API
         const params = {
           page: currentPage,
           limit: productsPerPage,
           status: 'active',
         };
 
-        // Category filter
         if (activeCategory) {
           params.category = activeCategory;
         }
 
-        // Search query - Dùng debouncedSearch thay vì searchInput
         if (debouncedSearch.trim() !== "") {
           params.search = debouncedSearch.trim();
         }
 
-        // Sort option
         if (sortOption === "lowToHigh") {
           params.sort = "price_asc";
         } else if (sortOption === "highToLow") {
@@ -80,13 +83,11 @@ const AllProducts = () => {
 
         console.log("🔍 Fetching products with params:", params);
 
-        // Call API
         const response = await productService.getAll(params);
 
         if (response.success) {
           const productList = response.data?.products || [];
 
-          // Format products với primary image
           const formatted = productList.map((p) => ({
             ...p,
             primary_image: p.images?.find((img) => img.is_primary)?.image_url || p.images?.[0]?.image_url,
@@ -95,7 +96,6 @@ const AllProducts = () => {
           setProducts(formatted);
           setDisplayProducts(formatted);
 
-          // Set pagination
           const pagination = response.data?.pagination || {};
           setTotalPages(pagination.total_pages || 1);
           setTotalProducts(pagination.total_items || 0);
@@ -108,14 +108,12 @@ const AllProducts = () => {
     };
 
     fetchProducts();
-  }, [activeCategory, debouncedSearch, sortOption, currentPage]); // Dùng debouncedSearch
+  }, [activeCategory, debouncedSearch, sortOption, currentPage]);
 
-  // Reset page khi filter/search thay đổi
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeCategory, debouncedSearch, sortOption]); //  Dùng debouncedSearch
+  }, [activeCategory, debouncedSearch, sortOption]);
 
-  // Pagination
   const showingFrom = totalProducts > 0 ? (currentPage - 1) * productsPerPage + 1 : 0;
   const showingTo = Math.min(currentPage * productsPerPage, totalProducts);
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -181,7 +179,6 @@ const AllProducts = () => {
                   </button>
                 )}
               </div>
-              {/* Hiển thị loading indicator khi đang debounce */}
               {searchInput !== debouncedSearch && (
                 <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
                   <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></span>
@@ -194,7 +191,6 @@ const AllProducts = () => {
             <div className="bg-yellow-50 p-4 rounded-xl">
               <h2 className="font-semibold mb-3">All Category</h2>
               <ul className="space-y-2">
-                {/* Nút All Products */}
                 <li
                   onClick={() => setActiveCategory(null)}
                   className={`flex justify-between items-center py-2 border-b cursor-pointer hover:text-green-600 transition ${
@@ -204,20 +200,26 @@ const AllProducts = () => {
                   All Products <span>↻</span>
                 </li>
 
-                {/* Danh sách categories */}
-                {categories.map((cat) => (
-                  <li
-                    key={cat._id}
-                    onClick={() => setActiveCategory(cat._id)}
-                    className={`flex justify-between items-center py-2 border-b cursor-pointer hover:text-green-600 transition ${
-                      activeCategory === cat._id
-                        ? "text-green-600 font-bold"
-                        : ""
-                    }`}
-                  >
-                    {cat.name} <span>→</span>
+                {/* Check if categories is array before mapping */}
+                {Array.isArray(categories) && categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <li
+                      key={cat._id}
+                      onClick={() => setActiveCategory(cat._id)}
+                      className={`flex justify-between items-center py-2 border-b cursor-pointer hover:text-green-600 transition ${
+                        activeCategory === cat._id
+                          ? "text-green-600 font-bold"
+                          : ""
+                      }`}
+                    >
+                      {cat.name} <span>→</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-gray-500 text-sm py-2">
+                    Đang tải danh mục...
                   </li>
-                ))}
+                )}
               </ul>
             </div>
           </div>
@@ -239,7 +241,6 @@ const AllProducts = () => {
               </select>
             </div>
 
-            {/* Loading state */}
             {loading ? (
               <div className="flex justify-center items-center py-12">
                 <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
@@ -261,7 +262,6 @@ const AllProducts = () => {
               </div>
             )}
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex justify-center mt-6 space-x-2">
                 {Array.from({ length: totalPages }, (_, i) => (

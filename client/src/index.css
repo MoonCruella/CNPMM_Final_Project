@@ -439,3 +439,77 @@ body {
   pointer-events: none;
   height: 0;
 }
+[data-sonner-toast] {
+  background: white !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-sonner-toast] [data-title] {
+  color: #111827 !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+}
+
+[data-sonner-toast] [data-description] {
+  color: #4b5563 !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+}
+
+/* Warning toast */
+[data-sonner-toast][data-type="warning"] {
+  border-left: 4px solid #f59e0b !important;
+}
+
+[data-sonner-toast][data-type="warning"] [data-icon] {
+  color: #f59e0b !important;
+}
+
+/* Success toast */
+[data-sonner-toast][data-type="success"] {
+  border-left: 4px solid #10b981 !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-icon] {
+  color: #10b981 !important;
+}
+
+/* Error toast */
+[data-sonner-toast][data-type="error"] {
+  border-left: 4px solid #ef4444 !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: #ef4444 !important;
+}
+
+/* Info toast */
+[data-sonner-toast][data-type="info"] {
+  border-left: 4px solid #3b82f6 !important;
+}
+
+[data-sonner-toast][data-type="info"] [data-icon] {
+  color: #3b82f6 !important;
+}
+
+/* Close button */
+[data-sonner-toast] [data-close-button] {
+  color: #6b7280 !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  color: #111827 !important;
+  background: #f3f4f6 !important;
+}
+
+/* Action button */
+[data-sonner-toast] [data-button] {
+  color: #3b82f6 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+
+[data-sonner-toast] [data-button]:hover {
+  text-decoration: underline !important;
+}

@@ -85,6 +85,7 @@ const orderSchema = new mongoose.Schema(
     delivered_at: Date,
     cancelled_at: Date,
     payment_date: Date,
+    cancel_requested_at: Date,
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },

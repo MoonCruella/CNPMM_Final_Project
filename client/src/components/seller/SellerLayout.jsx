@@ -11,6 +11,7 @@ import {
   IconArticle,
   IconMessageReply,
   IconPackage,
+  IconCategory, // Add this icon
 } from "@tabler/icons-react";
 import { assets } from "../../assets/assets";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -24,14 +25,20 @@ const SellerLayout = () => {
   const { logoutAll } = useAppContext();
   const location = useLocation();
   const activePath = location.pathname;
-  const navigate = useNavigate(); // Sử dụng hook useNavigate
-  const dispatch = useDispatch(); // Sử dụng dispatch để gọi action
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  
   const data = [
     { link: "/seller", label: "Dashboard", icon: IconReceipt2 },
     {
       link: "/seller/notifications",
       label: "Thông báo",
       icon: IconBellRinging,
+    },
+    {
+      link: "/seller/categories",
+      label: "Quản lý danh mục",
+      icon: IconCategory,
     },
     {
       link: "/seller/products",
@@ -59,7 +66,7 @@ const SellerLayout = () => {
       label: "Quản lý Blog",
       icon: IconArticle,
       link: "/seller/blog",
-      active: activePath === "/seller/blog", // Thay pathname bằng activePath
+      active: activePath === "/seller/blog",
     },
     {
       link: "/seller/my-account",
@@ -68,19 +75,12 @@ const SellerLayout = () => {
     },
   ];
 
-  // Cập nhật logout handler để chuyển hướng về trang đăng nhập với mode=seller
   const handleLogout = async () => {
     try {
       const loadingToast = toast.loading("Đang đăng xuất...");
-
-      // Logout thông qua AppContext
       await logoutAll();
-
-      // Đồng thời dispatch logout action trong Redux
       dispatch(logout());
-
       toast.dismiss(loadingToast);
-      // Chuyển hướng đến trang login với mode=seller
       navigate("/login?mode=seller");
     } catch (error) {
       toast.error("Có lỗi xảy ra khi đăng xuất");
@@ -89,10 +89,8 @@ const SellerLayout = () => {
 
   return (
     <div className="flex h-screen font-medium">
-      {/* Sidebar */}
       <nav className="h-full w-[280px] p-6 flex flex-col bg-gray-900">
         <div className="flex-1 overflow-y-auto">
-          {/* Header */}
           <div className="flex items-center justify-between pb-6 mb-9 border-b border-gray-800">
             <div className="flex items-center gap-2">
               <img
@@ -107,7 +105,6 @@ const SellerLayout = () => {
             </span>
           </div>
 
-          {/* Links */}
           <div className="space-y-1">
             {data.map((item) => {
               const isActive = activePath === item.link;
@@ -135,7 +132,6 @@ const SellerLayout = () => {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="mt-6 border-t border-gray-800">
           <button
             onClick={handleLogout}
@@ -147,10 +143,7 @@ const SellerLayout = () => {
         </div>
       </nav>
 
-      {/* Main Content Area */}
       <main className="flex-1 flex flex-col bg-white overflow-hidden">
-
-        {/* Content Area - scrollable */}
         <div className="flex-1 overflow-y-auto bg-gray-50">
           <Outlet />
         </div>

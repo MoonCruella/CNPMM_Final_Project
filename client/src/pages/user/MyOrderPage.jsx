@@ -354,15 +354,13 @@ const MyOrdersPage = () => {
     setIsSearching(false);
   };
 
-  const handleCancelOrder = async (orderId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
-      return;
-    }
-
+  const handleCancelOrder = async (orderId, reason = "Người dùng hủy đơn") => {
     try {
-      const response = await orderService.cancelOrder(orderId);
+      const response = await orderService.cancelOrder(orderId, reason);
+      
       if (response.success) {
         toast.success("Hủy đơn hàng thành công");
+        
         if (isSearching && searchTerm.trim()) {
           handleSearch();
         } else {
@@ -373,7 +371,29 @@ const MyOrdersPage = () => {
       }
     } catch (error) {
       console.error("Cancel order error:", error);
-      toast.error("Có lỗi xảy ra khi hủy đơn hàng");
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra");
+    }
+  };
+
+  // Handle cancel request - for processing
+  const handleCancelRequest = async (orderId, reason) => {
+    try {
+      const response = await orderService.cancelOrder(orderId, reason);
+      
+      if (response.success) {
+        toast.success(response.message || "Đã gửi yêu cầu hủy đơn hàng");
+        
+        if (isSearching && searchTerm.trim()) {
+          handleSearch();
+        } else {
+          resetAndLoadOrders();
+        }
+      } else {
+        toast.error(response.message || "Không thể gửi yêu cầu hủy");
+      }
+    } catch (error) {
+      console.error("Cancel request error:", error);
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra");
     }
   };
 
@@ -574,6 +594,7 @@ const MyOrdersPage = () => {
                     orderId={order._id}
                     order={order}
                     onCancelOrder={handleCancelOrder}
+                    onCancelRequest={handleCancelRequest} 
                     onReorder={handleReorder}
                     onUpdateShippingStatus={handleUpdateShippingStatus}
                     user={user}

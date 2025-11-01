@@ -2,17 +2,23 @@ import express from "express";
 import {
   getCategories,
   createCategory,
-  getCategoryById
+  getCategoryById,
+  updateCategory,
+  deleteCategory,
+  getAllCategoriesSimple,
 } from "../controllers/category.controller.js";
+import { authenticateToken, requireAdmin } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// Lấy danh sách categories
-router.get("/", getCategories);
-
-// (Tùy chọn) Thêm category mới
-router.post("/", createCategory);
-
+// Public routes
+router.get("/", getCategories); // With pagination & search
+router.get("/all", getAllCategoriesSimple); // Simple list for dropdown
 router.get("/:id", getCategoryById);
+
+// Protected routes (seller only)
+router.post("/", authenticateToken, requireAdmin, createCategory);
+router.put("/:id", authenticateToken, requireAdmin, updateCategory);
+router.delete("/:id", authenticateToken, requireAdmin, deleteCategory);
 
 export default router;

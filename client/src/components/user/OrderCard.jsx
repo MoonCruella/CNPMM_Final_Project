@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import OrderDetailModal from "./modal/OrderDetailModal";
+import CancelOrderModal from "../user/modal/CancelOrderModal";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
 const OrderCard = ({
   orderId,
   order,
   onCancelOrder,
   onReorder,
   onUpdateShippingStatus,
+  onCancelRequest, 
   user,
   autoOpen = false,
   onModalClose
@@ -15,9 +19,10 @@ const OrderCard = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newStatus, setNewStatus] = useState(order.status);
   const [showDetails, setShowDetails] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const navigate = useNavigate();
-  useEffect(() => {
 
+  useEffect(() => {
     if (autoOpen) {
       const timer = setTimeout(() => {
         setIsModalOpen(true);
@@ -25,8 +30,7 @@ const OrderCard = ({
 
       return () => clearTimeout(timer);
     }
-  }, [autoOpen, order._id]); // 
-
+  }, [autoOpen, order._id]);
 
   const formatDate = useCallback((dateString) => {
     return new Date(dateString).toLocaleDateString("vi-VN", {
@@ -53,7 +57,6 @@ const OrderCard = ({
   }, []);
 
   const handleOpenModal = useCallback(() => {
-
     navigate(`/user/orders/${order._id}`);
   }, [order._id, navigate]);
 
@@ -65,10 +68,28 @@ const OrderCard = ({
   }, [onModalClose]);
 
   const handleCancelOrder = useCallback(() => {
+    if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
+      return;
+    }
+    
     if (onCancelOrder) {
-      onCancelOrder(order._id);
+      onCancelOrder(order._id, "Người dùng hủy đơn");
     }
   }, [order._id, onCancelOrder]);
+
+  const handleOpenCancelModal = useCallback(() => {
+    setShowCancelModal(true);
+  }, []);
+
+  const handleCloseCancelModal = useCallback(() => {
+    setShowCancelModal(false);
+  }, []);
+
+  const handleSubmitCancelRequest = useCallback(async (orderId, reason) => {
+    if (onCancelRequest) {
+      await onCancelRequest(orderId, reason);
+    }
+  }, [onCancelRequest]);
 
   const handleReorder = useCallback(() => {
     if (onReorder) {
@@ -76,9 +97,8 @@ const OrderCard = ({
     }
   }, [order._id, onReorder]);
 
-  // Validate props
   if (!orderId || !order._id) {
-    console.error('❌ OrderCard: Missing required props', { orderId, order });
+    console.error('OrderCard: Missing required props', { orderId, order });
     return null;
   }
 
@@ -86,10 +106,10 @@ const OrderCard = ({
     <>
       <div
         id={`order-${orderId}`}
-        className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-300 ${autoOpen ? 'ring-4 ring-blue-500 ring-offset-2' : 'hover:shadow-md'
-          }`}
+        className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-300 ${
+          autoOpen ? 'ring-4 ring-blue-500 ring-offset-2' : 'hover:shadow-md'
+        }`}
       >
-        {/* Card Header */}
         <div className="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b border-green-200">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-4">
@@ -108,7 +128,6 @@ const OrderCard = ({
           </div>
         </div>
 
-        {/* Products List */}
         <div className="p-6">
           <div className="space-y-4">
             {order.items?.map((item, index) => {
@@ -147,7 +166,6 @@ const OrderCard = ({
             })}
           </div>
 
-          {/* Footer */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="text-sm text-gray-600">
@@ -176,6 +194,15 @@ const OrderCard = ({
                   </button>
                 )}
 
+                {user?.role === "user" && order.status === "processing" && (
+                  <button
+                    onClick={handleOpenCancelModal}
+                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition cursor-pointer"
+                  >
+                    🔄 Gửi yêu cầu hủy đơn
+                  </button>
+                )}
+
                 {user?.role === "user" && ["delivered", "cancelled"].includes(order.status) && (
                   <button
                     onClick={handleReorder}
@@ -190,7 +217,15 @@ const OrderCard = ({
         </div>
       </div>
 
+      <CancelOrderModal
+        isOpen={showCancelModal}
+        onClose={handleCloseCancelModal}
+        onSubmit={handleSubmitCancelRequest}
+        orderNumber={order.order_number || order._id?.slice(-8)}
+        orderId={order._id}
+      />
     </>
   );
 };
+
 export default OrderCard;
