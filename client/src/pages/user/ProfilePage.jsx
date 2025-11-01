@@ -5,22 +5,22 @@ import { useAddressContext } from "@/context/AddressContext";
 import AddressModal from "@/components/user/modal/AddressModal.jsx";
 import AddressItem from "@/components/user/item/AddressItem.jsx";
 import { assets } from "@/assets/assets";
+import userService from "../../services/user.service";
+import { emitUserUpdated } from "../../utils/events";
 const ProfilePage = () => {
   const {
-    user,
-    isLoading,
     isUpdating,
     isUploadingAvatar,
     updateUserProfile,
     uploadAvatar,
     updateUserWithAvatar,
     getUserDisplayName,
-    getUserAvatarUrl,
+    getUserAvatarUrl, // 
     isActiveUser,
     isAdmin,
-    formatAddress,
     createAddressObject,
   } = useUserContext();
+  
   const {
     addresses,
     loadAddresses,
@@ -35,15 +35,15 @@ const ProfilePage = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [editAddress, setEditAddress] = useState(null);
-
   const [isEditing, setIsEditing] = useState(false);
-
-  // ✅ Avatar upload states
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  // Avatar upload states
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const avatarInputRef = useRef(null);
 
-  // ✅ Form data state
+  // Form data state
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -54,15 +54,98 @@ const ProfilePage = () => {
       street: "",
       ward: "",
       district: "",
-      province: "", // ✅ Sử dụng province
+      province: "",
       full_address: "",
     },
   });
 
-  // load danh sách địa chỉ khi mở trang
   useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await userService.getCurrentUser();
+        if (response.success && response.user) {
+          // Normalize user data từ BE response
+          const userData = {
+            _id: response.user.userId, 
+            email: response.user.email,
+            name: response.user.name,
+            role: response.user.role,
+            coin: response.user.coin,
+            active: response.user.active,
+            phone: response.user.phone,
+            gender: response.user.gender,
+            date_of_birth: response.user.date_of_birth,
+            avatar: response.user.avatar,
+            address: response.user.address,
+          };
+
+          setUser(userData);
+        } else {
+          toast.error("Không thể tải thông tin người dùng");
+        }
+      } catch (error) {
+        console.error(" Fetch user error:", error);
+        toast.error("Lỗi tải thông tin người dùng");
+      } finally {
+         setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
     loadAddresses();
   }, []);
+
+  // Load user data into form
+  useEffect(() => {
+    if (user) {
+      let formattedDate = "";
+      if (user.date_of_birth) {
+        try {
+          const date = new Date(user.date_of_birth);
+          if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            formattedDate = `${year}-${month}-${day}`;
+          }
+        } catch (error) {
+          console.error('Error parsing date:', error);
+        }
+      }
+      setFormData({
+        name: user.name || "",
+        username: user.username || "",
+        phone: user.phone || "",
+        date_of_birth: formattedDate,
+        gender: user.gender || "",
+        address: {
+          street: user.address?.street || "",
+          ward: user.address?.ward || "",
+          district: user.address?.district || "",
+          province: user.address?.province || "",
+          full_address: user.address?.full_address || "",
+        },
+      });
+    }
+  }, [user]);
+
+   const formatDateForDisplay = (dateString) => {
+    if (!dateString) return "Chưa cập nhật";
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Chưa cập nhật";
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return "Chưa cập nhật";
+    }
+  };
 
   // Lưu địa chỉ (thêm hoặc sửa)
   const handleSaveAddress = async (data) => {
@@ -75,29 +158,7 @@ const ProfilePage = () => {
     setEditAddress(null);
   };
 
-  // Load user data into form
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name || "",
-        username: user.username || "",
-        phone: user.phone || "",
-        date_of_birth: user.date_of_birth
-          ? user.date_of_birth.split("T")[0]
-          : "",
-        gender: user.gender || "",
-        address: {
-          street: user.address?.street || "",
-          ward: user.address?.ward || "",
-          district: user.address?.district || "",
-          province: user.address?.province || "", // ✅ province
-          full_address: user.address?.full_address || "",
-        },
-      });
-    }
-  }, [user]);
-
-  // ✅ Handle input changes
+  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
@@ -118,12 +179,11 @@ const ProfilePage = () => {
     }
   };
 
-  // ✅ Handle avatar file selection
+  // Handle avatar file selection
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
 
     if (file) {
-      // Validate file
       const allowedTypes = [
         "image/jpeg",
         "image/jpg",
@@ -144,14 +204,13 @@ const ProfilePage = () => {
 
       setAvatarFile(file);
 
-      // Create preview
       const reader = new FileReader();
       reader.onload = (e) => setAvatarPreview(e.target.result);
       reader.readAsDataURL(file);
     }
   };
 
-  // ✅ Handle avatar upload only
+  // Handle avatar upload only
   const handleAvatarUpload = async () => {
     if (!avatarFile) {
       toast.error("Vui lòng chọn ảnh trước");
@@ -160,19 +219,35 @@ const ProfilePage = () => {
 
     try {
       await uploadAvatar(avatarFile);
-
-      // Reset avatar states
+      const response = await userService.getCurrentUser();
+    if (response.success && response.user) {
+      const userData = {
+        _id: response.user.userId,
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role,
+        coin: response.user.coin,
+        active: response.user.active,
+        phone: response.user.phone,
+        gender: response.user.gender,
+        date_of_birth: response.user.date_of_birth,
+        avatar: response.user.avatar, 
+        address: response.user.address,
+      };
+      setUser(userData);
+      emitUserUpdated();
+    }
       setAvatarFile(null);
       setAvatarPreview(null);
       if (avatarInputRef.current) {
         avatarInputRef.current.value = "";
       }
     } catch (error) {
-      // Error handled in context
+      console.error("Upload avatar error:", error);
     }
   };
 
-  // ✅ Cancel avatar selection
+  // Cancel avatar selection
   const handleCancelAvatar = () => {
     setAvatarFile(null);
     setAvatarPreview(null);
@@ -181,7 +256,7 @@ const ProfilePage = () => {
     }
   };
 
-  // ✅ Handle save profile
+  // Handle save profile
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast.error("Tên không được để trống");
@@ -194,66 +269,118 @@ const ProfilePage = () => {
     }
 
     try {
+      // Format date_of_birth thành ISO Date string cho server
+      let dateOfBirth = null;
+      if (formData.date_of_birth) {
+        const date = new Date(formData.date_of_birth);
+        
+        if (!isNaN(date.getTime())) {
+          date.setUTCHours(0, 0, 0, 0);
+          dateOfBirth = date.toISOString();
+        }
+      }
+
       const updateData = {
         name: formData.name.trim(),
         username: formData.username.trim() || null,
         phone: formData.phone.trim() || null,
-        date_of_birth: formData.date_of_birth || null,
+        date_of_birth: dateOfBirth, 
         gender: formData.gender || null,
         address: createAddressObject(formData.address),
       };
 
+
       if (avatarFile) {
-        // Update profile with avatar
         await updateUserWithAvatar(updateData, avatarFile);
 
-        // Reset avatar states
         setAvatarFile(null);
         setAvatarPreview(null);
         if (avatarInputRef.current) {
           avatarInputRef.current.value = "";
         }
       } else {
-        // Update profile only
         await updateUserProfile(updateData);
       }
+      const response = await userService.getCurrentUser();
+    if (response.success && response.user) {
+      const userData = {
+        _id: response.user.userId,
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role,
+        coin: response.user.coin,
+        active: response.user.active,
+        phone: response.user.phone,
+        gender: response.user.gender,
+        date_of_birth: response.user.date_of_birth,
+        avatar: response.user.avatar,
+        address: response.user.address,
+      };
+      setUser(userData);
+      emitUserUpdated()
+    }
 
       setIsEditing(false);
     } catch (error) {
-      // Error handled in context
+      console.error("Update profile error:", error);
     }
   };
 
-  // ✅ Toggle edit mode
+  // Toggle edit mode
   const toggleEdit = () => {
     setIsEditing(!isEditing);
     if (isEditing) {
-      // Reset form when canceling
-      setFormData({
-        name: user.name || "",
-        username: user.username || "",
-        phone: user.phone || "",
-        date_of_birth: user.date_of_birth
-          ? user.date_of_birth.split("T")[0]
-          : "",
-        gender: user.gender || "",
-        address: {
-          street: user.address?.street || "",
-          ward: user.address?.ward || "",
-          district: user.address?.district || "",
-          province: user.address?.province || "",
-          full_address: user.address?.full_address || "",
-        },
-      });
+      if (user) {
+        setFormData({
+          name: user.name || "",
+          username: user.username || "",
+          phone: user.phone || "",
+          date_of_birth: user.date_of_birth
+            ? user.date_of_birth.split("T")[0]
+            : "",
+          gender: user.gender || "",
+          address: {
+            street: user.address?.street || "",
+            ward: user.address?.ward || "",
+            district: user.address?.district || "",
+            province: user.address?.province || "",
+            full_address: user.address?.full_address || "",
+          },
+        });
+      }
       handleCancelAvatar();
     }
   };
-
-  // ✅ Get current avatar URL
-  const getAvatarUrl = () => {
-    if (avatarPreview) return avatarPreview;
-    return getUserAvatarUrl(200);
+  const getGenderDisplay = (gender) => {
+    const genderMap = {
+      'male': 'Nam',
+      'female': 'Nữ',
+      'other': 'Khác'
+    };
+    return genderMap[gender] || '';
   };
+
+  // Get avatar URL - Sử dụng getUserAvatarUrl từ UserContext
+  const getAvatarUrl = (size = 200) => {
+  // Nếu đang có preview (user đang chọn ảnh mới)
+  if (avatarPreview) {
+    return avatarPreview;
+  }
+
+  if (user?.avatar) {
+    // Optimize Cloudinary URL với transformation
+    if (user.avatar.includes('cloudinary.com')) {
+      const parts = user.avatar.split('/upload/');
+      if (parts.length === 2) {
+        // Thêm transformation parameters
+        return `${parts[0]}/upload/w_${size},h_${size},c_fill,q_auto,f_auto/${parts[1]}`;
+      }
+    }
+    return user.avatar;
+  }
+  const name = user?.name || user?.email || "User";
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&size=${size}`;
+};
 
   if (isLoading) {
     return (
@@ -277,20 +404,21 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 px-4 sm:py-8">
+    <div className="w-full">
       <div className="max-w-4xl mx-auto">
         {/* Header with Avatar */}
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            {/* ✅ Avatar Section */}
+            {/* Avatar Section */}
             <div className="relative group">
               <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-green-500 relative">
                 <img
-                  src={getAvatarUrl()}
+                  src={getAvatarUrl(200)}
                   alt="Avatar"
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    e.target.src = getUserAvatarUrl(200);
+                    console.error('Avatar load error');
+                    e.target.src = getUserAvatarUrl ? getUserAvatarUrl(200) : getAvatarUrl(200);
                   }}
                 />
 
@@ -331,17 +459,10 @@ const ProfilePage = () => {
               <p className="text-gray-600 text-sm sm:text-base">{user.email}</p>
               <div className="flex items-center space-x-2 my-3">
                 <img src={assets.coin_icon} className="h-6 w-6" />
-                <p className=" text-sm sm:text-base text-black">
+                <p className="text-sm sm:text-base text-black">
                   Xu tích lũy: {user.coin}
                 </p>
               </div>
-
-              {/* Address Display */}
-              {/* {formatAddress() && (
-                <p className="text-gray-500 text-sm mt-1">
-                  📍 {formatAddress()}
-                </p>
-              )} */}
 
               {/* Badges */}
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-2">
@@ -369,7 +490,7 @@ const ProfilePage = () => {
 
             {/* Action Buttons */}
             <div className="flex gap-2">
-              {/* ✅ Avatar Action Buttons */}
+              {/* Avatar Action Buttons */}
               {avatarFile && (
                 <div className="flex gap-2 mr-2">
                   <button
@@ -424,7 +545,7 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* ✅ Avatar Preview Message */}
+          {/* Avatar Preview Message */}
           {avatarPreview && (
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-blue-700 text-sm">
@@ -435,7 +556,7 @@ const ProfilePage = () => {
           )}
         </div>
 
-        {/* ✅ Profile Form */}
+        {/* Profile Form */}
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">
             Thông tin cá nhân
@@ -458,21 +579,6 @@ const ProfilePage = () => {
               />
             </div>
 
-            {/* Username */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tên đăng nhập
-              </label>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
-                placeholder="Nhập tên đăng nhập"
-              />
-            </div>
 
             {/* Email (readonly) */}
             <div>
@@ -508,38 +614,58 @@ const ProfilePage = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Ngày sinh
               </label>
-              <input
-                type="date"
-                name="date_of_birth"
-                value={formData.date_of_birth}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
-              />
+              {isEditing ? (
+                <input
+                  type="date"
+                  name="date_of_birth"
+                  value={formData.date_of_birth}
+                  onChange={handleInputChange}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={formatDateForDisplay(user.date_of_birth)} 
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                />
+              )}
             </div>
 
             {/* Gender */}
-            <div>
+             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Giới tính
               </label>
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
-              >
-                <option value="">Chọn giới tính</option>
-                <option value="male">Nam</option>
-                <option value="female">Nữ</option>
-                <option value="other">Khác</option>
-              </select>
+              {isEditing ? (
+                // Khi đang edit: hiển thị select
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Chọn giới tính</option>
+                  <option value="male">Nam</option>
+                  <option value="female">Nữ</option>
+                  <option value="other">Khác</option>
+                </select>
+              ) : (
+                // Khi disabled: hiển thị text tiếng Việt
+                <input
+                  type="text"
+                  value={getGenderDisplay(formData.gender) || "Chưa cập nhật"}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                />
+              )}
             </div>
           </div>
         </div>
+
+        {/* Address Section */}
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6 mt-5">
-          {/* Shipping Address */}
           <h4 className="text-lg font-semibold mb-4">Địa chỉ nhận hàng</h4>
           <div className="space-y-3">
             {addresses.length === 0 && (
@@ -554,8 +680,8 @@ const ProfilePage = () => {
                 address={addr}
                 showRadio={false}
                 isDefault={addr.is_default}
-                selected={selectedAddress?._id === addr._id} // thêm ? để tránh lỗi null
-                onSelect={() => setSelectedAddress(addr)} // set toàn bộ object
+                selected={selectedAddress?._id === addr._id}
+                onSelect={() => setSelectedAddress(addr)}
                 onEdit={(a) => {
                   setEditAddress(a);
                   setShowModal(true);
@@ -564,7 +690,6 @@ const ProfilePage = () => {
               />
             ))}
 
-            {/* Nút mở modal thêm địa chỉ */}
             <button
               type="button"
               onClick={() => {

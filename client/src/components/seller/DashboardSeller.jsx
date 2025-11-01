@@ -4,6 +4,8 @@ import SummaryCards from "./SummaryCards";
 import PeriodSwitcher from "./PeriodSwitcher";
 import RevenueChart from "./RevenueChart";
 import BestSellerTable from "./BestSellerTable";
+import { assets } from "@/assets/assets";
+import { Link, useNavigate } from "react-router-dom";
 
 const toInputDate = (iso) => {
   if (!iso) return "";
@@ -142,6 +144,19 @@ const DashboardSeller = () => {
 
   return (
     <div className="space-y-6">
+      <section
+        className="bg-cover bg-center py-20 text-center text-white"
+        style={{ backgroundImage: `url(${assets.page_banner})` }}
+      >
+        <h1 className="text-5xl font-bold">Dashboard</h1>
+        <ul className="flex justify-center gap-2 mt-2 text-sm">
+          <li>
+            <Link to="/seller" className="hover:underline font-medium">
+              Dashboard
+            </Link>
+          </li>
+        </ul>
+      </section>
       <SummaryCards summary={summary} />
 
       <div className="bg-white p-4 mx-3 rounded-lg shadow-sm">

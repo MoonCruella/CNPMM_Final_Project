@@ -14,6 +14,8 @@ import {
   updateUserProfile,
 } from "../controllers/user.controller.js";
 const router = express.Router();
+
+router.get("/me", authenticateToken, getUserByEmail);
 router.get("/profile/me", authenticateToken, async (req, res) => {
   req.params.userId = req.user.userId;
   return getUserProfile(req, res);

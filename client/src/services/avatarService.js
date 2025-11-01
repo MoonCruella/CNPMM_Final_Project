@@ -35,26 +35,69 @@ class AvatarService {
     }
   }
 
-  // Get optimized avatar URL
-  getOptimizedAvatarUrl(publicId, size = 200) {
-    if (!publicId) return null;
+  // ✅ Get optimized avatar URL - XỬ LÝ CẢ URL VÀ PUBLIC_ID
+  getOptimizedAvatarUrl(avatarInput, size = 200) {
+  if (!avatarInput) return null;
+  
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dnddgulz8';
+  
+  
+  // ✅ CASE 1: Nếu là full Cloudinary URL
+  if (typeof avatarInput === 'string' && avatarInput.startsWith('http')) {
     
-    // ✅ FIX: Use environment variable with fallback
-    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dnddgulz8';
+    const urlParts = avatarInput.split('/upload/');
     
-    // ✅ Ensure publicId doesn't start with cloudinary domain
-    const cleanPublicId = publicId.replace(/^https?:\/\/.*?\/.*?\/.*?\//, '');
+    if (urlParts.length === 2) {
+      let publicIdPart = urlParts[1];
+      
+      // Remove version number if exists (v1234567/)
+      publicIdPart = publicIdPart.replace(/^v\d+\//, '');
+      
+      
+      // ✅ Thêm timestamp để bust cache
+      const timestamp = Date.now();
+      const optimizedUrl = `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_${size},h_${size},q_auto,f_auto/${publicIdPart}?v=${timestamp}`;
+      
+      return optimizedUrl;
+    }
     
-    const optimizedUrl = `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_${size},h_${size},q_auto,f_auto/${cleanPublicId}`;
-    
-    
-    return optimizedUrl;
+    // If can't parse, add cache buster to original
+    return `${avatarInput}?v=${Date.now()}`;
   }
+  
+  // ✅ CASE 2: Nếu là public_id thuần
+  const timestamp = Date.now();
+  const optimizedUrl = `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_${size},h_${size},q_auto,f_auto/${avatarInput}?v=${timestamp}`;
+  
+  return optimizedUrl;
+}
+
+  // ✅ Helper: Extract public_id from URL or return as-is
+  extractPublicId(avatarInput) {
+    if (!avatarInput) return null;
+
+    // If it's already a public_id (doesn't start with http)
+    if (!avatarInput.startsWith('http')) {
+      return avatarInput;
+    }
+
+    // Extract from full URL
+    const urlParts = avatarInput.split('/upload/');
+    if (urlParts.length === 2) {
+      let publicIdPart = urlParts[1];
+      // Remove version number if exists (v1234567/)
+      publicIdPart = publicIdPart.replace(/^v\d+\//, '');
+      return publicIdPart;
+    }
+
+    return avatarInput;
+  }
+
   // Helper: Create avatar URL from any format
   createAvatarUrl(avatarData, size = 200) {
     // If it's already a full URL
     if (typeof avatarData === 'string' && avatarData.startsWith('http')) {
-      return avatarData;
+      return this.getOptimizedAvatarUrl(avatarData, size);
     }
     
     // If it's a public_id
@@ -64,12 +107,15 @@ class AvatarService {
     
     // If it's an object with url property
     if (avatarData?.url) {
-      return avatarData.url;
+      return this.getOptimizedAvatarUrl(avatarData.url, size);
     }
     
     // If it's an object with publicId property
     if (avatarData?.publicId || avatarData?.public_id) {
-      return this.getOptimizedAvatarUrl(avatarData.publicId || avatarData.public_id, size);
+      return this.getOptimizedAvatarUrl(
+        avatarData.publicId || avatarData.public_id, 
+        size
+      );
     }
     
     return null;

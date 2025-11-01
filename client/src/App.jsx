@@ -22,43 +22,39 @@ import ProductDetails from "./pages/user/ProductDetails";
 import SellerLayout from "./components/seller/SellerLayout";
 import ProductList from "./components/seller/ProductList";
 import Orders from "./components/seller/Orders";
-import Notifications from "./components/seller/SellerNotificationBell";
+import Notifications from "./components/seller/Notifications";
 import MyAccount from "./components/seller/MyAccount";
 import DashboardSeller from "./components/seller/DashboardSeller";
 import { useAppContext } from "./context/AppContext";
 import VoucherCard from "./components/user/item/VoucherCard";
 import Vouchers from "./components/seller/Vouchers";
-import TokenTester from "./components/TokenTester";
-import Chatbot from "./components/user/Chatbot";
-import SupportChat from "./components/user/SupportChat";
-import SupportChatSeller from "./components/seller/SupportChatSeller";
-import { useSelector } from "react-redux";
+import TokenTester from './components/TokenTester';
+import Chatbot from './components/user/Chatbot'; 
+import SupportChat from './components/user/SupportChat';
+import SupportChatSeller from './components/seller/SupportChatSeller';
+import { useSelector } from 'react-redux'; 
 import UserList from "./components/seller/UserList";
 import Ratings from "./components/seller/Ratings";
-
-import BlogPage from "./pages/user/BlogPage";
-import BlogPostPage from "./pages/user/BlogPostPage";
-import SellerBlogPage from "./pages/seller/SellerBlogPage";
+import BlogPage from './pages/user/BlogPage';
+import BlogPostPage from './pages/user/BlogPostPage';
+import SellerBlogPage from './pages/seller/SellerBlogPage';
+import OrderDetail from "./components/seller/OrderDetail";
+import GoogleAuthCallback from './pages/user/GoogleAuthCallback';
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
   const { showUserLogin } = useAppContext();
+  
+  const { isAuthenticated, isSeller } = useSelector(state => state.auth);
 
-  // Sử dụng Redux selector để lấy trạng thái đăng nhập và role
-  const { isAuthenticated, isSeller } = useSelector((state) => state.auth);
-
-  // SellerRoute component xử lý việc chuyển hướng cho seller routes
   const SellerRoute = ({ children }) => {
     if (!isAuthenticated) {
-      // Nếu chưa đăng nhập, chuyển hướng đến trang login với mode=seller
       return <Navigate to="/login?mode=seller" replace />;
     }
-
+    
     if (!isSeller) {
-      // Nếu đã đăng nhập nhưng không phải seller, chuyển hướng đến trang login với mode=seller
       return <Navigate to="/login?mode=seller" replace />;
     }
-
-    // Nếu đã đăng nhập và là seller, hiển thị nội dung seller
+    
     return children;
   };
 
@@ -71,37 +67,47 @@ const App = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        
+        <Route path="/user" element={<Dashboard />}>
+          <Route index element={<Dashboard />} />
+          <Route path="notifications" element={<Dashboard />} />
+          <Route path="account" element={<Dashboard />} />
+          <Route path="account/profile" element={<Dashboard />} />
+          <Route path="wishlist" element={<Dashboard />} />
+          <Route path="recent" element={<Dashboard />} />
+          <Route path="orders" element={<Dashboard />} />
+          <Route path="orders/:orderId" element={<Dashboard />} /> 
+        </Route>
+        
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/verify-otp" element={<VerifyOTPPage />} />
         <Route path="/reset-password" element={<NewPasswordPage />} />
         <Route path="/upload-to-cloudinary" element={<UploadImages />} />
-
-        <Route path="/token-tester" element={<TokenTester />} />
-
+        
+        <Route path="/token-tester" element={<TokenTester />} />        
         <Route path="/cart" element={<CartPage />} />
         <Route path="/products" element={<AllProducts />} />
-        <Route path="/my-orders" element={<MyOrdersPage />} />
+
+        
         <Route path="/my-profile" element={<ProfilePage />} />
         <Route path="/voucher-list" element={<VoucherCard />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/products/:id" element={<ProductDetails />} />
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
-        {/* Thay thế route /seller để sử dụng SellerRoute */}
-        <Route
-          path="/seller"
-          element={
-            <SellerRoute>
-              <SellerLayout />
-            </SellerRoute>
-          }
-        >
+        <Route path="/auth/google/success" element={<GoogleAuthCallback />} />
+        {/* Seller routes */}
+        <Route path="/seller" element={
+          <SellerRoute>
+            <SellerLayout />
+          </SellerRoute>
+        }>
           <Route path="/seller/blog" element={<SellerBlogPage />} />
           <Route index element={<DashboardSeller />} />
           <Route path="products" element={<ProductList />} />
           <Route path="orders" element={<Orders />} />
+          <Route path= "/seller/orders/:orderId" element= {<OrderDetail/>} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="my-account" element={<MyAccount />} />
           <Route path="vouchers" element={<Vouchers />} />
@@ -110,10 +116,12 @@ const App = () => {
           <Route path="ratings" element={<Ratings />} />
         </Route>
       </Routes>
+      
       {!isSellerPath && <Footer />}
       {!isSellerPath && <SupportChat />}
       {!isSellerPath && <Chatbot />}
     </div>
   );
 };
+
 export default App;

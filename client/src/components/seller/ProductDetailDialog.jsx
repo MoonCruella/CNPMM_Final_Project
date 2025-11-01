@@ -1,6 +1,25 @@
 import React from "react";
 
 const ProductDetailDialog = ({ open, onClose, product }) => {
+  const districtMap = {
+    phu_yen_city: "TP Tuy Hòa",
+    dong_hoa: "TX Đông Hòa",
+    tuy_an: "Huyện Tuy An",
+    son_hoa: "Huyện Sơn Hòa",
+    song_hinh: "Huyện Sông Hinh",
+    tay_hoa: "Huyện Tây Hòa",
+    phu_hoa: "Huyện Phú Hòa",
+    dong_xuan: "Huyện Đồng Xuân",
+    song_cau: "TX Sông Cầu",
+  };
+
+  const terrainMap = {
+    bien: "Biển",
+    nui: "Núi",
+    dong_bang: "Đồng bằng",
+    ven_bien: "Ven biển",
+  };
+
   if (!open || !product) return null;
 
   return (
@@ -42,7 +61,9 @@ const ProductDetailDialog = ({ open, onClose, product }) => {
             {product.sale_price !== undefined && (
               <p>
                 <strong>Giá khuyến mãi:</strong>{" "}
-                {product.sale_price === 0 ? "0 VNĐ" : `${product.sale_price} VNĐ`}
+                {product.sale_price === 0
+                  ? "0 VNĐ"
+                  : `${product.sale_price} VNĐ`}
               </p>
             )}
 
@@ -61,14 +82,15 @@ const ProductDetailDialog = ({ open, onClose, product }) => {
 
             {product.category_id && (
               <p>
-                <strong>Danh mục:</strong> {product.category_id.name}
+                <strong>Danh mục:</strong> {product.categoryName}
               </p>
             )}
 
-            {product.hometown_origin?.district && (
-              <p>
-                <strong>Xuất xứ:</strong> {product.hometown_origin.district},{" "}
-                {product.hometown_origin.terrain}
+            {product.hometown_origin && (
+              <p className="mt-2">
+                <strong>Xuất xứ:</strong>{" "}
+                {districtMap[product.hometown_origin.district] || "Không rõ"} -{" "}
+                {terrainMap[product.hometown_origin.terrain] || "Không rõ"}
               </p>
             )}
 

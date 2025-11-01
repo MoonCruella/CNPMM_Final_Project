@@ -76,6 +76,8 @@ const ProductDetails = () => {
       toast.error("Thêm vào giỏ hàng thất bại!");
     }
   };
+  
+  
   const toggleFavorite = async () => {
     if (!user) {
       toast.info("Vui lòng đăng nhập để thêm vào danh sách yêu thích!");

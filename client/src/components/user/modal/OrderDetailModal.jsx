@@ -18,11 +18,10 @@ const OrderDetailModal = ({
   onCancelOrder,
   onReorder,
 }) => {
-  // ✅ Memoize computed values
+  //  Memoize computed values
   const computedValues = useMemo(() => {
     if (!order) return {};
 
-    console.log("Order in OrderDetailModal:", order);
     const formatDate = (dateString) => {
       if (!dateString) return null;
       return new Date(dateString).toLocaleDateString("vi-VN", {
@@ -160,7 +159,7 @@ const OrderDetailModal = ({
     canReorder,
   } = computedValues;
 
-  // ✅ Memoize handlers
+  // Memoize handlers
   const handleBackdropClick = useCallback(
     (e) => {
       if (e.target === e.currentTarget) {
@@ -186,21 +185,22 @@ const OrderDetailModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0  bg-opacity-5 flex items-center justify-center z-50 p-4"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      {/*  Thêm shadow và border để modal nổi bật hơn */}
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-gray-300">
         {/* Header */}
         <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-6 relative">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition"
+            className="absolute top-4 right-4 p-2 hover:bg-green-600 hover:bg-opacity-20 rounded-full transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+            <div className="w-12 h-12 bg-opacity-20 rounded-full flex items-center justify-center">
               <Package className="w-6 h-6" />
             </div>
             <div>
@@ -340,12 +340,13 @@ const OrderDetailModal = ({
               {order.items?.map((item, index) => (
                 <div
                   key={item._id || index}
-                  className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl"
+                  className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:shadow-md transition"
                 >
                   <img
                     src={getPrimaryImage(item)}
                     alt={item.product_id?.name}
                     className="w-16 h-16 object-cover rounded-lg"
+                    loading="lazy"
                     onError={(e) => {
                       e.target.src = "/placeholder-product.jpg";
                     }}
@@ -386,15 +387,14 @@ const OrderDetailModal = ({
           </div>
 
           {/* Order Summary */}
-          <div className="bg-gray-50 rounded-xl p-6 mb-6">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 mb-6 border border-gray-200">
             <h3 className="font-semibold text-gray-800 mb-4">
               Tóm tắt đơn hàng
             </h3>
-            <div className="space-y-2 ">
+            <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Tổng tiền hàng</span>
                 <span>
-                  {" "}
                   {formatCurrency(
                     order.items?.reduce(
                       (acc, item) =>
@@ -407,13 +407,11 @@ const OrderDetailModal = ({
                 </span>
               </div>
 
-              {/* show actual shipping fee after freeship */}
               <div className="flex justify-between">
                 <span>Phí vận chuyển</span>
                 <span>{formatCurrency(order.shipping_fee || 0)}</span>
               </div>
 
-              {/* show freeship discount only when applicable */}
               {order.freeship_value > 0 && (
                 <div className="flex justify-between">
                   <span>Giảm giá phí vận chuyển</span>
@@ -431,10 +429,12 @@ const OrderDetailModal = ({
                   </span>
                 </div>
               )}
-              <hr className="my-2" />
+              <hr className="my-2 border-gray-300" />
               <div className="flex justify-between text-lg font-semibold">
                 <span>Tổng thanh toán</span>
-                <span>{formatCurrency(order.total_amount)}</span>
+                <span className="text-green-600">
+                  {formatCurrency(order.total_amount)}
+                </span>
               </div>
             </div>
           </div>
@@ -457,7 +457,7 @@ const OrderDetailModal = ({
             {canCancel && (
               <button
                 onClick={handleCancelOrder}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2"
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer"
               >
                 <XCircle className="w-4 h-4" />
                 Hủy đơn hàng
@@ -467,7 +467,7 @@ const OrderDetailModal = ({
             {canReorder && (
               <button
                 onClick={handleReorder}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2"
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer"
               >
                 <Package className="w-4 h-4" />
                 Đặt lại
@@ -476,7 +476,7 @@ const OrderDetailModal = ({
 
             <button
               onClick={onClose}
-              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition shadow-md hover:shadow-lg cursor-pointer"
             >
               Đóng
             </button>

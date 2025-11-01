@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { IconEye, IconEyeOff, IconTrash, IconMessageCircle } from "@tabler/icons-react";
 import { toast } from "sonner";
 import ratingService from "../../services/rating.service.js";
+import { assets } from "@/assets/assets";
+import { Link, useNavigate } from "react-router-dom";
 
 const Ratings = () => {
   const [ratings, setRatings] = useState([]);
@@ -61,6 +63,20 @@ const Ratings = () => {
 
   return (
     <main className="bg-gray-50 min-h-screen">
+      <section
+        className="bg-cover bg-center py-20 text-center text-white"
+        style={{ backgroundImage: `url(${assets.page_banner})` }}
+      >
+        <h1 className="text-5xl font-bold">Quản lý đánh giá</h1>
+        <ul className="flex justify-center gap-2 mt-2 text-sm">
+          <li>
+            <Link to="/seller" className="hover:underline font-medium">
+              Dashboard
+            </Link>
+          </li>
+          <li className="font-medium">/ Quản lý đánh giá</li>
+        </ul>
+      </section>
       {/* Bộ lọc */}
       <section className="container mx-auto px-4 pt-8">
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-center justify-between">

@@ -149,19 +149,6 @@ const SellerLayout = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col bg-white overflow-hidden">
-        {/* Header Bar */}
-        <div className="bg-white shadow-sm p-4 flex justify-between items-center border-b">
-          <h1 className="text-xl font-semibold text-green-700">
-            {data.find(
-              (item) =>
-                item.link === activePath ||
-                activePath.startsWith(item.link + "/")
-            )?.label || "Dashboard"}
-          </h1>
-          <div className="flex items-center gap-4">
-            <SellerNotificationBell />
-          </div>
-        </div>
 
         {/* Content Area - scrollable */}
         <div className="flex-1 overflow-y-auto bg-gray-50">

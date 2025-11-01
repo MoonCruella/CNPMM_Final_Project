@@ -7,6 +7,8 @@ import { loginUser, loginSeller, clearError } from '../../redux/authSlice';
 import { useUserContext } from '../../context/UserContext.jsx';
 import { useSocket } from '../../context/SocketContext';
 import { useSupportChat } from '../../context/SupportChatContext';
+import googleAuthService from '../../services/googleAuthService'; // ✅ Add import
+
 const loginSchema = z.object({
   email: z
     .string()
@@ -27,6 +29,8 @@ const LoginPage = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isSellerLogin, setIsSellerLogin] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false); // ✅ Add state
+  
   const { syncWithRedux } = useUserContext();
   const navigate = useNavigate();
   const location = useLocation();
@@ -34,6 +38,7 @@ const LoginPage = () => {
   const { user, loading, error, isAuthenticated, isSeller } = useSelector((state) => state.auth);
   const { connect: reconnectSocket } = useSocket();
   const { startConversation } = useSupportChat();
+
   // Kiểm tra nếu có tham số mode=seller trong URL
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -88,38 +93,51 @@ const LoginPage = () => {
     try {
       loginSchema.parse({ email, password });
       
-      // Nếu chọn "Ghi nhớ đăng nhập"
       if (rememberMe) {
         localStorage.setItem('rememberedEmail', email);
       } else {
         localStorage.removeItem('rememberedEmail');
       }
       
+      let result;
       if (isSellerLogin) {
         localStorage.setItem("authType", "seller");
-        await dispatch(loginSeller({ email, password })).unwrap();
+        result = await dispatch(loginSeller({ email, password })).unwrap();
       } else {
         localStorage.setItem("authType", "user");
-        await dispatch(loginUser({ email, password })).unwrap();
+        result = await dispatch(loginUser({ email, password })).unwrap();
       }
-      syncWithRedux(result);
-      setTimeout(() => {
-        if (result?.accessToken) {
-          console.log('🔌 Reconnecting socket after login');
-          reconnectSocket();
-          
-          // Khởi tạo conversation chat (nếu là user thường)
-          if (!isSellerLogin && startConversation) {
-            setTimeout(() => {
-              startConversation();
-            }, 1000);
+
+      if (result && result._id) {
+        syncWithRedux(result);
+        
+        setTimeout(() => {
+          if (result?.accessToken) {
+            console.log('🔌 Reconnecting socket after login');
+            reconnectSocket();
           }
-        }
-      }, 500);
+          
+          if (!isSellerLogin && startConversation) {
+            startConversation();
+          }
+        }, 500);
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       }
+    }
+  };
+
+  // ✅ Add handleGoogleLogin function
+  const handleGoogleLogin = async () => {
+    try {
+      setIsGoogleLoading(true);
+      await googleAuthService.loginWithGoogle();
+    } catch (error) {
+      console.error('Google login error:', error);
+      toast.error('Không thể đăng nhập với Google. Vui lòng thử lại!');
+      setIsGoogleLoading(false);
     }
   };
 
@@ -162,6 +180,20 @@ const LoginPage = () => {
               Người bán
             </button>
           </div>
+
+          {/* ✅ Notice for seller - Chỉ hiển thị khi tab "Người bán" được chọn */}
+          {isSellerLogin && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <p className="text-sm text-yellow-800">
+                  <strong>Lưu ý:</strong> Người bán vui lòng sử dụng <strong>email/password</strong> để đăng nhập. Không hỗ trợ đăng nhập Google cho tài khoản seller.
+                </p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-6">
             {/* Email */}
@@ -241,23 +273,46 @@ const LoginPage = () => {
             </button>
           </form>
 
-          {/* Social login (chỉ hiển thị khi đăng nhập thông thường) */}
+          {/* Social login - CHỈ hiển thị khi đăng nhập USER */}
           {!isSellerLogin && (
             <div className="mt-8">
-              <div className="relative flex items-center justify-center">
-                <span className="bg-white px-4 text-gray-500">
+              <div className="relative flex items-center justify-center mb-6">
+                <div className="absolute w-full border-t border-gray-300"></div>
+                <span className="relative bg-white px-4 text-gray-500 text-sm">
                   Hoặc đăng nhập với
                 </span>
-                <div className="absolute w-full border-t border-gray-200"></div>
               </div>
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                <button className="py-3 border-2 border-gray-200 rounded-xl hover:border-green-400">
-                  🔍 Google
-                </button>
-                <button className="py-3 border-2 border-gray-200 rounded-xl hover:border-green-400">
-                  📘 Facebook
-                </button>
-              </div>
+
+              {/* Google Login Button */}
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isGoogleLoading}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-green-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGoogleLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-gray-700 font-medium">Đang kết nối...</span>
+                  </>
+                ) : (
+                  <>
+                    {/* Google Icon */}
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <span className="text-gray-700 font-medium">Đăng nhập với Google</span>
+                  </>
+                )}
+              </button>
+
+              {/* Add helpful note */}
+              <p className="text-xs text-gray-500 text-center mt-3">
+                Chỉ dành cho khách hàng. Đăng nhập nhanh và bảo mật với Google.
+              </p>
             </div>
           )}
 

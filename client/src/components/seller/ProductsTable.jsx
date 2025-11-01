@@ -1,5 +1,12 @@
 import React, { useState, useMemo } from "react";
-import { IconEdit, IconTrash, IconEye } from "@tabler/icons-react";
+import {
+  IconEdit,
+  IconTrash,
+  IconEye,
+  IconArrowsSort,
+  IconChevronUp,
+  IconChevronDown,
+} from "@tabler/icons-react";
 
 const ProductsTable = ({ products, onEdit, onDelete, onView, isLoading }) => {
   const [sortBy, setSortBy] = useState("name");
@@ -34,8 +41,15 @@ const ProductsTable = ({ products, onEdit, onDelete, onView, isLoading }) => {
   };
 
   const getSortIcon = (field) => {
-    if (sortBy !== field) return "↕️";
-    return sortOrder === "asc" ? "↑" : "↓";
+    if (sortBy !== field)
+      return (
+        <IconArrowsSort size={16} className="inline-block text-gray-400" />
+      );
+    return sortOrder === "asc" ? (
+      <IconChevronUp size={16} className="inline-block text-gray-600" />
+    ) : (
+      <IconChevronDown size={16} className="inline-block text-gray-600" />
+    );
   };
 
   if (isLoading) {

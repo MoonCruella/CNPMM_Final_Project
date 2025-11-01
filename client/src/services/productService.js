@@ -2,9 +2,31 @@ import api from "./api";
 
 const productService = {
   // Lấy tất cả products
-  getAll: async () => {
-    const res = await api.get("/api/products");
-    return res.data;
+  getAll: async (params = {}) => {
+    try {
+      // ✅ Build query string from params
+      const queryString = new URLSearchParams();
+      
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          queryString.append(key, value);
+        }
+      });
+
+      const url = `/api/products${queryString.toString() ? `?${queryString.toString()}` : ''}`;
+      
+      console.log('📡 productService.getAll URL:', url);
+      
+      const res = await api.get(url);
+      return res.data;
+    } catch (error) {
+      console.error("Error in productService.getAll:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Không thể tải sản phẩm",
+        error: error.message
+      };
+    }
   },
 
   // Lấy 8 sản phẩm bán chạy nhất

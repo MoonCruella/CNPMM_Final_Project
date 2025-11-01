@@ -56,7 +56,6 @@ export const UserContextProvider = ({ children }) => {
   useEffect(() => {
     // Chỉ cập nhật nếu reduxUser có giá trị và khác với user hiện tại trong context
     if (reduxUser && reduxIsAuthenticated) {
-      console.log("Syncing Redux user to UserContext:", reduxUser);
       
       // Tạo đối tượng user với cấu trúc phù hợp cho UserContext
       const normalizedUser = {
@@ -66,14 +65,15 @@ export const UserContextProvider = ({ children }) => {
         full_name: reduxUser.full_name,
         role: reduxUser.role,
         avatar: reduxUser.avatar,
+        gender: reduxUser.gender,
         avatar_public_id: reduxUser.avatar_public_id,
+        date_of_birth: reduxUser.date_of_birth,
         active: reduxUser.active,
         phone: reduxUser.phone,
         address: reduxUser.address,
         createdAt: reduxUser.createdAt,
         updatedAt: reduxUser.updatedAt
       };
-      
       setUser(normalizedUser);
       userService.saveUserToStorage(normalizedUser);
     }
@@ -83,10 +83,8 @@ export const UserContextProvider = ({ children }) => {
     }
   }, [reduxUser, reduxIsAuthenticated]);
 
-  // THÊM MỚI: Method để đồng bộ hóa từ Redux 
   const syncWithRedux = useCallback((reduxUserData) => {
     if (reduxUserData) {
-      console.log("Manual sync from Redux:", reduxUserData);
       
       // Tạo đối tượng user với cấu trúc phù hợp cho UserContext
       const normalizedUser = {
@@ -126,7 +124,6 @@ export const UserContextProvider = ({ children }) => {
 
       if (response.success) {
         setUser(response.user);
-        console.log('UserL: ' + response.user)
         userService.saveUserToStorage(response.user);
         return response.user;
       } else {
@@ -169,140 +166,135 @@ export const UserContextProvider = ({ children }) => {
 
   // Upload avatar only
   const uploadAvatar = async (avatarFile) => {
-    try {
-      setIsUploadingAvatar(true);
-      setError(null);
+  try {
+    setIsUploadingAvatar(true);
+    setError(null);
 
-      // Validate file using avatarService
-      avatarService.validateAvatarFile(avatarFile);
-
-      // Upload avatar using avatarService
-      const uploadResponse = await avatarService.uploadAvatar(avatarFile);
-
-
-      // ✅ FIX: Response structure is correct, check properly
-      if (!uploadResponse || !uploadResponse.success) {
-        throw new Error(uploadResponse?.message || 'Upload avatar thất bại');
+    //   Xóa ảnh cũ trước khi upload mới (nếu có)
+    const oldAvatarPublicId = user?.avatar_public_id;
+    if (oldAvatarPublicId) {
+      try {
+        await avatarService.deleteAvatar(oldAvatarPublicId);
+      } catch (deleteError) {
+        console.warn('Failed to delete old avatar:', deleteError);
+        // Continue với upload mới
       }
+    }
 
-      // Extract data correctly
-      const avatarData = uploadResponse.data;
-      const avatarUrl = avatarData.url;
-      const publicId = avatarData.publicId;
+    avatarService.validateAvatarFile(avatarFile);
+
+    const uploadResponse = await avatarService.uploadAvatar(avatarFile);
+
+    if (!uploadResponse || !uploadResponse.success) {
+      throw new Error(uploadResponse?.message || 'Upload avatar thất bại');
+    }
+
+    const avatarData = uploadResponse.data;
+    const avatarUrl = avatarData.url;
+    const publicId = avatarService.extractPublicId(avatarData.publicId || avatarData.url);
 
 
-      // Update user profile với avatar URL mới
-      const updateResponse = await userService.updateUserProfile({
-        avatar: avatarUrl,
-        avatar_public_id: publicId
+    const updateResponse = await userService.updateUserProfile({
+      avatar: avatarUrl,
+      avatar_public_id: publicId
+    });
+
+    if (updateResponse.success) {
+      const updatedUser = updateResponse.data.user;
+      
+      //   Update với URL mới
+      updateUserData({
+        avatar: updatedUser.avatar,
+        avatar_public_id: updatedUser.avatar_public_id
       });
 
-      console.log('🔍 Profile update response:', updateResponse); // Debug log
-
-      if (updateResponse.success) {
-        // Update user avatar in context
-        updateUserData({
-          avatar: avatarUrl,
-          avatar_public_id: publicId
-        });
-
-        toast.success('Upload avatar thành công!');
-        return {
-          success: true,
-          data: avatarData,
-          message: 'Upload avatar thành công!'
-        };
-      } else {
-        throw new Error(updateResponse.message || 'Không thể cập nhật avatar trong profile');
-      }
-
-    } catch (error) {
-      
-
-      setError(error.message);
-
-      // Show appropriate error message
-      if (error.message.includes('Chỉ chấp nhận file ảnh') ||
-        error.message.includes('Kích thước file quá lớn') ||
-        error.message.includes('Vui lòng chọn file ảnh')) {
-        toast.error(error.message);
-      } else if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error(error.message || 'Có lỗi xảy ra khi upload avatar');
-      }
-
-      throw error;
-    } finally {
-      setIsUploadingAvatar(false);
+      toast.success('Upload avatar thành công!');
+      return {
+        success: true,
+        data: avatarData,
+        message: 'Upload avatar thành công!'
+      };
+    } else {
+      throw new Error(updateResponse.message || 'Không thể cập nhật avatar trong profile');
     }
-  };
+
+  } catch (error) {
+    console.error(' Upload avatar error:', error);
+    setError(error.message);
+    toast.error(error.message || 'Có lỗi xảy ra khi upload avatar');
+    throw error;
+  } finally {
+    setIsUploadingAvatar(false);
+  }
+};
 
   // Update user profile with optional avatar
   const updateUserWithAvatar = async (updateData, avatarFile = null) => {
-    try {
-      setIsUpdating(true);
-      setIsUploadingAvatar(!!avatarFile);
-      setError(null);
+  try {
+    setIsUpdating(true);
+    setIsUploadingAvatar(!!avatarFile);
+    setError(null);
 
-      let finalUpdateData = { ...updateData };
+    let finalUpdateData = { ...updateData };
 
-      // Upload avatar first if provided
-      if (avatarFile) {
-        try {
-          // Validate file using avatarService
-          avatarService.validateAvatarFile(avatarFile);
+    // Upload avatar first if provided
+    if (avatarFile) {
+      try {
+        avatarService.validateAvatarFile(avatarFile);
 
-          // Upload avatar using avatarService
-          const uploadResponse = await avatarService.uploadAvatar(avatarFile);
+        const uploadResponse = await avatarService.uploadAvatar(avatarFile);
 
-          console.log('🔍 Avatar upload in updateUserWithAvatar:', uploadResponse); // Debug
-
-          if (uploadResponse.success) {
-            // FIX: Extract data correctly
-            const avatarData = uploadResponse.data;
-            finalUpdateData.avatar = avatarData.url;
-            finalUpdateData.avatar_public_id = avatarData.publicId;
-          } else {
-            throw new Error(uploadResponse.message || 'Upload avatar thất bại');
-          }
-        } catch (uploadError) {
-          console.error('Avatar upload failed:', uploadError);
-          toast.error(uploadError.message || 'Upload avatar thất bại');
-          throw uploadError;
+        if (uploadResponse.success) {
+          const avatarData = uploadResponse.data;
+          const avatarUrl = avatarData.url;
+          const publicId = avatarService.extractPublicId(avatarData.publicId || avatarData.url);
+                    
+          // Lưu URL thay vì publicId
+          finalUpdateData.avatar = avatarUrl;
+          finalUpdateData.avatar_public_id = publicId;
+        } else {
+          throw new Error(uploadResponse.message || 'Upload avatar thất bại');
         }
+      } catch (uploadError) {
+        console.error('Avatar upload failed:', uploadError);
+        toast.error(uploadError.message || 'Upload avatar thất bại');
+        throw uploadError;
       }
-
-
-      // Update user profile với data (bao gồm avatar nếu có)
-      const response = await userService.updateUserProfile(finalUpdateData);
-
-      if (response.success) {
-        updateUserData(response.data.user);
-
-        const successMessage = avatarFile
-          ? 'Cập nhật thông tin và avatar thành công!'
-          : 'Cập nhật thông tin thành công!';
-        toast.success(successMessage);
-
-        return response;
-      } else {
-        throw new Error(response.message || 'Cập nhật thất bại');
-      }
-    } catch (error) {
-      console.error('Update user with avatar error:', error);
-      setError(error.message);
-
-      if (!error.message.includes('Upload avatar') && !error.message.includes('Chỉ chấp nhận')) {
-        toast.error(error.message || 'Có lỗi xảy ra khi cập nhật');
-      }
-
-      throw error;
-    } finally {
-      setIsUpdating(false);
-      setIsUploadingAvatar(false);
     }
-  };
+
+    // Update user profile với data (bao gồm avatar nếu có)
+    const response = await userService.updateUserProfile(finalUpdateData);
+
+    if (response.success) {
+      const updatedUser = response.data.user;
+      
+      //   Update với data từ backend
+      updateUserData(updatedUser);
+
+
+      const successMessage = avatarFile
+        ? 'Cập nhật thông tin và avatar thành công!'
+        : 'Cập nhật thông tin thành công!';
+      toast.success(successMessage);
+
+      return response;
+    } else {
+      throw new Error(response.message || 'Cập nhật thất bại');
+    }
+  } catch (error) {
+    console.error('Update user with avatar error:', error);
+    setError(error.message);
+
+    if (!error.message.includes('Upload avatar') && !error.message.includes('Chỉ chấp nhận')) {
+      toast.error(error.message || 'Có lỗi xảy ra khi cập nhật');
+    }
+
+    throw error;
+  } finally {
+    setIsUpdating(false);
+    setIsUploadingAvatar(false);
+  }
+};
   // Delete avatar - Using avatarService
   const deleteAvatar = async () => {
     try {
@@ -397,7 +389,7 @@ export const UserContextProvider = ({ children }) => {
     uploadAvatar,
     updateUserWithAvatar,
     clearUser,
-    syncWithRedux, // THÊM MỚI: hàm đồng bộ với Redux
+    syncWithRedux, 
 
     // Computed values
     getUserDisplayName,
