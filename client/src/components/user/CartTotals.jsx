@@ -8,7 +8,6 @@ const CartTotals = ({
   totalCount = 0 
 }) => {
   const navigate = useNavigate();
-  // ✅ REMOVE: const shippingFee = 30000;
   const discount = 0;
   const total = subtotal - discount; //  Bỏ shippingFee
 

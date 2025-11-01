@@ -25,10 +25,9 @@ const ProductDisplay = ({ layout = "grid", type = "all" }) => {
           response = await productService.getAll();
         }
 
-        console.log("📦 Product response:", response);
 
         if (response.success) {
-          // ✅ Handle different response structures
+          // Handle different response structures
           let productList = [];
           
           if (type === "all") {
@@ -39,13 +38,12 @@ const ProductDisplay = ({ layout = "grid", type = "all" }) => {
             productList = response.data || [];
           }
 
-          // ✅ Map products with primary image
+          // Map products with primary image
           const mappedProducts = productList.map((p) => ({
             ...p,
             primary_image: p.images?.find((img) => img.is_primary)?.image_url || p.images?.[0]?.image_url,
           }));
 
-          console.log("✅ Mapped products:", mappedProducts);
           setProducts(mappedProducts);
         } else {
           setError(response.message || "Không thể tải sản phẩm");
@@ -95,7 +93,7 @@ const ProductDisplay = ({ layout = "grid", type = "all" }) => {
     ],
   };
 
-  // ✅ Loading state
+  // Loading state
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -107,7 +105,7 @@ const ProductDisplay = ({ layout = "grid", type = "all" }) => {
     );
   }
 
-  // ✅ Error state
+  // Error state
   if (error) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -129,7 +127,7 @@ const ProductDisplay = ({ layout = "grid", type = "all" }) => {
     );
   }
 
-  // ✅ Empty state
+  // Empty state
   if (products.length === 0) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -145,7 +143,7 @@ const ProductDisplay = ({ layout = "grid", type = "all" }) => {
     );
   }
 
-  // ✅ Render products
+  // Render products
   return (
     <div className="mx-4">
       {layout === "slider" ? (

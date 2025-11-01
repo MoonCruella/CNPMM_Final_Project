@@ -282,6 +282,27 @@ const authService = {
       newPassword,
     });
   },
+
+  sendOtpChangePassword: async (email) => {
+    return await api.post("/api/auth/change-password/send-otp", { email });
+  },
+
+  // Verify OTP for Change Password
+  verifyOtpChangePassword: async (email, otp) => {
+    return await api.post("/api/auth/change-password/verify-otp", {
+      email,
+      otp,
+    });
+  },
+
+  // Change Password
+  changePassword: async (email, newPassword) => {
+  return await api.post("/api/auth/change-password/reset", {
+    email,
+    newPassword,
+  });
+},
+
 };
 
 export default authService;

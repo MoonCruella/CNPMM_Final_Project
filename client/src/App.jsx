@@ -40,6 +40,7 @@ import BlogPostPage from './pages/user/BlogPostPage';
 import SellerBlogPage from './pages/seller/SellerBlogPage';
 import OrderDetail from "./components/seller/OrderDetail";
 import GoogleAuthCallback from './pages/user/GoogleAuthCallback';
+
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
   const { showUserLogin } = useAppContext();
@@ -79,17 +80,22 @@ const App = () => {
           <Route path="orders/:orderId" element={<Dashboard />} /> 
         </Route>
         
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/verify-otp" element={<VerifyOTPPage />} />
-        <Route path="/reset-password" element={<NewPasswordPage />} />
+
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/forgot-password/verify-otp" element={<VerifyOTPPage />} />
+        <Route path="/forgot-password/reset" element={<NewPasswordPage />} />
+
+        <Route path="/change-password" element={<ForgotPasswordPage />} />
+        <Route path="/change-password/verify-otp" element={<VerifyOTPPage />} />
+        <Route path="/change-password/reset" element={<NewPasswordPage />} />
+       
         <Route path="/upload-to-cloudinary" element={<UploadImages />} />
         
         <Route path="/token-tester" element={<TokenTester />} />        
         <Route path="/cart" element={<CartPage />} />
         <Route path="/products" element={<AllProducts />} />
 
-        
         <Route path="/my-profile" element={<ProfilePage />} />
         <Route path="/voucher-list" element={<VoucherCard />} />
         <Route path="/checkout" element={<CheckoutPage />} />

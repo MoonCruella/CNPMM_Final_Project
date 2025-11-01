@@ -12,8 +12,6 @@ const Categories = () => {
       try {
         const res = await categoryService.getAll();
 
-        console.log("API categories:", res);
-
         // chỉ lấy phần mảng
         setCategories(res.data || []);
       } catch (error) {

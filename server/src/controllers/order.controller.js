@@ -5,6 +5,7 @@ import Voucher from "../models/voucher.model.js";
 import mongoose from "mongoose";
 import response from "../helpers/response.js";
 import * as notificationService from "../services/notification.service.js";
+import CartItem from "../models/cart.model.js"; 
 import { 
   createFuzzyMongoQuery, 
   sortByRelevance, 
@@ -225,7 +226,7 @@ export const getOrderById = async (req, res) => {
       return response.sendError(res, "ID đơn hàng không hợp lệ", 400);
     }
 
-    // ✅ Build query based on role
+    //  Build query based on role
     let query = { _id: orderId };
     
     // Nếu không phải admin/seller, chỉ cho phép xem đơn hàng của chính mình
@@ -406,18 +407,17 @@ export const reorder = async (req, res) => {
     const { orderId } = req.params;
     const userId = req.user.userId;
 
-    // Validate orderId format
+
+    // Validate orderId
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return response.sendError(res, "ID đơn hàng không hợp lệ", 400);
     }
 
-    // Find order and verify ownership
+    // Find order
     const order = await Order.findOne({
       _id: orderId,
       user_id: userId,
-    })
-      .populate("items.product_id")
-      .lean();
+    }).lean();
 
     if (!order) {
       return response.sendError(
@@ -427,21 +427,16 @@ export const reorder = async (req, res) => {
       );
     }
 
-    // Check if order can be reordered
-    if (!["delivered", "cancelled"].includes(order.status)) {
-      return response.sendError(
-        res,
-        "Chỉ có thể đặt lại đơn hàng đã giao hoặc đã hủy",
-        400
-      );
-    }
 
-    // Prepare cart items
-    const cartItems = [];
     const unavailableItems = [];
+    let addedCount = 0;
 
+    //  Process each order item
     for (const item of order.items) {
-      const product = item.product_id;
+      const productId = item.product_id.toString();
+
+      // Fetch product
+      const product = await Product.findById(productId);
 
       if (!product) {
         unavailableItems.push({
@@ -451,40 +446,82 @@ export const reorder = async (req, res) => {
         continue;
       }
 
-      // Check product availability (assuming you have stock field)
-      if (product.stock < item.quantity) {
+      // Check status
+      if (product.status === 'inactive') {
         unavailableItems.push({
           name: product.name,
-          reason: `Chỉ còn ${product.stock} sản phẩm trong kho`,
+          reason: "Sản phẩm không còn bán",
         });
         continue;
       }
 
-      cartItems.push({
-        product_id: product._id,
-        name: product.name,
-        price: product.price, // Use current price
-        quantity: item.quantity,
-        total: product.price * item.quantity,
-        sale_price: product.sale_price || null,
+      // Check stock
+      if (product.stock < item.quantity) {
+        unavailableItems.push({
+          name: product.name,
+          reason: `Chỉ còn ${product.stock} sản phẩm`,
+        });
+        continue;
+      }
+
+      // Check if already in cart
+      let cartItem = await CartItem.findOne({
+        user_id: userId,
+        product_id: productId,
       });
+
+      if (cartItem) {
+        // Update quantity
+        const newQuantity = cartItem.quantity + item.quantity;
+        
+        if (newQuantity > product.stock) {
+          cartItem.quantity = product.stock;
+          unavailableItems.push({
+            name: product.name,
+            reason: `Đã tăng số lượng lên tối đa ${product.stock}`,
+          });
+        } else {
+          cartItem.quantity = newQuantity;
+        }
+        
+        await cartItem.save();
+      } else {
+        // ✅ Create new cart item
+        cartItem = new CartItem({
+          user_id: userId,
+          product_id: productId,
+          quantity: item.quantity,
+        });
+        
+        await cartItem.save();
+        console.log("➕ Added new cart item:", product.name, "qty:", item.quantity);
+      }
+
+      addedCount++;
     }
 
+    // ✅ Get all cart items for response
+    const cartItems = await CartItem.find({ user_id: userId })
+      .populate("product_id", "name images price sale_price stock status")
+      .sort({ updated_at: -1 });
+
+    console.log("✅ Cart now has", cartItems.length, "items");
+
     const data = {
-      cart_items: cartItems,
+      cart: { items: cartItems }, // ✅ Wrap in object for consistency
       unavailable_items: unavailableItems,
-      total_added: cartItems.length,
+      total_added: addedCount,
       total_unavailable: unavailableItems.length,
     };
 
     const message =
       unavailableItems.length > 0
-        ? "Một số sản phẩm không thể thêm vào giỏ hàng"
-        : "Đã thêm tất cả sản phẩm vào giỏ hàng";
+        ? `Đã thêm ${addedCount} sản phẩm vào giỏ hàng. ${unavailableItems.length} sản phẩm không khả dụng.`
+        : `Đã thêm ${addedCount} sản phẩm vào giỏ hàng`;
 
     return response.sendSuccess(res, data, message, 200);
   } catch (error) {
-    console.error("Reorder error:", error);
+    console.error("❌ Reorder error:", error);
     return response.sendError(
       res,
       "Có lỗi xảy ra khi đặt lại đơn hàng",
@@ -937,7 +974,7 @@ export const getAllOrders = async (req, res) => {
     const totalOrders = await Order.countDocuments(filter);
     const totalPages = Math.ceil(totalOrders / parseInt(limit));
 
-    // ✅ Calculate statistics (respect date filter)
+    //  Calculate statistics (respect date filter)
     const statsFilter = startDate || endDate ? {
       created_at: {
         ...(startDate ? { $gte: new Date(startDate) } : {}),

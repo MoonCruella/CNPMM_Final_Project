@@ -81,7 +81,7 @@ const CheckoutSummary = ({
             toast.success("Thanh toán VNPay thành công!");
             await removeCheckedOutItems(); 
             localStorage.removeItem("pendingOrderData");
-            navigate("/user/purchase");
+            navigate("/user/orders");
           } else {
             toast.error("Lưu đơn hàng thất bại: " + res.message);
           }
@@ -106,7 +106,7 @@ const CheckoutSummary = ({
               toast.success("Thanh toán ZaloPay thành công!");
               await removeCheckedOutItems(); 
               localStorage.removeItem("pendingOrderData");
-              navigate("/user/purchase");
+              navigate("/user/orders");
             } else {
               toast.error("Thanh toán thành công nhưng lưu đơn thất bại!");
             }
@@ -196,7 +196,6 @@ const CheckoutSummary = ({
         discount_value: discountAmount,
       };
 
-      console.log("Creating order with data:", orderData);
 
       if (paymentMethod === "vnpay") {
         setLoading(true);
@@ -248,8 +247,8 @@ const CheckoutSummary = ({
         const res = await orderService.createOrder(orderData);
         if (res.success) {
           toast.success("Đặt hàng thành công!");
-          await removeCheckedOutItems(); //     FIX: Only remove selected items
-          navigate("/user/purchase");
+          await removeCheckedOutItems(); 
+          navigate("/user/orders");
         } else {
           toast.error("Đặt hàng thất bại: " + res.message);
         }

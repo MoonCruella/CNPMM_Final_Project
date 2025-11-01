@@ -153,15 +153,15 @@ export const deleteProduct = async (req, res) => {
 // Lấy tất cả sản phẩm
 export const getAllProducts = async (req, res) => {
   try {
-    // ✅ Lấy page và limit từ query params
+    //  Lấy page và limit từ query params
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // ✅ Optional: Filter parameters
+    //  Optional: Filter parameters
     const { category, minPrice, maxPrice, search, sort } = req.query;
     
-    // ✅ Build filter query
+    //  Build filter query
     const filter = { status: "active" };
     
     if (category) {
@@ -181,7 +181,7 @@ export const getAllProducts = async (req, res) => {
       ];
     }
 
-    // ✅ Build sort options
+    // Build sort options
     let sortOptions = {};
     switch (sort) {
       case 'price_asc':
@@ -203,7 +203,7 @@ export const getAllProducts = async (req, res) => {
         sortOptions = { created_at: -1 }; // Default: newest first
     }
 
-    // ✅ Fetch products with pagination
+    //  Fetch products with pagination
     const products = await Product.find(filter)
       .populate('category_id', 'name slug')
       .sort(sortOptions)
@@ -211,11 +211,11 @@ export const getAllProducts = async (req, res) => {
       .limit(limit)
       .lean();
 
-    // ✅ Count total products
+    //  Count total products
     const totalProducts = await Product.countDocuments(filter);
     const totalPages = Math.ceil(totalProducts / limit);
 
-    // ✅ Response with pagination info
+    //  Response with pagination info
     res.status(200).json({
       success: true,
       data: {

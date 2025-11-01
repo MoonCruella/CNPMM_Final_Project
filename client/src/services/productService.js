@@ -4,7 +4,7 @@ const productService = {
   // Lấy tất cả products
   getAll: async (params = {}) => {
     try {
-      // ✅ Build query string from params
+      // Build query string from params
       const queryString = new URLSearchParams();
       
       Object.entries(params).forEach(([key, value]) => {

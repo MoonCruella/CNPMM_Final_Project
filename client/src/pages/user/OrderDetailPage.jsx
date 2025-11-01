@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useUserContext } from "@/context/UserContext";
+import { useCartContext } from "@/context/CartContext"; //    Add CartContext
 import orderService from "@/services/order.service";
 import { toast } from "sonner";
 
@@ -8,8 +9,10 @@ const OrderDetailPage = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useUserContext();
+  const { fetchCart } = useCartContext();
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReordering, setIsReordering] = useState(false); 
 
   useEffect(() => {
     if (isAuthenticated && orderId) {
@@ -62,7 +65,7 @@ const OrderDetailPage = () => {
       confirmed: { label: "Đã xác nhận", color: "bg-blue-100 text-blue-800", icon: "✔️" },
       processing: { label: "Đang xử lý", color: "bg-purple-100 text-purple-800", icon: "🛒" },
       shipped: { label: "Đang giao", color: "bg-indigo-100 text-indigo-800", icon: "🚚" },
-      delivered: { label: "Đã giao", color: "bg-green-100 text-green-800", icon: "✅" },
+      delivered: { label: "Đã giao", color: "bg-green-100 text-green-800", icon: " ✅ " },
       cancelled: { label: "Đã hủy", color: "bg-red-100 text-red-800", icon: "❌" },
       cancel_request: { label: "Yêu cầu hủy", color: "bg-orange-100 text-orange-800", icon: "🔄" },
     };
@@ -95,18 +98,39 @@ const OrderDetailPage = () => {
     }
   };
 
+  //    IMPROVED handleReorder - Same as MyOrderPage
   const handleReorder = async () => {
+    if (isReordering) return; // Prevent double click
+
     try {
+      setIsReordering(true);
+
       const response = await orderService.reorder(orderId);
+
       if (response.success) {
         toast.success("Đã thêm sản phẩm vào giỏ hàng");
-        navigate("/cart");
+
+        //    Wait for cart to load completely
+        try {
+          const cartData = await fetchCart();
+
+          //  Wait a bit more to ensure state propagates
+          await new Promise(resolve => setTimeout(resolve, 300));
+
+          navigate('/cart');
+        } catch (fetchError) {
+          console.error(" Cart fetch error:", fetchError);
+          // Navigate anyway
+          navigate('/cart');
+        }
       } else {
         toast.error(response.message || "Không thể đặt lại đơn hàng");
       }
     } catch (error) {
-      console.error("Reorder error:", error);
-      toast.error("Có lỗi xảy ra khi đặt lại đơn hàng");
+      console.error("❌ Reorder error:", error);
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi đặt lại đơn hàng");
+    } finally {
+      setIsReordering(false);
     }
   };
 
@@ -480,7 +504,6 @@ const OrderDetailPage = () => {
                 )}
               </div>
 
-              {/* Action Buttons */}
               <div className="mt-6 space-y-3">
                 {canCancel && (
                   <button
@@ -493,9 +516,20 @@ const OrderDetailPage = () => {
                 {canReorder && (
                   <button
                     onClick={handleReorder}
-                    className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium cursor-pointer"
+                    disabled={isReordering} 
+                    className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    🔄 Đặt lại đơn hàng
+                    {isReordering ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Đang xử lý...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🔄</span>
+                        <span>Đặt lại đơn hàng</span>
+                      </>
+                    )}
                   </button>
                 )}
                 <button

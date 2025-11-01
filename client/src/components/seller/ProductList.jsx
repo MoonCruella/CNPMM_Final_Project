@@ -7,7 +7,7 @@ import ProductFormDialog from "./ProductForm.jsx";
 import ProductDetailDialog from "./ProductDetailDialog.jsx";
 import { assets } from "@/assets/assets";
 import { Link } from "react-router-dom";
-import { useDebounce } from "@/hooks/useDebounce"; // ✅ Import useDebounce
+import { useDebounce } from "@/hooks/useDebounce"; 
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
@@ -23,10 +23,10 @@ const ProductList = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchName, setSearchName] = useState("");
   
-  // ✅ Debounce search value
+  // Debounce search value
   const debouncedSearchName = useDebounce(searchName, 500);
 
-  // ✅ Pagination from backend
+  // Pagination from backend
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -41,34 +41,33 @@ const ProductList = () => {
     }
   };
 
-  // ✅ Load products from backend with pagination
+  // Load products from backend with pagination
   const loadProducts = async () => {
     try {
       setIsLoading(true);
       
-      // ✅ Build query params với debouncedSearchName
+      // Build query params với debouncedSearchName
       const params = {
         page,
         limit,
         status: status !== "all" ? status : undefined,
         category: categoryFilter !== "all" ? categoryFilter : undefined,
-        search: debouncedSearchName.trim() !== "" ? debouncedSearchName : undefined, // ✅ Use debounced value
+        search: debouncedSearchName.trim() !== "" ? debouncedSearchName : undefined, // Use debounced value
       };
 
-      // ✅ Remove undefined values
+      //  Remove undefined values
       Object.keys(params).forEach(key => {
         if (params[key] === undefined) delete params[key];
       });
 
-      console.log('📋 Fetching products with params:', params);
 
-      // ✅ Call API with query params
+      // Call API with query params
       const res = await productService.getAll(params);
       
       if (res.success) {
         const { products: fetchedProducts, pagination } = res.data;
         
-        // ✅ Format products with category name and primary image
+        // Format products with category name and primary image
         const formatted = fetchedProducts.map((p) => ({
           ...p,
           primary_image: p.images?.find((img) => img.is_primary)?.image_url || p.images?.[0]?.image_url,
@@ -77,12 +76,11 @@ const ProductList = () => {
 
         setProducts(formatted);
         
-        // ✅ Set pagination from backend
+        // Set pagination from backend
         setTotalPages(pagination?.total_pages || 1);
         setTotalProducts(pagination?.total_items || 0);
         
-        console.log('✅ Loaded products:', formatted.length);
-        console.log('📄 Pagination:', pagination);
+      
       } else {
         toast.error(res.message || "Không tải được sản phẩm");
       }
@@ -94,22 +92,22 @@ const ProductList = () => {
     }
   };
 
-  // ✅ Load categories first
+  // Load categories first
   useEffect(() => {
     loadCategories();
   }, []);
 
-  // ✅ Load products when dependencies change - use debouncedSearchName
+  // Load products when dependencies change - use debouncedSearchName
   useEffect(() => {
     if (categories.length > 0) {
       loadProducts();
     }
-  }, [categories, page, status, categoryFilter, debouncedSearchName]); // ✅ Changed dependency
+  }, [categories, page, status, categoryFilter, debouncedSearchName]); 
 
-  // ✅ Reset to page 1 when filters change - use debouncedSearchName
+  // Reset to page 1 when filters change - use debouncedSearchName
   useEffect(() => {
     setPage(1);
-  }, [status, categoryFilter, debouncedSearchName]); // ✅ Changed dependency
+  }, [status, categoryFilter, debouncedSearchName]);
 
   const handleAddProduct = () => {
     setSelectedProduct(null);
@@ -184,7 +182,6 @@ const ProductList = () => {
             </li>
             <li className="font-medium">/ Quản lý sản phẩm</li>
           </ul>
-          {/* ✅ Show total products count */}
           {!isLoading && totalProducts > 0 && (
             <p className="text-gray-200 text-sm mt-2">
               Hiển thị {((page - 1) * limit + 1)} - {Math.min(page * limit, totalProducts)} trong tổng số {totalProducts} sản phẩm
@@ -238,7 +235,6 @@ const ProductList = () => {
                 ✕
               </button>
             )}
-            {/* ✅ Show searching indicator */}
             {searchName !== debouncedSearchName && (
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                 <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>

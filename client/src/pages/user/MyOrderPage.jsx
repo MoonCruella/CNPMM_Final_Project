@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import { useUserContext } from "@/context/UserContext";
 import OrderCard from "@/components/user/OrderCard";
 import orderService from "@/services/order.service";
+import { useCartContext } from "@/context/CartContext";
 import { toast } from "sonner";
 
 const MyOrdersPage = () => {
@@ -20,11 +21,12 @@ const MyOrdersPage = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchDebounceTimer, setSearchDebounceTimer] = useState(null);
   const [initialOrderLoaded, setInitialOrderLoaded] = useState(false);
-
+  const navigate = useNavigate(); 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalOrders, setTotalOrders] = useState(0);
+  const { fetchCart } = useCartContext();
   const ORDERS_PER_PAGE = 10;
 
   // Intersection Observer ref for infinite scroll
@@ -73,10 +75,10 @@ const MyOrdersPage = () => {
           return [order, ...prev];
         });
 
-        // ✅ Load other orders immediately
+        // Load other orders immediately
         await loadOtherOrders(orderId);
 
-        // ✅ Mark as loaded to enable infinite scroll
+        // Mark as loaded to enable infinite scroll
         setInitialOrderLoaded(true);
 
         // Scroll after render
@@ -147,7 +149,7 @@ const MyOrdersPage = () => {
     }
   }, [isAuthenticated, user, filter]);
 
-  // ✅ Search effect với debounce
+  // Search effect với debounce
   useEffect(() => {
     if (searchDebounceTimer) {
       clearTimeout(searchDebounceTimer);
@@ -375,19 +377,32 @@ const MyOrdersPage = () => {
     }
   };
 
-  const handleReorder = async (orderId) => {
-    try {
-      const response = await orderService.reorder(orderId);
-      if (response.success) {
-        toast.success("Đã thêm sản phẩm vào giỏ hàng");
-      } else {
-        toast.error(response.message || "Không thể đặt lại đơn hàng");
+   const handleReorder = async (orderId) => {
+  try {
+    const response = await orderService.reorder(orderId);
+    if (response.success) {
+      toast.success("Đã thêm sản phẩm vào giỏ hàng");
+      
+      // Wait for cart to fetch completely
+      try {
+        await fetchCart();
+      } catch (fetchError) {
+        console.error("Cart fetch error:", fetchError);
+        // Continue anyway
       }
-    } catch (error) {
-      console.error("Reorder error:", error);
-      toast.error("Có lỗi xảy ra khi đặt lại đơn hàng");
+      
+      //  Navigate after a longer delay to ensure state updates
+      setTimeout(() => {
+        navigate('/cart');
+      }, 500); // Increase from 300ms to 500ms
+    } else {
+      toast.error(response.message || "Không thể đặt lại đơn hàng");
     }
-  };
+  } catch (error) {
+    console.error("Reorder error:", error);
+    toast.error(error.response?.data?.message || "Có lỗi xảy ra khi đặt lại đơn hàng");
+  }
+};
 
   const handleUpdateShippingStatus = async (orderId, newStatus) => {
     try {
@@ -471,7 +486,7 @@ const MyOrdersPage = () => {
       {/* Filter Tabs - Matching width, no extra space */}
       <section>
         <div className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden"> 
-          <div className="flex gap-2 p-2 overflow-x-auto"> {/* ✅ overflow-x-auto only on flex */}
+          <div className="flex gap-2 p-2 overflow-x-auto"> 
             {[
               { key: "all", label: "Tất cả", count: orderStats.total },
               { key: "pending", label: "Chờ xác nhận", count: orderStats.pending },

@@ -7,13 +7,13 @@ import { User, Mail, Phone, MapPin, Calendar, Shield, Eye, EyeOff } from "lucide
 import { setUser } from "@/redux/authSlice";
 import userService from "@/services/user.service";
 import { emitUserUpdated } from "@/utils/events";
-import { useUserContext } from "@/context/UserContext"; // ✅ Import UserContext
+import { useUserContext } from "@/context/UserContext"; 
 
 const MyAccount = () => {
   const dispatch = useDispatch();
   const { user: reduxUser } = useSelector((state) => state.auth);
 
-  // ✅ Use UserContext
+
   const {
     uploadAvatar,
     updateUserWithAvatar,
@@ -146,7 +146,7 @@ const MyAccount = () => {
     return genderMap[gender] || "";
   };
 
-  // ✅ Get avatar URL - Use UserContext method
+  //  Get avatar URL - Use UserContext method
   const getAvatarUrl = (size = 200) => {
     if (avatarPreview) {
       return avatarPreview;
@@ -211,7 +211,7 @@ const MyAccount = () => {
     }
   };
 
-  // ✅ Handle avatar upload only - Use UserContext uploadAvatar
+  // Handle avatar upload only - Use UserContext uploadAvatar
   const handleAvatarUpload = async () => {
     if (!avatarFile) {
       toast.error("Vui lòng chọn ảnh trước");
@@ -219,10 +219,10 @@ const MyAccount = () => {
     }
 
     try {
-      // ✅ Use uploadAvatar from UserContext
+      // Use uploadAvatar from UserContext
       await uploadAvatar(avatarFile);
 
-      // ✅ Reload user data
+      // Reload user data
       const userResponse = await userService.getCurrentUser();
       if (userResponse.success && userResponse.user) {
         const userData = {
@@ -264,7 +264,7 @@ const MyAccount = () => {
     }
   };
 
-  // ✅ Update profile - Use UserContext updateUserWithAvatar
+  // Update profile - Use UserContext updateUserWithAvatar
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast.error("Tên không được để trống");
@@ -296,10 +296,10 @@ const MyAccount = () => {
         gender: formData.gender || null,
       };
 
-      // ✅ Use updateUserWithAvatar from UserContext
+      // Use updateUserWithAvatar from UserContext
       await updateUserWithAvatar(updateData, avatarFile);
 
-      // ✅ Reload user data
+      // Reload user data
       const userResponse = await userService.getCurrentUser();
       if (userResponse.success && userResponse.user) {
         const userData = {

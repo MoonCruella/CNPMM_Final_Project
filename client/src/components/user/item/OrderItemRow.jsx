@@ -23,7 +23,7 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder, onUpdateShippingStatus 
       onUpdateShippingStatus(order._id, newStatus);
     }
   };
-  // ✅ Memoize computed values
+  //  Memoize computed values
   const computedValues = useMemo(() => {
     // Helper functions
     const formatDate = (dateString) => {
@@ -85,7 +85,7 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder, onUpdateShippingStatus 
     canReorder,
   } = computedValues;
 
-  // ✅ Memoize image getter function
+  // Memoize image getter function
   const getPrimaryImage = useCallback((item) => {
     const images = item.product_id?.images;
     if (!images || !Array.isArray(images)) return "/placeholder-product.jpg";
@@ -98,7 +98,7 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder, onUpdateShippingStatus 
     );
   }, []);
 
-  // ✅ Memoize handlers
+  // Memoize handlers
   const handleToggleDetails = useCallback(() => {
     setShowDetails((prev) => !prev);
   }, []);
@@ -332,7 +332,7 @@ const OrderItemRow = ({ order, onCancelOrder, onReorder, onUpdateShippingStatus 
   );
 };
 
-// ✅ Custom comparison function
+// ACustom comparison function
 const areEqual = (prevProps, nextProps) => {
   return (
     prevProps.order._id === nextProps.order._id &&

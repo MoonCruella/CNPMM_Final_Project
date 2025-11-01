@@ -375,7 +375,6 @@ Trong bối cảnh hiện đại hóa, áo bà ba đã có nhiều biến thể 
 
     // Thêm vào database
     const result = await HometownPost.insertMany(samplePosts);
-    console.log(`✅ Successfully added ${result.length} sample hometown posts`);
     
     // In danh sách các bài viết đã thêm
     console.table(result.map(post => ({ 

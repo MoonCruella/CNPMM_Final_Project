@@ -245,7 +245,7 @@ router.post("/multiple", upload.array("images", 5), async (req, res) => {
   }
 });
 
-// ✅ DELETE /api/upload - Delete image from Cloudinary
+//  DELETE /api/upload - Delete image from Cloudinary
 router.delete("/", authenticateToken, async (req, res) => {
   try {
     const { publicId } = req.body;
@@ -279,7 +279,7 @@ router.delete("/", authenticateToken, async (req, res) => {
   }
 });
 
-// ✅ GET /api/upload/optimize - Get optimized URL
+//  GET /api/upload/optimize - Get optimized URL
 router.get("/optimize", (req, res) => {
   try {
     const { publicId, width, height, crop, quality, format } = req.query;
