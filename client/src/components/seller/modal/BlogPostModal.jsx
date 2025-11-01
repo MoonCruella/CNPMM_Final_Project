@@ -90,7 +90,6 @@ const BlogPostModal = ({ isOpen, onClose, postToEdit = null, onSuccess }) => {
   };
 
   const handleContentChange = (value) => {
-    console.log("Nhận nội dung Markdown từ TipTapEditor:", value.substring(0, 100) + "...");
     setFormData(prev => ({ ...prev, content: value }));
   };
 

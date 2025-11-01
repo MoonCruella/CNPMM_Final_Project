@@ -237,7 +237,6 @@ const TipTapEditor = ({ value, onChange, placeholder = "Viết nội dung của 
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       const markdown = turndownService.turndown(html);
-      console.log("Chuyển đổi HTML sang Markdown:", { html, markdown });
       onChange(markdown);
     },
   });
@@ -248,14 +247,12 @@ const TipTapEditor = ({ value, onChange, placeholder = "Viết nội dung của 
       try {
         // Kiểm tra xem đầu vào có phải Markdown không
         if (isMarkdown(value)) {
-          console.log("Phát hiện nội dung Markdown, chuyển đổi sang HTML");
           // Chuyển Markdown thành HTML trước khi hiển thị
           const html = marked.parse(value);
           if (html !== editor.getHTML()) {
             editor.commands.setContent(html);
           }
         } else if (value !== editor.getHTML()) {
-          console.log("Đặt nội dung trực tiếp");
           editor.commands.setContent(value);
         }
       } catch (error) {

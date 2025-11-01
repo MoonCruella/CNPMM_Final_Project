@@ -18,7 +18,6 @@ const cleanup = initTokenRefresh();
 // Cleanup khi app unmount (cho hot reload trong development)
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    console.log('Cleaning up token refresh system');
     cleanup();
   });
 }

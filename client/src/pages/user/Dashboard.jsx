@@ -61,7 +61,6 @@ const Dashboard = () => {
             address: response.user.address,
           };
 
-          console.log('Dashboard - User loaded:', userData);
           setUser(userData);
         }
       } catch (error) {
@@ -92,7 +91,6 @@ const Dashboard = () => {
           address: response.user.address,
         };
 
-        console.log('Dashboard - User loaded:', userData);
         setUser(userData);
       }
     } catch (error) {
@@ -102,7 +100,6 @@ const Dashboard = () => {
 
   useEffect(() => {
     const cleanup = onUserUpdated(() => {
-      console.log('🔄 Dashboard - User updated event received, refreshing...');
       fetchUserData();
     });
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import cartService from "@/services/cartService";
 import { useSelector } from "react-redux";
 import { toast } from "sonner";
@@ -7,31 +7,52 @@ const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const { user, isAuthenticated } = useSelector(state => state.auth);
-  
-  const [items, setItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [items, setItems] = useState([]); // ✅ Main state
   const [loading, setLoading] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
 
-  // Load giỏ hàng từ API
-  const loadCart = async () => {
+  // ✅ UNIFIED loadCart function - Update items state
+  const loadCart = useCallback(async () => {
     if (!isAuthenticated || !user) {
       setItems([]);
-      setSelectedItems([]); //  Clear selection khi logout
-      return;
+      setSelectedItems([]);
+      setIsLoading(false);
+      return null;
     }
     
     try {
       setLoading(true);
+      setIsLoading(true);
+      
       const res = await cartService.getCart();
+      
       if (res.success) {
-        setItems(res.data);
+        const cartData = res.data || [];
+        setItems(cartData); // ✅ Update items state
+        return cartData;
+      } else {
+        console.warn("⚠️ Cart load failed");
+        setItems([]);
+        return [];
       }
     } catch (err) {
-      console.error("Error loading cart:", err);
+      console.error("❌ Error loading cart:", err);
+      setItems([]);
+      return [];
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }, [isAuthenticated, user]);
+
+  // ✅ fetchCart is now just an alias for loadCart
+  const fetchCart = loadCart;
+
+  // ✅ Initial load
+  useEffect(() => {
+    loadCart();
+  }, [loadCart]);
 
   // Thêm sản phẩm
   const addToCart = async (product_id, quantity = 1) => {
@@ -52,12 +73,11 @@ export const CartProvider = ({ children }) => {
           return [...prev, res.data];
         });
         
-        //  Auto select new item
+        // Auto select new item
         const newItem = res.data;
         if (newItem && !selectedItems.includes(newItem._id)) {
           setSelectedItems(prev => [...prev, newItem._id]);
         }
-        
       }
     } catch (err) {
       console.error("Error adding to cart:", err);
@@ -92,33 +112,44 @@ export const CartProvider = ({ children }) => {
     
     try {
       setLoading(true);
+      
       const response = await cartService.removeFromCart(itemId);
       
       if (response.success) {
-        setItems(response.data.items);
-        setSelectedItems(prev => prev.filter(id => id !== itemId)); // Remove from selection
+        // ✅ Update local state immediately
+        setItems(prev => prev.filter(item => item._id !== itemId));
+        setSelectedItems(prev => prev.filter(id => id !== itemId));
+        
         toast.success('Đã xóa khỏi giỏ hàng');
+        
+        // ✅ Reload to ensure sync
+        await loadCart();
       } else {
         toast.error(response.message || 'Không thể xóa sản phẩm');
+        await loadCart();
       }
     } catch (error) {
-      console.error('Remove from cart error:', error);
-      toast.error('Có lỗi xảy ra');
+      console.error('❌ Remove from cart error:', error);
+      
+      // Only show error if not success
+      if (error.response?.status !== 200) {
+        toast.error('Có lỗi xảy ra');
+      }
+      
+      await loadCart();
     } finally {
       setLoading(false);
     }
   };
 
-  //Xóa nhiều items (sau khi checkout)
+  // Xóa nhiều items
   const removeMultipleItems = async (itemIds) => {
     if (!isAuthenticated || !user) return;
     if (!Array.isArray(itemIds) || itemIds.length === 0) return;
     
     try {
       setLoading(true);
-      console.log('🗑️ Removing items after checkout:', itemIds);
       
-      // Call API to remove multiple items
       const response = await cartService.removeMultipleItems(itemIds);
       
       if (response.success) {
@@ -127,24 +158,29 @@ export const CartProvider = ({ children }) => {
         setSelectedItems(prev => prev.filter(id => !itemIds.includes(id)));
         
         toast.success(`Đã xóa ${itemIds.length} sản phẩm khỏi giỏ hàng`);
+        
+        // Reload to sync
+        await loadCart();
       } else {
-        console.error('❌ Remove multiple items failed:', response.message);
+        console.error('❌ Remove multiple items failed');
         toast.error('Không thể cập nhật giỏ hàng');
+        await loadCart();
       }
     } catch (error) {
       console.error('❌ Remove multiple items error:', error);
-      toast.error('Có lỗi xảy ra khi cập nhật giỏ hàng');
+      toast.error('Có lỗi xảy ra');
+      await loadCart();
     } finally {
       setLoading(false);
     }
   };
 
-  // Xóa toàn bộ giỏ (chỉ dùng khi thực sự cần clear all)
+  // Xóa toàn bộ giỏ
   const clearCart = async () => {
     if (!isAuthenticated || !user) return;
     
     try {
-      console.warn('⚠️ clearCart() called - this will remove ALL items');
+      console.warn('⚠️ clearCart() called');
       const res = await cartService.clearCart();
       if (res.success) {
         setItems([]);
@@ -195,24 +231,19 @@ export const CartProvider = ({ children }) => {
     }, 0);
   };
 
-  // Load lại giỏ mỗi khi user thay đổi
-  useEffect(() => {
-    loadCart();
-  }, [isAuthenticated, user?._id]);
-
-  const refreshCart = async () => {
-    await loadCart();
-  };
+  const refreshCart = loadCart; 
 
   return (
     <CartContext.Provider
       value={{
         items,
         loading,
+        isLoading, 
         addToCart,
         updateQuantity,
         removeFromCart,
         removeMultipleItems, 
+        fetchCart,
         clearCart,
         loadCart,
         refreshCart,
