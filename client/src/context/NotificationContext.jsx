@@ -16,7 +16,7 @@ export const NotificationProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const { isAuthenticated } = useAppContext();
   
-  // ✅ Lấy user từ Redux store
+  // Lấy user từ Redux store
   const { user } = useSelector((state) => state.auth);
   
   // Lấy số thông báo chưa đọc khi component mount
@@ -161,7 +161,7 @@ export const NotificationProvider = ({ children }) => {
     }
   }, []);
 
-  // ✅ Xóa thông báo
+  // Xóa thông báo
   const deleteNotification = useCallback(async (notificationId) => {
     try {
       const { data } = await api.delete(`/api/notifications/${notificationId}`);
@@ -185,13 +185,13 @@ export const NotificationProvider = ({ children }) => {
     }
   }, [notifications]);
 
-  // ✅ Xử lý khi click vào thông báo - CHECK ROLE từ Redux
+  // Xử lý khi click vào thông báo - CHECK ROLE từ Redux
   const handleViewNotification = useCallback((notification) => {
     markAsRead(notification._id);
     
     const notificationType = notification.type;
     
-    // ✅ Check user role từ Redux
+    // Check user role từ Redux
     const isSeller = user?.role === 'seller';
     const isAdmin = user?.role === 'admin';
     
@@ -213,7 +213,7 @@ export const NotificationProvider = ({ children }) => {
         
     if (orderTypes.includes(notificationType)) {
       if (notification.reference_id) {
-        // ✅ Navigate based on role
+        // Navigate based on role
         const url = (isSeller || isAdmin) 
           ? `/seller/orders/${notification.reference_id}`
           : `/user/orders/${notification.reference_id}`;
@@ -222,7 +222,7 @@ export const NotificationProvider = ({ children }) => {
         navigate(url);
         return;
       } else {
-        // ✅ Navigate to orders list based on role
+        // Navigate to orders list based on role
         const url = (isSeller || isAdmin) ? '/seller/orders' : '/user/orders';
         console.log('🔗 Navigating to orders list:', url);
         navigate(url);
@@ -254,7 +254,7 @@ export const NotificationProvider = ({ children }) => {
       }
     }
     
-    // ✅ Default navigation based on role
+    //  Default navigation based on role
     if (isSeller || isAdmin) {
       console.log('🔗 Navigating to seller notifications');
       navigate('/seller/notifications');

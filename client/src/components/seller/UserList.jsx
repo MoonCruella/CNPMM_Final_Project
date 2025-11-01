@@ -139,7 +139,7 @@ const UserList = () => {
 
   return (
     <main className="bg-gray-50 min-h-screen">
-      {/* ✅ Banner Section - Full width, outside container */}
+      {/* Banner Section - Full width, outside container */}
       <section
         className="bg-cover bg-center py-20 text-center text-white relative"
         style={{ backgroundImage: `url(${assets.page_banner})` }}

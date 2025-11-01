@@ -5,14 +5,14 @@ import ViewRecent from "../../components/user/ViewRecent";
 import NotificationsPanel from "../../components/user/NotificationsPanel";
 import ProfilePage from "./ProfilePage";
 import MyOrdersPage from "./MyOrderPage";
-import OrderDetailPage from "./OrderDetailPage"; // ✅ Import OrderDetailPage
+import OrderDetailPage from "./OrderDetailPage"; 
 import userService from "../../services/user.service";
 import { onUserUpdated } from "../../utils/events";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { orderId } = useParams(); // ✅ Get orderId from URL params
+  const { orderId } = useParams(); 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
@@ -21,7 +21,6 @@ const Dashboard = () => {
   const getActiveSection = () => {
     const path = location.pathname;
 
-    // ✅ Check for order detail page
     if (path.includes('/user/orders/') && orderId) return 'order-detail';
 
     if (path.includes('/user/notifications')) return 'notifications';
@@ -143,20 +142,9 @@ const Dashboard = () => {
       case "profile":
         return <ProfilePage />;
       case "account":
-        return (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-semibold mb-4">Thông tin tài khoản</h2>
-            <button
-              onClick={() => navigate("/user/account/profile")}
-              className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700"
-            >
-              Chỉnh sửa hồ sơ
-            </button>
-          </div>
-        );
+        return null;
       case "orders":
         return <MyOrdersPage />;
-      // ✅ Add order detail case
       case "order-detail":
         return <OrderDetailPage />;
       case "notifications":
@@ -166,18 +154,6 @@ const Dashboard = () => {
     }
   };
 
-  const getPageTitle = () => {
-    switch (activeSection) {
-      case "notifications": return "";
-      case "account": return "Tài khoản của tôi";
-      case "profile": return "Hồ sơ cá nhân";
-      case "orders": return "Đơn hàng của tôi";
-      case "order-detail": return "Chi tiết đơn hàng"; // ✅ Add title
-      case "wishlist": return "Sản phẩm yêu thích";
-      case "recent": return "Đã xem gần đây";
-      default: return "Dashboard";
-    }
-  };
 
   if (loading) {
     return (
@@ -225,7 +201,7 @@ const Dashboard = () => {
           {/* User Info Card - Desktop Only */}
           <div className="hidden md:block bg-white rounded-xl shadow-md p-5"> 
             <div className="flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-3 ring-4 ring-green-50"> {/* ✅ Added ring */}
+              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-3 ring-4 ring-green-50"> 
                 <img
                   src={getAvatarUrl(80)}
                   alt={user?.name || "User"}
@@ -236,7 +212,7 @@ const Dashboard = () => {
                 />
               </div>
               <h2 className="text-lg font-semibold text-gray-800">{user?.name}</h2>
-              <p className="text-sm text-gray-500 mb-4">{user?.email}</p> {/* ✅ Changed: mb-4 */}
+              <p className="text-sm text-gray-500 mb-4">{user?.email}</p> 
               <button
                 onClick={() => navigate("/user/account/profile")}
                 className="w-full px-4 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
@@ -298,19 +274,7 @@ const Dashboard = () => {
                 {/* Submenu */}
                 {accountMenuOpen && (
                   <div className="bg-gray-50">
-                    <button
-                      onClick={() => handleNavigation("account")}
-                      className={`w-full flex items-center px-5 py-2.5 pl-12 text-left text-sm cursor-pointer transition-all duration-200 ${
-                        activeSection === "account" && !location.pathname.includes('/profile')
-                          ? "text-green-700 font-semibold bg-green-100"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-2 flex-shrink-0">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
-                      </svg>
-                      Thông tin chung
-                    </button>
+                   
                     <button
                       onClick={() => handleNavigation("account/profile")}
                       className={`w-full flex items-center px-5 py-2.5 pl-12 text-left text-sm cursor-pointer transition-all duration-200 ${
@@ -323,6 +287,19 @@ const Dashboard = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                       </svg>
                       Hồ sơ cá nhân
+                    </button>
+                     <button
+                      onClick={() => navigate("/change-password")}
+                      className={`w-full flex items-center px-5 py-2.5 pl-12 text-left text-sm cursor-pointer transition-all duration-200 ${
+                        activeSection === "account" && !location.pathname.includes('/profile')
+                          ? "text-green-700 font-semibold bg-green-100"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-2 flex-shrink-0">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                      </svg>
+                      Đổi mật khẩu
                     </button>
                   </div>
                 )}

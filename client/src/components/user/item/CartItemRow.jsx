@@ -5,8 +5,8 @@ const CartItemRow = ({
   item, 
   updateQuantity, 
   removeFromCart,
-  isSelected = false, // ✅ NEW
-  onToggleSelect // ✅ NEW
+  isSelected = false, 
+  onToggleSelect 
 }) => {
   const quantity = Number(item.quantity) || 0;
   const price = Number(item.product_id?.price) || 0;
@@ -19,7 +19,6 @@ const CartItemRow = ({
 
   return (
     <tr className={`border-t transition ${isSelected ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
-      {/* ✅ NEW: Checkbox column */}
       <td className="py-4 px-4">
         <input
           type="checkbox"
@@ -38,7 +37,6 @@ const CartItemRow = ({
               alt={name}
               className="w-16 h-16 object-cover rounded"
             />
-            {/* ✅ Selected badge overlay */}
             {isSelected && (
               <div className="absolute -top-1 -right-1 bg-green-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                 ✓

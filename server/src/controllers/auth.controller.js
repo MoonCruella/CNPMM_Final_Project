@@ -211,7 +211,6 @@ export const refreshToken = async (req, res) => {
       avatar: userDoc.avatar,
     };
 
-    console.log('🔄 Refresh token - New payload:', payload);
 
     const { accessToken, refreshToken: newRefreshToken } =
       generateTokenPair(payload);
@@ -224,7 +223,7 @@ export const refreshToken = async (req, res) => {
     return response.sendSuccess(
       res,
       {
-        user: payload, // ✅ Trả về user data mới nhất
+        user: payload, //  Trả về user data mới nhất
         accessToken,
         refreshToken: newRefreshToken,
       },
@@ -357,7 +356,7 @@ export const googleCallback = async (req, res) => {
     let user = await userModel.findOne({ email });
 
     if (user) {
-      // ✅ Check if existing user is a seller
+      //  Check if existing user is a seller
       if (user.role === 'seller') {
         return res.redirect(
           `${config.client_url || 'http://localhost:5173'}/login?error=seller_account`
@@ -377,13 +376,13 @@ export const googleCallback = async (req, res) => {
       }
       await user.save();
     } else {
-      // ✅ Create new user - ALWAYS role = 'user'
+      //  Create new user - ALWAYS role = 'user'
       user = await userModel.create({
         email,
         name: name || email.split('@')[0],
         googleId,
         avatar: picture,
-        role: 'user', // ✅ Force role = user
+        role: 'user', //  Force role = user
         active: email_verified || true,
         password: crypto.randomBytes(32).toString('hex'),
       });
@@ -429,3 +428,200 @@ export const googleCallback = async (req, res) => {
   }
 };
 
+//  Change Password - Send OTP
+export const sendOtpChangePassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const userId = req.user.userId;
+
+    if (!email) {
+      return response.sendError(res, "Email không được để trống", 400);
+    }
+
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return response.sendError(res, "Người dùng không tồn tại", 404);
+    }
+
+    if (user.email !== email) {
+      return response.sendError(res, "Email không khớp với tài khoản", 400);
+    }
+
+    if (!user.active) {
+      return response.sendError(res, "Tài khoản chưa được kích hoạt", 403);
+    }
+
+    // Generate OTP
+    const otp = crypto.randomInt(100000, 999000).toString();
+
+    // Save OTP to Redis (expires in 5 minutes)
+    await redisClient.setEx(`change_password_otp:${email}`, 300, otp);
+
+    // Send OTP email với 3 tham số
+    await sendMail(
+      email,
+      "🔐 Mã OTP đổi mật khẩu - Phú Yên Store",
+      `Xin chào ${user.name},\n\nBạn đã yêu cầu đổi mật khẩu cho tài khoản của mình.\n\nMã OTP của bạn là: ${otp}\n\nMã có hiệu lực trong 5 phút.\n\n⚠️ Lưu ý:\n- Không chia sẻ mã OTP này với bất kỳ ai\n- Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này\n\nTrân trọng,\nPhú Yên Store Team`
+    );
+
+    return response.sendSuccess(
+      res,
+      { email },
+      "Mã OTP đã được gửi đến email của bạn",
+      200
+    );
+  } catch (error) {
+    console.error("Send OTP change password error:", error);
+    return response.sendError(
+      res,
+      "Có lỗi xảy ra khi gửi mã OTP",
+      500,
+      error.message
+    );
+  }
+};
+
+//  Verify OTP for Change Password
+export const verifyOtpChangePassword = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const userId = req.user.userId;
+
+    // Validate inputs
+    if (!email || !otp) {
+      return response.sendError(res, "Email và OTP không được để trống", 400);
+    }
+
+    // Verify user owns this email
+    const user = await userModel.findById(userId);
+    if (!user || user.email !== email) {
+      return response.sendError(res, "Email không hợp lệ", 400);
+    }
+
+    // Get OTP from Redis
+    const otpKey = `change_password_otp:${email}`;
+    const savedOtp = await redisClient.get(otpKey);
+
+    if (!savedOtp) {
+      return response.sendError(res, "Mã OTP đã hết hạn hoặc không tồn tại", 400);
+    }
+
+    if (savedOtp !== otp) {
+      return response.sendError(res, "Mã OTP không chính xác", 400);
+    }
+
+    // Mark as verified
+    await redisClient.setEx(`verified:change:${email}`, 900, "true"); // 15 minutes
+
+    // Delete OTP
+    await redisClient.del(otpKey);
+
+    return response.sendSuccess(
+      res,
+      { email },
+      "Xác thực OTP thành công",
+      200
+    );
+  } catch (error) {
+    console.error("Verify OTP change password error:", error);
+    return response.sendError(
+      res,
+      "Có lỗi xảy ra khi xác thực OTP",
+      500,
+      error.message
+    );
+  }
+};
+
+// Change Password
+export const changePassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body; // Removed currentPassword
+    const userId = req.user.userId;
+
+    // Validate inputs
+    if (!email || !newPassword) {
+      return response.sendError(
+        res,
+        "Email và mật khẩu mới không được để trống",
+        400
+      );
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return response.sendError(
+        res,
+        "Mật khẩu mới phải có ít nhất 8 ký tự",
+        400
+      );
+    }
+
+    // Check if OTP was verified
+    const isVerified = await redisClient.get(`verified:change:${email}`);
+    if (!isVerified) {
+      return response.sendError(
+        res,
+        "Vui lòng verify OTP trước khi đổi mật khẩu",
+        400
+      );
+    }
+
+    // Find user
+    const user = await userModel.findById(userId);
+    if (!user || user.email !== email) {
+      return response.sendError(res, "Người dùng không tồn tại", 404);
+    }
+
+    //  Check if new password is same as current (optional but good practice)
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return response.sendError(
+        res,
+        "Mật khẩu mới không được trùng với mật khẩu hiện tại",
+        400
+      );
+    }
+
+    // Clean refresh_tokens before save
+    if (user.refresh_tokens && Array.isArray(user.refresh_tokens)) {
+      user.refresh_tokens = user.refresh_tokens.filter(token => {
+        return token && typeof token === 'object' && token.token;
+      });
+    } else {
+      user.refresh_tokens = [];
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    
+    // Save user
+    await user.save();
+
+    // Delete verified flag
+    await redisClient.del(`verified:change:${email}`);
+
+    // Send confirmation email
+    await sendMail(
+      email,
+      "✅ Mật khẩu đã được đổi thành công - Phú Yên Store",
+      `Xin chào ${user.name},\n\nMật khẩu của bạn đã được đổi thành công!\n\nBạn có thể đăng nhập với mật khẩu mới ngay bây giờ.\n\n⚠️ Lưu ý bảo mật:\n- Không chia sẻ mật khẩu với bất kỳ ai\n- Sử dụng mật khẩu mạnh và khác nhau cho mỗi tài khoản\n- Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ với chúng tôi ngay\n\nTrân trọng,\nPhú Yên Store Team`
+    );
+
+    return response.sendSuccess(
+      res,
+      null,
+      "Đổi mật khẩu thành công",
+      200
+    );
+  } catch (error) {
+    console.error("Change password error:", error);
+    return response.sendError(
+      res,
+      "Có lỗi xảy ra khi đổi mật khẩu",
+      500,
+      error.message
+    );
+  }
+};

@@ -23,13 +23,13 @@ const GoogleAuthCallback = () => {
       const refreshToken = searchParams.get('refreshToken');
       const error = searchParams.get('error');
 
-      // ✅ Handle errors with detailed messages
+      //  Handle errors with detailed messages
       if (error) {
         const errorMessages = {
           no_code: 'Không nhận được mã xác thực từ Google',
           invalid_data: 'Dữ liệu từ Google không hợp lệ',
           account_inactive: 'Tài khoản chưa được kích hoạt',
-          seller_account: 'Tài khoản seller không thể đăng nhập bằng Google. Vui lòng sử dụng email/password!', // ✅ New error
+          seller_account: 'Tài khoản seller không thể đăng nhập bằng Google. Vui lòng sử dụng email/password!',
           server_error: 'Lỗi server, vui lòng thử lại',
         };
         
@@ -57,7 +57,7 @@ const GoogleAuthCallback = () => {
         );
 
         if (result.success && result.user) {
-          // ✅ Double check role on frontend
+          // Double check role on frontend
           if (result.user.role === 'seller') {
             toast.error('Tài khoản seller không thể đăng nhập bằng Google!');
             
@@ -95,7 +95,7 @@ const GoogleAuthCallback = () => {
             duration: 3000,
           });
           
-          // ✅ Always redirect to home (user role only)
+          // Always redirect to home (user role only)
           navigate('/');
           
         } else {

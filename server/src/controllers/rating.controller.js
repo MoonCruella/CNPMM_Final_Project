@@ -178,7 +178,7 @@ export const updateRating = async (req, res) => {
       });
     }
 
-    // ✅ Cập nhật các trường cho phép
+    // Cập nhật các trường cho phép
     if (content !== undefined) existingRating.content = content;
     if (rating !== undefined) existingRating.rating = rating;
     if (status !== undefined && isSeller) existingRating.status = status; // 👈 chỉ seller mới đổi trạng thái

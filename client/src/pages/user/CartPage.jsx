@@ -10,16 +10,16 @@ const CartPage = () => {
     items: cartItems = [],
     updateQuantity,
     removeFromCart,
-    selectedItems, // ✅ NEW
-    toggleSelectItem, // ✅ NEW
-    selectAllItems, // ✅ NEW
-    deselectAllItems, // ✅ NEW
-    isAllSelected, // ✅ NEW
-    getSelectedItems, // ✅ NEW
-    getSelectedTotal, // ✅ NEW
+    selectedItems, 
+    toggleSelectItem, 
+    selectAllItems, 
+    deselectAllItems, 
+    isAllSelected, 
+    getSelectedItems, 
+    getSelectedTotal, 
   } = useCartContext();
 
-  // ✅ Calculate total for ALL items
+  // Calculate total for ALL items
   const subtotal = Array.isArray(cartItems)
     ? cartItems.reduce((total, item) => {
         const price =
@@ -29,7 +29,7 @@ const CartPage = () => {
       }, 0)
     : 0;
 
-  // ✅ Calculate total for SELECTED items only
+  // Calculate total for SELECTED items only
   const selectedTotal = getSelectedTotal();
   const selectedItemsCount = selectedItems.length;
 

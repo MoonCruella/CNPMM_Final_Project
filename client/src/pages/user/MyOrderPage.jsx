@@ -73,10 +73,10 @@ const MyOrdersPage = () => {
           return [order, ...prev];
         });
 
-        // ✅ Load other orders immediately
+        // Load other orders immediately
         await loadOtherOrders(orderId);
 
-        // ✅ Mark as loaded to enable infinite scroll
+        // Mark as loaded to enable infinite scroll
         setInitialOrderLoaded(true);
 
         // Scroll after render
@@ -147,7 +147,7 @@ const MyOrdersPage = () => {
     }
   }, [isAuthenticated, user, filter]);
 
-  // ✅ Search effect với debounce
+  // Search effect với debounce
   useEffect(() => {
     if (searchDebounceTimer) {
       clearTimeout(searchDebounceTimer);
@@ -471,7 +471,7 @@ const MyOrdersPage = () => {
       {/* Filter Tabs - Matching width, no extra space */}
       <section>
         <div className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden"> 
-          <div className="flex gap-2 p-2 overflow-x-auto"> {/* ✅ overflow-x-auto only on flex */}
+          <div className="flex gap-2 p-2 overflow-x-auto"> 
             {[
               { key: "all", label: "Tất cả", count: orderStats.total },
               { key: "pending", label: "Chờ xác nhận", count: orderStats.pending },
