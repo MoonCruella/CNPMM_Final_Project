@@ -100,9 +100,10 @@ const App = () => {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/forgot-password/verify-otp" element={<VerifyOTPPage />} />
         <Route path="/forgot-password/reset" element={<NewPasswordPage />} />
-
+        
         <Route path="/change-password" element={<ForgotPasswordPage />} />
         <Route path="/change-password/verify-otp" element={<VerifyOTPPage />} />
+        <Route path="/verify-otp" element={<VerifyOTPPage />} />
         <Route path="/change-password/reset" element={<NewPasswordPage />} />
        
         <Route path="/upload-to-cloudinary" element={<UploadImages />} />
