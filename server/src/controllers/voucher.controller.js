@@ -1,6 +1,6 @@
 import Voucher from "../models/voucher.model.js";
 
-// 📌 Admin: Tạo voucher
+// Admin: Tạo voucher
 export const createVoucher = async (req, res) => {
   try {
     // check trùng code
@@ -17,7 +17,7 @@ export const createVoucher = async (req, res) => {
   }
 };
 
-// 📌 Admin: Lấy danh sách voucher
+// Admin: Lấy danh sách voucher
 export const getAllVouchers = async (req, res) => {
   try {
     const {
@@ -64,8 +64,8 @@ export const getAllVouchers = async (req, res) => {
   }
 };
 
-// 📌 User: Lấy danh sách voucher (không phân trang) - trả về tất cả voucher đang có trong hệ thống
-// 📌 User: Lấy danh sách voucher đang khả dụng
+// User: Lấy danh sách voucher (không phân trang) - trả về tất cả voucher đang có trong hệ thống
+// User: Lấy danh sách voucher đang khả dụng
 export const getAvailableVouchers = async (req, res) => {
   try {
     const now = new Date();
@@ -86,7 +86,7 @@ export const getAvailableVouchers = async (req, res) => {
   }
 };
 
-// 📌 Admin: Cập nhật voucher
+// Admin: Cập nhật voucher
 export const updateVoucher = async (req, res) => {
   try {
     const voucher = await Voucher.findByIdAndUpdate(req.params.id, req.body, {
@@ -99,7 +99,7 @@ export const updateVoucher = async (req, res) => {
   }
 };
 
-// 📌 Admin: Xóa voucher
+// Admin: Xóa voucher
 export const deleteVoucher = async (req, res) => {
   try {
     const voucher = await Voucher.findByIdAndDelete(req.params.id);
@@ -110,7 +110,7 @@ export const deleteVoucher = async (req, res) => {
   }
 };
 
-// 📌 User: Áp dụng mã nhập tay
+// User: Áp dụng mã nhập tay
 export const applyVoucher = async (req, res) => {
   try {
     const { code, orderValue, shippingFee } = req.body;
