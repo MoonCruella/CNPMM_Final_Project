@@ -82,7 +82,7 @@ const ProductDetailDialog = ({ open, onClose, product }) => {
 
             {product.category_id && (
               <p>
-                <strong>Danh mục:</strong> {product.categoryName}
+                <strong>Danh mục:</strong> {product.category_id.name}
               </p>
             )}
 
