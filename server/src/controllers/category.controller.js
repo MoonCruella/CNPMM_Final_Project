@@ -6,6 +6,40 @@ import {
   sortByRelevance,
 } from "../utils/fuzzySearch.js";
 
+// ✅ Helper function to generate slug
+const generateSlug = (name) => {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+};
+
+// ✅ Helper function to ensure unique slug
+const ensureUniqueSlug = async (baseSlug, excludeId = null) => {
+  let slug = baseSlug;
+  let counter = 1;
+  
+  while (true) {
+    const query = { slug };
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+    
+    const existing = await Category.findOne(query);
+    if (!existing) {
+      return slug;
+    }
+    
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+};
+
 // GET: Lấy tất cả categories với phân trang và search
 export const getCategories = async (req, res) => {
   try {
@@ -92,26 +126,22 @@ export const getCategories = async (req, res) => {
 // POST: Tạo category mới
 export const createCategory = async (req, res) => {
   try {
-    const { name, slug, description, image, is_active } = req.body;
+    const { name, slug: customSlug, description, image, is_active } = req.body;
 
     // Validate required fields
     if (!name || !name.trim()) {
       return response.sendError(res, "Tên danh mục không được để trống", 400);
     }
 
-    if (!slug || !slug.trim()) {
-      return response.sendError(res, "Slug không được để trống", 400);
-    }
-
-    // Check if slug already exists
-    const existingCategory = await Category.findOne({ slug });
-    if (existingCategory) {
-      return response.sendError(res, "Slug đã tồn tại", 400);
-    }
+    // ✅ Generate slug from name or use custom slug
+    const baseSlug = customSlug?.trim() || generateSlug(name);
+    
+    // ✅ Ensure unique slug
+    const uniqueSlug = await ensureUniqueSlug(baseSlug);
 
     const category = new Category({
       name: name.trim(),
-      slug: slug.trim(),
+      slug: uniqueSlug,
       description: description?.trim() || "",
       image: image?.trim() || "",
       is_active: is_active !== undefined ? is_active : true,
@@ -168,7 +198,7 @@ export const getCategoryById = async (req, res) => {
 export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, slug, description, image, is_active } = req.body;
+    const { name, slug: customSlug, description, image, is_active } = req.body;
 
     const category = await Category.findById(id);
     if (!category) {
@@ -180,21 +210,22 @@ export const updateCategory = async (req, res) => {
       return response.sendError(res, "Tên danh mục không được để trống", 400);
     }
 
-    if (!slug || !slug.trim()) {
-      return response.sendError(res, "Slug không được để trống", 400);
+    // ✅ Generate slug from name if customSlug not provided
+    let newSlug;
+    if (customSlug && customSlug.trim()) {
+      newSlug = customSlug.trim();
+    } else {
+      newSlug = generateSlug(name);
     }
 
-    // Check if slug is changed and already exists
-    if (slug !== category.slug) {
-      const existingCategory = await Category.findOne({ slug });
-      if (existingCategory) {
-        return response.sendError(res, "Slug đã tồn tại", 400);
-      }
+    // ✅ Check if slug is changed and ensure unique
+    if (newSlug !== category.slug) {
+      newSlug = await ensureUniqueSlug(newSlug, id);
     }
 
     // Update fields
     category.name = name.trim();
-    category.slug = slug.trim();
+    category.slug = newSlug;
     category.description = description?.trim() || "";
     category.image = image?.trim() || "";
     category.is_active = is_active !== undefined ? is_active : category.is_active;
@@ -227,7 +258,6 @@ export const deleteCategory = async (req, res) => {
     if (!category) {
       return response.sendError(res, "Không tìm thấy danh mục", 404);
     }
-
 
     await Category.findByIdAndDelete(id);
 

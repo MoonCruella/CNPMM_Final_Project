@@ -1,22 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
   const [form, setForm] = useState({
     name: "",
-    slug: "",
     description: "",
-    short_description: "",
     price: "",
     sale_price: "",
     stock_quantity: "",
     status: "active",
-    featured: false,
-    hometown_origin: {
-      district: "",
-      terrain: "",
-    },
     category_id: "",
     images: [],
+    tags: [], // ✅ Add tags
   });
 
   const [previews, setPreviews] = useState([]);
@@ -26,59 +21,54 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
     if (initialData) {
       setForm({
         name: initialData.name || "",
-        price: initialData.price || 0,
-        category_id: initialData.category_id?._id || "",
-        hometown_origin: {
-          district: initialData.hometown_origin?.district || "",
-          terrain: initialData.hometown_origin?.terrain || "",
-        },
         description: initialData.description || "",
-        stock: initialData.stock || 0,
-        is_active: initialData.is_active ?? true,
+        price: initialData.price || "",
+        sale_price: initialData.sale_price || "",
+        stock_quantity: initialData.stock_quantity || "",
+        status: initialData.status || "active",
+        category_id: initialData.category_id?._id || initialData.category_id || "",
+        images: Array.isArray(initialData.images) ? initialData.images : [],
+        tags: Array.isArray(initialData.tags) ? initialData.tags : [],
       });
+
+      if (Array.isArray(initialData.images) && initialData.images.length > 0) {
+        setPreviews(initialData.images.map(img => img.image_url || img));
+      }
     } else {
-      // 🧹 Reset form khi ở chế độ thêm mới
       setForm({
         name: "",
-        price: 0,
-        category_id: "",
-        hometown_origin: { district: "", terrain: "" },
         description: "",
-        stock: 0,
-        is_active: true,
+        price: "",
+        sale_price: "",
+        stock_quantity: "",
+        status: "active",
+        category_id: "",
+        images: [],
+        tags: [],
       });
+      setPreviews([]);
     }
-  }, [initialData]);
+  }, [initialData, open]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
-    // xử lý riêng cho hometown_origin.*
-    if (name.startsWith("hometown_origin.")) {
-      const field = name.split(".")[1];
-      setForm((prev) => ({
-        ...prev,
-        hometown_origin: {
-          ...prev.hometown_origin,
-          [field]: value,
-        },
-      }));
-    } else {
-      setForm((prev) => ({
-        ...prev,
-        [name]:
-          type === "checkbox"
-            ? checked
-            : type === "number"
+    setForm((prev) => ({
+      ...prev,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : type === "number"
             ? Number(value)
             : value,
-      }));
-    }
+    }));
   };
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
+
+    const toastId = toast.loading(`Đang upload ${files.length} ảnh...`);
 
     try {
       const formData = new FormData();
@@ -89,47 +79,91 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
         body: formData,
       });
 
-      const data = await res.json();
-      if (data.success) {
-        const uploaded = data.data.successful.map((img, index) => ({
-          image_url: img.url,
-          is_primary: form.images.length === 0 && index === 0,
-        }));
+      const response = await res.json();
 
-        setForm((prev) => ({
-          ...prev,
-          images: [...prev.images, ...uploaded],
-        }));
+      if (response.success && response.data) {
+        const { successful = [], failed = [], totalUploaded = 0, totalFailed = 0 } = response.data;
 
-        setPreviews((prev) => [
-          ...prev,
-          ...uploaded.map((img) => img.image_url),
-        ]);
+        if (Array.isArray(successful) && successful.length > 0) {
+          const newImages = successful.map((img, index) => ({
+            image_url: img.url,
+            is_primary: (form.images?.length || 0) === 0 && index === 0,
+          }));
+
+          setForm((prev) => ({
+            ...prev,
+            images: [...(prev.images || []), ...newImages],
+          }));
+
+          setPreviews((prev) => [
+            ...(prev || []),
+            ...newImages.map((img) => img.image_url),
+          ]);
+
+          toast.success(
+            `Upload thành công ${totalUploaded} ảnh${totalFailed > 0 ? `, ${totalFailed} ảnh thất bại` : ""}`,
+            { id: toastId }
+          );
+        } else {
+          toast.error("Không có ảnh nào được upload thành công!", { id: toastId });
+        }
+
+        if (Array.isArray(failed) && failed.length > 0) {
+          console.warn("⚠️ Failed uploads:", failed);
+        }
       } else {
-        alert("Upload ảnh thất bại!");
+        toast.error(response.message || "Upload ảnh thất bại!", { id: toastId });
       }
     } catch (err) {
-      console.error("Upload error:", err);
-      alert("Có lỗi khi upload ảnh");
+      console.error("❌ Upload error:", err);
+      toast.error("Có lỗi khi upload ảnh: " + err.message, { id: toastId });
     } finally {
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
   const handleRemoveImage = (index) => {
-    setPreviews((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => (prev || []).filter((_, i) => i !== index));
     setForm((prev) => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index),
+      images: (prev.images || []).filter((_, i) => i !== index),
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Validate required fields
+    if (!form.name.trim()) {
+      toast.error("Vui lòng nhập tên sản phẩm");
+      return;
+    }
+
+    if (!form.category_id) {
+      toast.error("Vui lòng chọn danh mục");
+      return;
+    }
+
+    if (!form.price || Number(form.price) <= 0) {
+      toast.error("Vui lòng nhập giá sản phẩm hợp lệ");
+      return;
+    }
+
+    // ✅ Chỉ gửi những field BE cần
     const payload = {
-      ...form,
-      sale_price: form.sale_price === "" ? null : Number(form.sale_price),
+      name: form.name.trim(),
+      description: form.description.trim(),
+      price: Number(form.price),
+      sale_price: form.sale_price ? Number(form.sale_price) : 0,
+      category_id: form.category_id,
+      tags: form.tags || [],
+      stock_quantity: Number(form.stock_quantity) || 0,
+      images: form.images || [],
     };
+
+    console.log("📤 Sending payload to BE:", payload);
     onSubmit(payload);
   };
 
@@ -149,11 +183,11 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* --- Thông tin cơ bản --- */}
+          {/* Thông tin cơ bản */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="col-span-2">
               <label className="block text-sm text-gray-600 mb-1">
-                Tên sản phẩm
+                Tên sản phẩm <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -162,28 +196,27 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 onChange={handleChange}
                 required
                 className="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-gray-200"
+                placeholder="VD: Bánh Hồng (2.5kg/ 5gói)"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                💡 Slug sẽ được tự động tạo từ tên sản phẩm ở phía Backend
+              </p>
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Slug</label>
-              <input
-                type="text"
-                name="slug"
-                value={form.slug}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Giá</label>
+              <label className="block text-sm text-gray-600 mb-1">
+                Giá <span className="text-red-500">*</span>
+              </label>
               <input
                 type="number"
                 name="price"
                 value={form.price}
                 onChange={handleChange}
+                required
+                min="0"
+                step="1000"
                 className="w-full border rounded-lg px-3 py-2"
+                placeholder="175000"
               />
             </div>
 
@@ -196,7 +229,10 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 name="sale_price"
                 value={form.sale_price}
                 onChange={handleChange}
+                min="0"
+                step="1000"
                 className="w-full border rounded-lg px-3 py-2"
+                placeholder="150000 (Để trống = 0)"
               />
             </div>
 
@@ -209,147 +245,76 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 name="stock_quantity"
                 value={form.stock_quantity}
                 onChange={handleChange}
+                min="0"
                 className="w-full border rounded-lg px-3 py-2"
+                placeholder="100"
               />
             </div>
 
             <div>
               <label className="block text-sm text-gray-600 mb-1">
-                Trạng thái
-              </label>
-              <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2"
-              >
-                <option value="active">Đang bán</option>
-                <option value="inactive">Ngừng bán</option>
-              </select>
-            </div>
-          </div>
-
-          {/* --- Mô tả --- */}
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Mô tả ngắn
-            </label>
-            <textarea
-              name="short_description"
-              value={form.short_description}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 h-20"
-            />
-
-            <label className="block text-sm text-gray-600 mb-1 mt-4">
-              Mô tả chi tiết
-            </label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 h-28"
-            />
-          </div>
-
-          {/* --- Danh mục, nổi bật, xuất xứ --- */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                Danh mục
+                Danh mục <span className="text-red-500">*</span>
               </label>
               <select
                 name="category_id"
                 value={form.category_id}
                 onChange={handleChange}
+                required
                 className="w-full border rounded-lg px-3 py-2"
               >
                 <option value="">-- Chọn danh mục --</option>
-                {categories.map((c) => (
+                {Array.isArray(categories) && categories.map((c) => (
                   <option key={c._id} value={c._id}>
                     {c.name}
                   </option>
                 ))}
               </select>
             </div>
-
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                Khu vực
-              </label>
-              <select
-                name="hometown_origin.district"
-                value={form.hometown_origin.district}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2 mb-3"
-              >
-                <option value="">-- Chọn huyện/thị xã --</option>
-                <option value="phu_yen_city">TP. Tuy Hòa</option>
-                <option value="dong_hoa">TX. Đông Hòa</option>
-                <option value="tuy_an">Tuy An</option>
-                <option value="son_hoa">Sơn Hòa</option>
-                <option value="song_hinh">Sông Hinh</option>
-                <option value="tay_hoa">Tây Hòa</option>
-                <option value="phu_hoa">Phú Hòa</option>
-                <option value="dong_xuan">Đồng Xuân</option>
-                <option value="song_cau">Sông Cầu</option>
-              </select>
-
-              <label className="block text-sm text-gray-600 mb-1">
-                Địa hình
-              </label>
-              <select
-                name="hometown_origin.terrain"
-                value={form.hometown_origin.terrain}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2"
-              >
-                <option value="">-- Chọn địa hình --</option>
-                <option value="bien">Biển</option>
-                <option value="ven_bien">Vén biển</option>
-                <option value="dong_bang">Đồng bằng</option>
-                <option value="nui">Núi</option>
-              </select>
-            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="featured"
-              checked={form.featured}
-              onChange={handleChange}
-              id="featured"
-            />
-            <label htmlFor="featured" className="text-sm text-gray-700">
-              Sản phẩm nổi bật
+          {/* Mô tả */}
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">
+              Mô tả chi tiết
             </label>
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2 h-32"
+              placeholder="Nhập mô tả chi tiết về sản phẩm, cách sử dụng, bảo quản..."
+            />
           </div>
 
-          {/* --- Upload ảnh --- */}
+          {/* Upload ảnh */}
           <div>
             <label className="block text-sm text-gray-600 mb-2">
               Ảnh sản phẩm
             </label>
             <div className="flex flex-wrap gap-3">
-              {previews.map((src, i) => (
+              {Array.isArray(previews) && previews.map((src, i) => (
                 <div key={i} className="relative">
                   <img
                     src={src}
                     className="w-24 h-24 object-cover rounded-lg border"
-                    alt=""
+                    alt={`Preview ${i + 1}`}
                   />
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(i)}
-                    className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
+                    className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-700"
                   >
                     ×
                   </button>
+                  {form.images?.[i]?.is_primary && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-green-600 text-white text-xs text-center py-0.5 rounded-b-lg">
+                      Ảnh chính
+                    </div>
+                  )}
                 </div>
               ))}
 
-              <label className="cursor-pointer border border-dashed border-gray-300 hover:border-gray-400 rounded-lg w-24 h-24 flex items-center justify-center text-gray-500 text-sm">
+              <label className="cursor-pointer border-2 border-dashed border-gray-300 hover:border-gray-400 rounded-lg w-24 h-24 flex items-center justify-center text-gray-500 text-3xl transition">
                 +
                 <input
                   type="file"
@@ -361,22 +326,25 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 />
               </label>
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Ảnh đầu tiên sẽ là ảnh chính. Click dấu + để thêm nhiều ảnh.
+            </p>
           </div>
 
-          {/* --- Buttons --- */}
+          {/* Buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium"
+              className="px-5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-full bg-gray-800 hover:bg-gray-900 text-white font-medium"
+              className="px-5 py-2 rounded-full bg-gray-800 hover:bg-gray-900 text-white font-medium transition"
             >
-              {initialData ? "Cập nhật" : "Thêm"}
+              {initialData ? "💾 Cập nhật" : "➕ Thêm mới"}
             </button>
           </div>
         </form>
