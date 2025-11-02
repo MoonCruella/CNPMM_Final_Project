@@ -18,9 +18,8 @@ const StarRating = ({ rating }) => {
       {Array.from({ length: 5 }).map((_, i) => (
         <span
           key={i}
-          className={`text-lg ${
-            i < rating ? "text-yellow-400" : "text-gray-300"
-          }`}
+          className={`text-lg ${i < rating ? "text-yellow-400" : "text-gray-300"
+            }`}
         >
           ★
         </span>
@@ -70,8 +69,8 @@ const ProductDetails = () => {
       toast.error("Thêm vào giỏ hàng thất bại!");
     }
   };
-  
-  
+
+
   const toggleFavorite = async () => {
     if (!user) {
       toast.info("Vui lòng đăng nhập để thêm vào danh sách yêu thích!");
@@ -194,7 +193,7 @@ const ProductDetails = () => {
       if (err.response?.status === 403) {
         toast.error(
           err.response.data?.message ||
-            "Bạn cần mua sản phẩm này trước khi đánh giá!"
+          "Bạn cần mua sản phẩm này trước khi đánh giá!"
         );
       } else if (err.response?.status === 400) {
         toast.error(
@@ -255,11 +254,10 @@ const ProductDetails = () => {
               <div
                 key={index}
                 onClick={() => setThumbnail(imageObj)}
-                className={`border rounded overflow-hidden cursor-pointer w-30 h-30 ${
-                  thumbnail === imageObj
+                className={`border rounded overflow-hidden cursor-pointer w-30 h-30 ${thumbnail === imageObj
                     ? "border-green-700"
                     : "border-gray-300"
-                }`}
+                  }`}
               >
                 <img
                   src={imageObj.image_url}
@@ -283,11 +281,10 @@ const ProductDetails = () => {
             <div className="mt-4 flex justify-center">
               <button
                 onClick={toggleFavorite}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  isFavorited
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${isFavorited
                     ? "bg-red-50 border border-red-200 text-red-500"
                     : "bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100"
-                }`}
+                  }`}
               >
                 <span className="text-xl">{isFavorited ? "❤️" : "🤍"}</span>
                 <span>
@@ -333,12 +330,28 @@ const ProductDetails = () => {
 
           {/* Price info */}
           <div className="flex items-center gap-4 mt-4">
-            <p className="text-4xl font-bold text-green-700">
-              {formatCurrency(product.sale_price)}
-            </p>
-            <p className="text-2xl text-gray-500 line-through">
-              {formatCurrency(product.price)}
-            </p>
+            {product.sale_price && product.sale_price > 0 ? (
+              <>
+                {/* ✅ Có giá sale: hiển thị sale_price và price gạch ngang */}
+                <p className="text-4xl font-bold text-green-700">
+                  {formatCurrency(product.sale_price)}
+                </p>
+                <p className="text-2xl text-gray-500 line-through">
+                  {formatCurrency(product.price)}
+                </p>
+                {/* ✅ Tính % giảm giá */}
+                <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                  -{Math.round(((product.price - product.sale_price) / product.price) * 100)}%
+                </span>
+              </>
+            ) : (
+              <>
+                {/* ✅ Không có giá sale: chỉ hiển thị price (không gạch ngang) */}
+                <p className="text-4xl font-bold text-green-700">
+                  {formatCurrency(product.price)}
+                </p>
+              </>
+            )}
           </div>
 
           <p className="text-gray-600 mt-6">{product.description}</p>
@@ -464,11 +477,10 @@ const ProductDetails = () => {
                 <button
                   key={i}
                   onClick={() => setPage(i + 1)}
-                  className={`px-3 py-1 rounded ${
-                    page === i + 1
+                  className={`px-3 py-1 rounded ${page === i + 1
                       ? "bg-green-700 text-white"
                       : "bg-gray-200 text-gray-700"
-                  }`}
+                    }`}
                 >
                   {i + 1}
                 </button>
@@ -489,7 +501,7 @@ const ProductDetails = () => {
               const primary_image =
                 product.images && product.images.length > 0
                   ? product.images.find((img) => img.is_primary)?.image_url ||
-                    product.images[0].image_url
+                  product.images[0].image_url
                   : "";
 
               return (
