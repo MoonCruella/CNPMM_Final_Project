@@ -8,6 +8,7 @@ const fmtVND = (n = 0) => Number(n || 0).toLocaleString("vi-VN") + " ₫";
 const pad = (n) => (n < 10 ? `0${n}` : String(n));
 
 const SummaryCards = ({ summary }) => {
+  console.log("SummaryCards summary prop:", summary);
   const [revenueMonth, setRevenueMonth] = useState(summary?.revenueMonth ?? 0);
   const [percentChange, setPercentChange] = useState(
     summary?.revenueMonthChange ?? null

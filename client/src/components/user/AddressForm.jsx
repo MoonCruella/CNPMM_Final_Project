@@ -21,8 +21,9 @@ const AddressForm = ({ addressToEdit, onCancel }) => {
 
   // load tỉnh/huyện/xã
   useEffect(() => {
-    axios.get("https://provinces.open-api.vn/api/?depth=3").then((res) => {
+    axios.get("http://provinces.open-api.vn/api/?depth=3").then((res) => {
       setProvinces(res.data);
+      console.log("Provinces data loaded:", res.data);
     });
   }, []);
 
