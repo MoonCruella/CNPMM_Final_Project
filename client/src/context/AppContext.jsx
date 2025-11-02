@@ -270,7 +270,6 @@ useEffect(() => {
     } finally {
       setUser(null);
       syncAuthState();
-      toast.success("Đăng xuất thành công!");
     }
   };
 
@@ -288,7 +287,7 @@ useEffect(() => {
     } finally {
       syncAuthState();
       navigate("/");
-      toast.success("Đã đăng xuất khỏi tất cả thiết bị!");
+      toast.success("Đăng xuất thành công!");
     }
   };
 

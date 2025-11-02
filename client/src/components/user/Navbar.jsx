@@ -109,7 +109,7 @@ const Navbar = () => {
 
   const handleLogoutAll = async () => {
     try {
-      const loadingToast = toast.loading("Đang đăng xuất khỏi tất cả thiết bị...");
+      const loadingToast = toast.loading("Đang đăng xuất khỏi thiết bị...");
 
       await contextLogoutAll();
       await dispatch(logoutAsync()).unwrap();
