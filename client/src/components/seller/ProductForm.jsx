@@ -16,6 +16,10 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
 
   const [previews, setPreviews] = useState([]);
   const fileInputRef = useRef(null);
+  
+  // ✅ Loading states
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -25,7 +29,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
         price: initialData.price || "",
         sale_price: initialData.sale_price || "",
         stock_quantity: initialData.stock_quantity || "",
-        status: initialData.status || "active", // ✅ Lấy status từ initialData
+        status: initialData.status || "active",
         category_id: initialData.category_id?._id || initialData.category_id || "",
         images: Array.isArray(initialData.images) ? initialData.images : [],
         tags: Array.isArray(initialData.tags) ? initialData.tags : [],
@@ -48,6 +52,10 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
       });
       setPreviews([]);
     }
+    
+    // ✅ Reset loading states khi mở/đóng form
+    setIsUploading(false);
+    setIsSubmitting(false);
   }, [initialData, open]);
 
   const handleChange = (e) => {
@@ -68,6 +76,8 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
+    // ✅ Set uploading state
+    setIsUploading(true);
     const toastId = toast.loading(`Đang upload ${files.length} ảnh...`);
 
     try {
@@ -118,6 +128,8 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
       console.error("❌ Upload error:", err);
       toast.error("Có lỗi khi upload ảnh: " + err.message, { id: toastId });
     } finally {
+      // ✅ Reset uploading state
+      setIsUploading(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -132,7 +144,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate required fields
@@ -151,28 +163,42 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
       return;
     }
 
-    // ✅ Thêm status vào payload khi edit
-    const payload = {
-      name: form.name.trim(),
-      description: form.description.trim(),
-      price: Number(form.price),
-      sale_price: form.sale_price ? Number(form.sale_price) : 0,
-      category_id: form.category_id,
-      tags: form.tags || [],
-      stock_quantity: Number(form.stock_quantity) || 0,
-      images: form.images || [],
-    };
+    // ✅ Set submitting state
+    setIsSubmitting(true);
 
-    // ✅ Chỉ thêm status khi edit (có initialData)
-    if (initialData) {
-      payload.status = form.status;
+    try {
+      const payload = {
+        name: form.name.trim(),
+        description: form.description.trim(),
+        price: Number(form.price),
+        sale_price: form.sale_price ? Number(form.sale_price) : 0,
+        category_id: form.category_id,
+        tags: form.tags || [],
+        stock_quantity: Number(form.stock_quantity) || 0,
+        images: form.images || [],
+      };
+
+      if (initialData) {
+        payload.status = form.status;
+      }
+
+      console.log("📤 Sending payload to BE:", payload);
+      
+      // ✅ Call onSubmit và đợi kết quả
+      await onSubmit(payload);
+    } catch (error) {
+      console.error("❌ Submit error:", error);
+      toast.error("Có lỗi xảy ra khi lưu sản phẩm");
+    } finally {
+      // ✅ Reset submitting state
+      setIsSubmitting(false);
     }
-
-    console.log("📤 Sending payload to BE:", payload);
-    onSubmit(payload);
   };
 
   if (!open) return null;
+
+  // ✅ Disable all fields khi đang upload hoặc submit
+  const isDisabled = isUploading || isSubmitting;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
@@ -181,11 +207,32 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
           {initialData ? "✏️ Chỉnh sửa sản phẩm" : "➕ Thêm sản phẩm mới"}
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-800 text-2xl font-bold"
+            disabled={isDisabled}
+            className={`text-gray-500 hover:text-gray-800 text-2xl font-bold ${
+              isDisabled ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
             ×
           </button>
         </h2>
+
+        {/* ✅ Loading overlay khi đang upload */}
+        {isUploading && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-blue-700 font-medium">Đang upload ảnh...</span>
+          </div>
+        )}
+
+        {/* ✅ Loading overlay khi đang submit */}
+        {isSubmitting && (
+          <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-green-700 font-medium">
+              {initialData ? "Đang cập nhật sản phẩm..." : "Đang thêm sản phẩm..."}
+            </span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Thông tin cơ bản */}
@@ -199,8 +246,11 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 name="name"
                 value={form.name}
                 onChange={handleChange}
+                disabled={isDisabled}
                 required
-                className="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-gray-200"
+                className={`w-full border rounded-lg px-3 py-2 focus:ring focus:ring-gray-200 ${
+                  isDisabled ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 placeholder="VD: Bánh Hồng (2.5kg/ 5gói)"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -217,10 +267,13 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 name="price"
                 value={form.price}
                 onChange={handleChange}
+                disabled={isDisabled}
                 required
                 min="0"
                 step="1000"
-                className="w-full border rounded-lg px-3 py-2"
+                className={`w-full border rounded-lg px-3 py-2 ${
+                  isDisabled ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 placeholder="175000"
               />
             </div>
@@ -234,9 +287,12 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 name="sale_price"
                 value={form.sale_price}
                 onChange={handleChange}
+                disabled={isDisabled}
                 min="0"
                 step="1000"
-                className="w-full border rounded-lg px-3 py-2"
+                className={`w-full border rounded-lg px-3 py-2 ${
+                  isDisabled ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 placeholder="150000 (Để trống = 0)"
               />
             </div>
@@ -250,8 +306,11 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 name="stock_quantity"
                 value={form.stock_quantity}
                 onChange={handleChange}
+                disabled={isDisabled}
                 min="0"
-                className="w-full border rounded-lg px-3 py-2"
+                className={`w-full border rounded-lg px-3 py-2 ${
+                  isDisabled ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 placeholder="100"
               />
             </div>
@@ -264,8 +323,11 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 name="category_id"
                 value={form.category_id}
                 onChange={handleChange}
+                disabled={isDisabled}
                 required
-                className="w-full border rounded-lg px-3 py-2"
+                className={`w-full border rounded-lg px-3 py-2 ${
+                  isDisabled ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
               >
                 <option value="">-- Chọn danh mục --</option>
                 {Array.isArray(categories) && categories.map((c) => (
@@ -276,20 +338,23 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
               </select>
             </div>
 
-            {/* ✅ Status field - chỉ hiện khi edit */}
+            {/* Status field */}
             {initialData && (
               <div className="col-span-2">
                 <label className="block text-sm text-gray-600 mb-2">
                   Trạng thái sản phẩm
                 </label>
                 <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className={`flex items-center gap-2 ${
+                    isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                  }`}>
                     <input
                       type="radio"
                       name="status"
                       value="active"
                       checked={form.status === "active"}
                       onChange={handleChange}
+                      disabled={isDisabled}
                       className="w-4 h-4 text-green-600 focus:ring-green-500"
                     />
                     <span className="text-sm">
@@ -298,13 +363,16 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                     </span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className={`flex items-center gap-2 ${
+                    isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                  }`}>
                     <input
                       type="radio"
                       name="status"
                       value="inactive"
                       checked={form.status === "inactive"}
                       onChange={handleChange}
+                      disabled={isDisabled}
                       className="w-4 h-4 text-gray-600 focus:ring-gray-500"
                     />
                     <span className="text-sm">
@@ -312,8 +380,6 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                       <span className="text-gray-500 text-xs ml-1">(Inactive)</span>
                     </span>
                   </label>
-
-                  
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
                   Chỉ sản phẩm "Đang bán" mới hiển thị trên website
@@ -331,7 +397,10 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
               name="description"
               value={form.description}
               onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 h-32"
+              disabled={isDisabled}
+              className={`w-full border rounded-lg px-3 py-2 h-32 ${
+                isDisabled ? "bg-gray-100 cursor-not-allowed" : ""
+              }`}
               placeholder="Nhập mô tả chi tiết về sản phẩm, cách sử dụng, bảo quản..."
             />
           </div>
@@ -352,7 +421,12 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(i)}
-                    className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-700"
+                    disabled={isDisabled}
+                    className={`absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center ${
+                      isDisabled
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:bg-red-700"
+                    }`}
                   >
                     ×
                   </button>
@@ -364,8 +438,16 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 </div>
               ))}
 
-              <label className="cursor-pointer border-2 border-dashed border-gray-300 hover:border-gray-400 rounded-lg w-24 h-24 flex items-center justify-center text-gray-500 text-3xl transition">
-                +
+              <label className={`border-2 border-dashed border-gray-300 rounded-lg w-24 h-24 flex items-center justify-center text-gray-500 text-3xl transition ${
+                isDisabled
+                  ? "opacity-50 cursor-not-allowed"
+                  : "cursor-pointer hover:border-gray-400"
+              }`}>
+                {isUploading ? (
+                  <div className="w-6 h-6 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  "+"
+                )}
                 <input
                   type="file"
                   multiple
@@ -373,6 +455,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                   className="hidden"
                   ref={fileInputRef}
                   onChange={handleFileChange}
+                  disabled={isDisabled}
                 />
               </label>
             </div>
@@ -386,15 +469,32 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition"
+              disabled={isDisabled}
+              className={`px-5 py-2 rounded-full bg-gray-100 text-gray-700 font-medium transition ${
+                isDisabled
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-gray-200"
+              }`}
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-full bg-gray-800 hover:bg-gray-900 text-white font-medium transition"
+              disabled={isDisabled}
+              className={`px-5 py-2 rounded-full bg-gray-800 text-white font-medium transition flex items-center gap-2 ${
+                isDisabled
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-gray-900"
+              }`}
             >
-              {initialData ? "💾 Cập nhật" : "➕ Thêm mới"}
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>{initialData ? "Đang cập nhật..." : "Đang thêm..."}</span>
+                </>
+              ) : (
+                <span>{initialData ? "💾 Cập nhật" : "➕ Thêm mới"}</span>
+              )}
             </button>
           </div>
         </form>

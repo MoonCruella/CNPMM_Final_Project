@@ -108,3 +108,32 @@ export const requireOrderOwnerOrAdmin = async (req, res, next) => {
   }
 };
 
+export const checkAuthOptional = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token) {
+      try {
+        const decoded = verifyAccessToken(token);
+        const user = await User.findById(decoded.userId);
+        if (user && user.active) {
+          req.user = {
+            ...decoded,
+            email: user.email,
+            role: user.role,
+            name: user.name,
+            avatar: user.avatar,
+          };
+        }
+      } catch (tokenError) {
+        console.log("Optional auth token error:", tokenError.message);
+      }
+    }
+    
+    next();
+  } catch (error) {
+    // Không block request nếu có lỗi
+    next();
+  }
+};

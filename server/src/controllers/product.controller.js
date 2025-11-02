@@ -153,23 +153,32 @@ export const deleteProduct = async (req, res) => {
 // Lấy tất cả sản phẩm
 export const getAllProducts = async (req, res) => {
   try {
-    // Lấy page và limit từ query params
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Optional: Filter parameters
     const { category, minPrice, maxPrice, search, sort, status } = req.query;
     
-    // Build filter query
     const filter = {};
     
-    //  Filter theo status (mặc định là active nếu không truyền)
-    if (status) {
-      // Nếu có status trong query, filter theo status đó
-      filter.status = status;
+   
+
+    if (req.user && req.user.role === 'seller') {
+      
+      // Nếu có status query, filter theo status đó
+      if (status && status !== 'all') {
+        filter.status = status;
+      } else {
+      }
+      // Không filter theo status nếu không truyền hoặc status='all'
+    } else if (req.user && req.user.role === 'admin') {
+
+      
+      if (status && status !== 'all') {
+        filter.status = status;
+      }
     } else {
-      // Nếu không có status, mặc định chỉ lấy active
+      //  USER/GUEST: Chỉ xem active
       filter.status = "active";
     }
     
@@ -190,7 +199,7 @@ export const getAllProducts = async (req, res) => {
       ];
     }
 
-    // Build sort options với _id làm tiebreaker để đảm bảo sort ổn định
+    // Build sort options với _id làm tiebreaker
     let sortOptions = {};
     switch (sort) {
       case 'price_asc':
@@ -211,8 +220,7 @@ export const getAllProducts = async (req, res) => {
       default:
         sortOptions = { created_at: -1, _id: -1 }; 
     }
-
-    // Fetch products with pagination
+    //  Fetch products with pagination
     const products = await Product.find(filter)
       .populate('category_id', 'name slug')
       .sort(sortOptions)
@@ -220,11 +228,10 @@ export const getAllProducts = async (req, res) => {
       .limit(limit)
       .lean();
 
-    // Count total products
     const totalProducts = await Product.countDocuments(filter);
     const totalPages = Math.ceil(totalProducts / limit);
 
-    //  Response with pagination info
+
     res.status(200).json({
       success: true,
       data: {
@@ -241,7 +248,7 @@ export const getAllProducts = async (req, res) => {
       message: "Lấy danh sách sản phẩm thành công"
     });
   } catch (err) {
-    console.error("Error fetching all products:", err);
+    console.error("❌ Error fetching all products:", err);
     res.status(500).json({
       success: false,
       message: "Server error",

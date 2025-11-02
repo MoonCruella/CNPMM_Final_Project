@@ -16,7 +16,7 @@ import {
   getProductStats,
   
 } from "../controllers/product.controller.js";
-import { authenticateToken, checkAuth } from "../middleware/auth.middleware.js";
+import { authenticateToken, checkAuth, checkAuthOptional } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
@@ -32,7 +32,7 @@ router.get("/:productId/similar", getSimilarProducts);
 router.get("/:productId/stats", getProductStats);
 
 // Public routes
-router.get("/", getAllProducts);
+router.get("/", checkAuthOptional, getAllProducts);
 router.post("/", authenticateToken, createProduct);
 router.put("/:id", authenticateToken, updateProduct);
 router.delete("/:id", authenticateToken, deleteProduct);

@@ -139,28 +139,31 @@ const ProductList = () => {
   };
 
   const handleFormSubmit = async (formData) => {
-    try {
-      let res;
-      if (selectedProduct?._id) {
-        res = await productService.update(selectedProduct._id, formData);
-      } else {
-        res = await productService.create(formData);
-      }
-
-      if (res.success) {
-        toast.success(
-          selectedProduct ? "Cập nhật sản phẩm thành công" : "Thêm sản phẩm thành công"
-        );
-        setOpenForm(false);
-        loadProducts();
-      } else {
-        toast.error(res.message || "Có lỗi xảy ra");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Có lỗi xảy ra khi lưu sản phẩm");
+  try {
+    let res;
+    if (selectedProduct?._id) {
+      res = await productService.update(selectedProduct._id, formData);
+    } else {
+      res = await productService.create(formData);
     }
-  };
+
+    if (res.success) {
+      toast.success(
+        selectedProduct ? "Cập nhật sản phẩm thành công" : "Thêm sản phẩm thành công"
+      );
+      setOpenForm(false);
+      loadProducts();
+      setSelectedProduct(null);
+    } else {
+      toast.error(res.message || "Có lỗi xảy ra");
+      throw new Error(res.message); 
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error("Có lỗi xảy ra khi lưu sản phẩm");
+    throw err; 
+  }
+};
 
   return (
     <main className="bg-gray-50 min-h-screen">
@@ -180,11 +183,7 @@ const ProductList = () => {
             </li>
             <li className="font-medium">/ Quản lý sản phẩm</li>
           </ul>
-          {!isLoading && totalProducts > 0 && (
-            <p className="text-gray-200 text-sm mt-2">
-              Hiển thị {((page - 1) * limit + 1)} - {Math.min(page * limit, totalProducts)} trong tổng số {totalProducts} sản phẩm
-            </p>
-          )}
+          
         </div>
       </section>
 

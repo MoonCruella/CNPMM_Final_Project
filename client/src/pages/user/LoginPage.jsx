@@ -29,7 +29,7 @@ const LoginPage = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isSellerLogin, setIsSellerLogin] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false); // ✅ Add state
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false); 
 
   const { syncWithRedux } = useUserContext();
   const navigate = useNavigate();

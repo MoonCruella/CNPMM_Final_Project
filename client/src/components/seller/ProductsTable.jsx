@@ -115,7 +115,7 @@ const ProductsTable = ({ products, onEdit, onDelete, onView, isLoading }) => {
                   {p.price?.toLocaleString()}₫
                 </td>
                 <td className="py-3 px-4 text-center text-gray-700">
-                  {p.categoryName}
+                  {p.category_id.name}
                 </td>
                 <td className="py-3 px-4 text-center text-gray-700">
                   {p.stock_quantity}
