@@ -73,16 +73,51 @@ export const getPosts = async (req, res) => {
       filter.category = req.query.category;
     }
     
+    // Xử lý filter status theo role
     if (req.query.status) {
-      // Kiểm tra quyền nếu muốn lấy bài viết draft
-      if (req.query.status === 'draft' && (!req.user || !req.user.isAdmin)) {
-        filter.status = 'published';
+      // Nếu có status trong query
+      if (req.query.status === 'draft') {
+        // Chỉ admin hoặc seller (author) mới xem được draft
+        if (!req.user) {
+          // Không đăng nhập thì chỉ xem published
+          filter.status = 'published';
+        } else if (req.user.role === 'admin') {
+          // Admin xem tất cả draft
+          filter.status = 'draft';
+        } else if (req.user.role === 'seller') {
+          // Seller chỉ xem draft của chính mình
+          filter.status = 'draft';
+          filter.author_id = req.user.userId;
+        } else {
+          // User thường chỉ xem published
+          filter.status = 'published';
+        }
       } else {
-        filter.status = req.query.status;
+        // Status khác draft (published, archived)
+        if (req.user && (req.user.role === 'admin' || req.user.role === 'seller')) {
+          filter.status = req.query.status;
+          // Seller chỉ xem bài của mình
+          if (req.user.role === 'seller') {
+            filter.author_id = req.user.userId;
+          }
+        } else {
+          // User thường chỉ xem published
+          filter.status = 'published';
+        }
       }
     } else {
-      // Mặc định chỉ lấy bài đã published nếu không có quyền admin
-      if (!req.user || !req.user.isAdmin) {
+      // Không có status trong query
+      if (!req.user) {
+        // Không đăng nhập: chỉ xem published
+        filter.status = 'published';
+      } else if (req.user.role === 'admin') {
+        // Admin: xem tất cả (không filter status)
+        // Không set filter.status để lấy tất cả
+      } else if (req.user.role === 'seller') {
+        // ✅ Seller: xem tất cả bài của mình (không filter status)
+        filter.author_id = req.user.userId;
+      } else {
+        // User thường: chỉ xem published
         filter.status = 'published';
       }
     }
@@ -91,12 +126,22 @@ export const getPosts = async (req, res) => {
       filter['location.district'] = req.query.location;
     }
     
+    // ✅ Thêm tìm kiếm
+    if (req.query.search && req.query.search.trim()) {
+      const searchRegex = new RegExp(req.query.search.trim(), 'i');
+      filter.$or = [
+        { title: searchRegex },
+        { content: searchRegex },
+        { excerpt: searchRegex }
+      ];
+    }
+    
     // Lấy tổng số bài viết thỏa mãn điều kiện
     const total = await HometownPost.countDocuments(filter);
     
     // Lấy danh sách bài viết
     const posts = await HometownPost.find(filter)
-      .populate('author_id', 'name avatar')
+      .populate('author_id', 'name avatar email')
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(limit);

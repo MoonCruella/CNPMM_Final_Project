@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // 
+import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+
 import BlogPostList from './BlogPostList';
 import BlogPostModal from './modal/BlogPostModal';
 import blogService from '@/services/blogService';
@@ -81,18 +83,36 @@ const BlogManagement = () => {
     }
   };
 
+  // ✅ FIX: Cập nhật status locally trước khi gọi API
   const handleChangeStatus = async (postId, newStatus) => {
     try {
+      // ✅ Cập nhật UI ngay lập tức
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post._id === postId 
+            ? { ...post, status: newStatus }
+            : post
+        )
+      );
+
       const response = await blogService.changeStatus(postId, newStatus);
       
       if (response.success) {
-        toast.success(`Bài viết đã được ${newStatus === 'published' ? 'đăng' : 'ẩn'}`);
-        fetchPosts();
+        toast.success(`Bài viết đã được ${newStatus === 'published' ? 'đăng' : newStatus === 'draft' ? 'chuyển về bản nháp' : 'lưu trữ'}`);
+        
+        // ✅ Nếu đang filter và status mới không khớp với filter, reload lại
+        if (filterStatus !== 'all' && filterStatus !== newStatus) {
+          fetchPosts();
+        }
       } else {
+        // ✅ Nếu lỗi, revert lại status cũ
+        fetchPosts();
         toast.error(response.message || 'Không thể thay đổi trạng thái bài viết');
       }
     } catch (error) {
       console.error('Error changing blog post status:', error);
+      // ✅ Nếu lỗi, revert lại status cũ
+      fetchPosts();
       toast.error('Có lỗi xảy ra khi thay đổi trạng thái bài viết');
     }
   };
@@ -107,12 +127,11 @@ const BlogManagement = () => {
         className="bg-cover bg-center py-20 text-center text-white relative"
         style={{ backgroundImage: `url(${assets.page_banner})` }}
       >
-        {/* Overlay để text dễ đọc hơn */}
         <div className="absolute inset-0 bg-black/40"></div>
         
-        <div className="relative z-10">
+        <div className="relative z-10 container mx-auto px-4">
           <h1 className="text-5xl font-bold drop-shadow-lg">Quản lý Blog</h1>
-          <ul className="flex justify-center gap-2 mt-2 text-sm">
+          <ul className="flex justify-center gap-2 mt-4 text-sm">
             <li>
               <Link to="/seller" className="hover:underline font-medium">
                 Dashboard
@@ -163,7 +182,10 @@ const BlogManagement = () => {
 
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setCurrentPage(1);
+              }}
               className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="all">Tất cả trạng thái</option>
@@ -172,6 +194,30 @@ const BlogManagement = () => {
               <option value="archived">Đã lưu trữ</option>
             </select>
           </div>
+
+          {/* ✅ Thêm thông báo khi đang filter */}
+          {filterStatus !== 'all' && (
+            <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <span>
+                Đang lọc theo: <strong>
+                  {{
+                    published: 'Đã đăng',
+                    draft: 'Bản nháp',
+                    archived: 'Đã lưu trữ'
+                  }[filterStatus]}
+                </strong>
+              </span>
+              <button
+                onClick={() => setFilterStatus('all')}
+                className="ml-auto text-blue-600 hover:text-blue-800 underline"
+              >
+                Xóa bộ lọc
+              </button>
+            </div>
+          )}
 
           <BlogPostList 
             posts={posts}
