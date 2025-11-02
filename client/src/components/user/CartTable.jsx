@@ -17,9 +17,9 @@ const CartTable = ({
               <th className="py-3 px-4 w-12">
                 <span className="sr-only">Select</span>
               </th>
-              <th className="py-3 px-4 text-white">Products</th>
-              <th className="py-3 px-4 text-white">Quantity</th>
-              <th className="py-3 px-4 text-right text-white">Subtotal</th>
+              <th className="py-3 px-4 text-white">Sản phẩm</th>
+              <th className="py-3 px-4 text-white">Số lượng</th>
+              <th className="py-3 px-4 text-right text-white">Tổng giá trị</th>
             </tr>
           </thead>
           <tbody>

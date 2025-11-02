@@ -61,14 +61,14 @@ const Checkout = () => {
         className="bg-cover bg-center py-20 text-center text-white"
         style={{ backgroundImage: `url(${assets.page_banner})` }}
       >
-        <h1 className="text-5xl font-bold">Checkout</h1>
+        <h1 className="text-5xl font-bold">Thanh toán</h1>
         <ul className="flex justify-center gap-2 mt-2 text-sm">
           <li>
             <Link to="/" className="hover:underline font-medium">
               Home
             </Link>
           </li>
-          <li className="font-medium">/ Checkout</li>
+          <li className="font-medium">/ Thanh toán</li>
         </ul>
       </section>
 

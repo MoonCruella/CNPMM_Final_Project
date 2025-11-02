@@ -30,13 +30,13 @@ const CartTotals = ({
 
   return (
     <div className="bg-white shadow rounded-xl p-6 h-fit sticky top-4">
-      <h2 className="text-2xl font-bold mb-4">Cart Totals</h2>
+      <h2 className="text-2xl font-bold mb-4">Tổng kết giỏ hàng</h2>
       
 
       {/* Price Breakdown */}
       <div className="space-y-3 border-t pt-4">
         <div className="flex justify-between text-gray-600">
-          <span>Subtotal</span>
+          <span>Tổng tiền các sản phẩm  </span>
           <span className="font-medium text-gray-800">
             {subtotal.toLocaleString("vi-VN")}₫
           </span>
@@ -46,7 +46,7 @@ const CartTotals = ({
 
         {discount > 0 && (
           <div className="flex justify-between text-green-600">
-            <span>Discount</span>
+            <span>Giảm giá</span>
             <span className="font-medium">
               -{discount.toLocaleString("vi-VN")}₫
             </span>
@@ -54,7 +54,7 @@ const CartTotals = ({
         )}
 
         <div className="border-t pt-3 flex justify-between items-center">
-          <span className="text-lg font-bold text-gray-800">Total</span>
+          <span className="text-lg font-bold text-gray-800">Tổng cộng</span>
           <div className="text-right">
             <span className="text-2xl font-bold text-green-700">
               {hasSelection ? total.toLocaleString("vi-VN") : '0'}₫
@@ -80,15 +80,15 @@ const CartTotals = ({
       >
         {hasSelection ? (
           <>
-            Proceed to Checkout
+            Thanh toán
             {selectedCount > 1 && (
               <span className="text-xs ml-2 opacity-90">
-                ({selectedCount} items)
+                ({selectedCount}  )
               </span>
             )}
           </>
         ) : (
-          "Select items to checkout"
+          "Chọn sản phẩm để thanh toán"
         )}
       </button>
 
@@ -116,7 +116,7 @@ const CartTotals = ({
             href="/products"
             className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center justify-center gap-1 hover:gap-2 transition-all"
           >
-            ← Continue Shopping
+            ← Tiếp tục mua sắm
           </a>
         </div>
       )}

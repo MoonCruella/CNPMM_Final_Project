@@ -37,7 +37,7 @@ const googleAuthService = {
       localStorage.setItem('refreshToken', refreshToken);
 
       // Fetch user data
-      const response = await fetch(`${API_BASE_URL}/api/user/current-user`, {
+      const response = await fetch(`${API_BASE_URL}/api/user/get-user`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },

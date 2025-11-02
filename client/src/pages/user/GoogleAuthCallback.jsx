@@ -103,7 +103,6 @@ const GoogleAuthCallback = () => {
         }
       } catch (error) {
         console.error('Google callback error:', error);
-        toast.error(error.message || 'Có lỗi xảy ra khi xử lý đăng nhập');
         navigate('/login');
       }
     };

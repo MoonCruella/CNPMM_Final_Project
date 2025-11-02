@@ -147,10 +147,10 @@ const AllProducts = () => {
           <h1 className="text-5xl font-bold mb-4">Tất cả sản phẩm</h1>
           <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full">
             <a href="/" className="hover:underline">
-              Home
+              Trang chủ
             </a>
             <span>|</span>
-            <span>All Products</span>
+            <span>Tất cả sản phẩm</span>
           </div>
         </div>
       </div>
@@ -189,7 +189,7 @@ const AllProducts = () => {
 
             {/* Categories */}
             <div className="bg-yellow-50 p-4 rounded-xl">
-              <h2 className="font-semibold mb-3">All Category</h2>
+              <h2 className="font-semibold mb-3">Các danh mục</h2>
               <ul className="space-y-2">
                 <li
                   onClick={() => setActiveCategory(null)}
@@ -197,7 +197,7 @@ const AllProducts = () => {
                     activeCategory === null ? "text-green-600 font-bold" : ""
                   }`}
                 >
-                  All Products <span>↻</span>
+                  Tất cả loại sản phẩm <span>↻</span>
                 </li>
 
                 {/* Check if categories is array before mapping */}
@@ -228,16 +228,16 @@ const AllProducts = () => {
           <div className="flex-1">
             <div className="flex justify-between items-center mb-4">
               <span className="bg-green-700 text-white px-4 py-2 rounded-lg ml-5">
-                Showing {showingFrom}-{showingTo} of {totalProducts} Results
+                Hiển thị {showingFrom}-{showingTo} of {totalProducts} kết quả
               </span>
               <select
                 className="border rounded-lg px-3 py-2 mr-5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400"
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value)}
               >
-                <option value="default">Default Sorting</option>
-                <option value="lowToHigh">Price: Low to High</option>
-                <option value="highToLow">Price: High to Low</option>
+                <option value="default">Mặc định</option>
+                <option value="lowToHigh">Giá từ thấp lên cao</option>
+                <option value="highToLow">Giá từ cao xuống thấp</option>
               </select>
             </div>
 

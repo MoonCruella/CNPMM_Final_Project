@@ -40,14 +40,14 @@ const CartPage = () => {
         className="bg-cover bg-center py-20 text-center text-white"
         style={{ backgroundImage: `url(${assets.page_banner})` }}
       >
-        <h1 className="text-5xl font-bold">Cart</h1>
+        <h1 className="text-5xl font-bold">Giỏ hàng</h1>
         <ul className="flex justify-center gap-2 mt-2 text-sm">
           <li>
             <Link to="/" className="hover:underline font-medium">
               Home
             </Link>
           </li>
-          <li className="font-medium">/ Cart</li>
+          <li className="font-medium">/ Giỏ hàng</li>
         </ul>
       </section>
 
@@ -105,7 +105,7 @@ const CartPage = () => {
               to="/products"
               className="hover:underline font-medium text-primary"
             >
-              Continue Shopping
+              Tiếp tục mua sắm
             </Link>
           </div>
         </div>

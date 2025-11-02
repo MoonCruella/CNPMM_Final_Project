@@ -157,26 +157,21 @@ const Navbar = () => {
           to="/"
           className="relative border-b-2 border-transparent hover:border-green-600 transition duration-300"
         >
-          Home
+          Trang Chủ
         </NavLink>
         <NavLink 
           to="/products" 
           className="relative border-b-2 border-transparent hover:border-green-600 transition duration-300"
         >
-            All Products
+            Tất cả sản phẩm
         </NavLink>
 
-        <NavLink 
-          to="/contact"
-          className="relative border-b-2 border-transparent hover:border-green-600 transition duration-300"
-        >
-          Contact
-        </NavLink>
+        
         <NavLink 
           to="/blog"
           className="relative border-b-2 border-transparent hover:border-green-600 transition duration-300"
         >
-          Blog
+          Bài đăng
         </NavLink>
 
         {/* Cart */}
@@ -230,7 +225,7 @@ const Navbar = () => {
 
             {/* Dropdown Menu */}
             <div
-              className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm z-50 transition-all duration-200 ${
+              className={`absolute top-12 right-0 bg-white shadow-lg border border-gray-200 py-2 w-56 rounded-md text-sm z-50 transition-all duration-200 ${
                 isUserMenuOpen
                   ? "opacity-100 visible translate-y-0"
                   : "opacity-0 invisible -translate-y-2"
@@ -284,14 +279,14 @@ const Navbar = () => {
                 onClick={() => handleMenuNavigation("/user/account/profile")}
                 className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 transition-colors"
               >
-                <span>👤</span> My Profile
+                Hồ sơ của tôi
               </button>
 
               <button
                 onClick={() => handleMenuNavigation("/user/orders")}
                 className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 transition-colors"
               >
-                <span>📦</span> My Orders
+                Đơn hàng của tôi
               </button>
 
               {/* Admin Link */}
@@ -310,7 +305,7 @@ const Navbar = () => {
                   onClick={() => handleMenuNavigation("/seller")}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-blue-600 transition-colors"
                 >
-                  <span>🏪</span> Seller Dashboard
+                  Trang quản lí bán hàng
                 </button>
               )}
 
@@ -318,18 +313,13 @@ const Navbar = () => {
 
               {/* Logout Options */}
               <button
-                onClick={handleLogout}
+                onClick={handleLogoutAll}
                 className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-gray-700 transition-colors"
               >
-                <span>🚪</span> Logout
+                 Đăng xuất
               </button>
 
-              <button
-                onClick={handleLogoutAll}
-                className="w-full text-left px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-red-600 transition-colors"
-              >
-                <span>🚫</span> Logout All Devices
-              </button>
+              
             </div>
           </div>
         )}
