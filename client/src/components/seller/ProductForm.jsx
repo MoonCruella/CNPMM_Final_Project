@@ -11,7 +11,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
     status: "active",
     category_id: "",
     images: [],
-    tags: [], // ✅ Add tags
+    tags: [],
   });
 
   const [previews, setPreviews] = useState([]);
@@ -25,7 +25,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
         price: initialData.price || "",
         sale_price: initialData.sale_price || "",
         stock_quantity: initialData.stock_quantity || "",
-        status: initialData.status || "active",
+        status: initialData.status || "active", // ✅ Lấy status từ initialData
         category_id: initialData.category_id?._id || initialData.category_id || "",
         images: Array.isArray(initialData.images) ? initialData.images : [],
         tags: Array.isArray(initialData.tags) ? initialData.tags : [],
@@ -151,7 +151,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
       return;
     }
 
-    // ✅ Chỉ gửi những field BE cần
+    // ✅ Thêm status vào payload khi edit
     const payload = {
       name: form.name.trim(),
       description: form.description.trim(),
@@ -162,6 +162,11 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
       stock_quantity: Number(form.stock_quantity) || 0,
       images: form.images || [],
     };
+
+    // ✅ Chỉ thêm status khi edit (có initialData)
+    if (initialData) {
+      payload.status = form.status;
+    }
 
     console.log("📤 Sending payload to BE:", payload);
     onSubmit(payload);
@@ -270,6 +275,51 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
                 ))}
               </select>
             </div>
+
+            {/* ✅ Status field - chỉ hiện khi edit */}
+            {initialData && (
+              <div className="col-span-2">
+                <label className="block text-sm text-gray-600 mb-2">
+                  Trạng thái sản phẩm
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="status"
+                      value="active"
+                      checked={form.status === "active"}
+                      onChange={handleChange}
+                      className="w-4 h-4 text-green-600 focus:ring-green-500"
+                    />
+                    <span className="text-sm">
+                      <span className="font-medium text-green-700">Đang bán</span>
+                      <span className="text-gray-500 text-xs ml-1">(Active)</span>
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="status"
+                      value="inactive"
+                      checked={form.status === "inactive"}
+                      onChange={handleChange}
+                      className="w-4 h-4 text-gray-600 focus:ring-gray-500"
+                    />
+                    <span className="text-sm">
+                      <span className="font-medium text-gray-700">Ngừng bán</span>
+                      <span className="text-gray-500 text-xs ml-1">(Inactive)</span>
+                    </span>
+                  </label>
+
+                  
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Chỉ sản phẩm "Đang bán" mới hiển thị trên website
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Mô tả */}

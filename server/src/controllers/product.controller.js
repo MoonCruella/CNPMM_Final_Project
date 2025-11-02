@@ -153,16 +153,25 @@ export const deleteProduct = async (req, res) => {
 // Lấy tất cả sản phẩm
 export const getAllProducts = async (req, res) => {
   try {
-    //  Lấy page và limit từ query params
+    // Lấy page và limit từ query params
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    //  Optional: Filter parameters
-    const { category, minPrice, maxPrice, search, sort } = req.query;
+    // Optional: Filter parameters
+    const { category, minPrice, maxPrice, search, sort, status } = req.query;
     
-    //  Build filter query
-    const filter = { status: "active" };
+    // Build filter query
+    const filter = {};
+    
+    //  Filter theo status (mặc định là active nếu không truyền)
+    if (status) {
+      // Nếu có status trong query, filter theo status đó
+      filter.status = status;
+    } else {
+      // Nếu không có status, mặc định chỉ lấy active
+      filter.status = "active";
+    }
     
     if (category) {
       filter.category_id = category;
@@ -181,29 +190,29 @@ export const getAllProducts = async (req, res) => {
       ];
     }
 
-    // Build sort options
+    // Build sort options với _id làm tiebreaker để đảm bảo sort ổn định
     let sortOptions = {};
     switch (sort) {
       case 'price_asc':
-        sortOptions = { price: 1 };
+        sortOptions = { price: 1, _id: 1 };
         break;
       case 'price_desc':
-        sortOptions = { price: -1 };
+        sortOptions = { price: -1, _id: 1 }; 
         break;
       case 'newest':
-        sortOptions = { created_at: -1 };
+        sortOptions = { created_at: -1, _id: -1 }; 
         break;
       case 'popular':
-        sortOptions = { sold_quantity: -1 };
+        sortOptions = { sold_quantity: -1, _id: 1 }; 
         break;
       case 'rating':
-        sortOptions = { avg_rating: -1 };
+        sortOptions = { avg_rating: -1, _id: 1 }; 
         break;
       default:
-        sortOptions = { created_at: -1 }; // Default: newest first
+        sortOptions = { created_at: -1, _id: -1 }; 
     }
 
-    //  Fetch products with pagination
+    // Fetch products with pagination
     const products = await Product.find(filter)
       .populate('category_id', 'name slug')
       .sort(sortOptions)
@@ -211,7 +220,7 @@ export const getAllProducts = async (req, res) => {
       .limit(limit)
       .lean();
 
-    //  Count total products
+    // Count total products
     const totalProducts = await Product.countDocuments(filter);
     const totalPages = Math.ceil(totalProducts / limit);
 

@@ -14,9 +14,7 @@ const productService = {
       });
 
       const url = `/api/products${queryString.toString() ? `?${queryString.toString()}` : ''}`;
-      
-      console.log('📡 productService.getAll URL:', url);
-      
+            
       const res = await api.get(url);
       return res.data;
     } catch (error) {
