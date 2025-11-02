@@ -13,6 +13,10 @@ const revenueFieldExpr = () =>
   // prefer total_amount, fall back to total
   ({ $toDouble: { $ifNull: ["$total_amount", "$total"] } });
 
+// SHIFT to Vietnam local (UTC+7)
+const SHIFT_HOURS = 7;
+const SHIFT_MS = SHIFT_HOURS * 60 * 60 * 1000;
+
 /**
  * GET /api/revenue?period=day|week|month&start=ISO&end=ISO&status=completed
  * returns array of { period: string, revenue: number, orders: number }
@@ -23,17 +27,19 @@ export const getRevenue = async (req, res) => {
     const startDate = parseDate(start, new Date(0));
     const endDate = parseDate(end, new Date());
 
-    const match = {
-      created_at: { $gte: startDate, $lte: endDate },
+    // We'll shift created_at by +7 hours inside aggregation to compute local periods
+    // Build a match that compares the shifted field (localCreatedAt) to the provided start/end (which are local)
+    const matchLocal = {
+      localCreatedAt: { $gte: startDate, $lte: endDate },
     };
-    if (status) match.status = status;
+    if (status) matchLocal.status = status;
 
     let groupStage;
     let projectStage;
 
     if (period === "month") {
       groupStage = {
-        _id: { $dateToString: { format: "%Y-%m", date: "$created_at" } },
+        _id: { $dateToString: { format: "%Y-%m", date: "$localCreatedAt" } },
         revenue: { $sum: revenueFieldExpr() },
         orders: { $sum: 1 },
       };
@@ -46,8 +52,8 @@ export const getRevenue = async (req, res) => {
     } else if (period === "week") {
       groupStage = {
         _id: {
-          year: { $isoWeekYear: "$created_at" },
-          week: { $isoWeek: "$created_at" },
+          year: { $isoWeekYear: "$localCreatedAt" },
+          week: { $isoWeek: "$localCreatedAt" },
         },
         revenue: { $sum: revenueFieldExpr() },
         orders: { $sum: 1 },
@@ -66,7 +72,7 @@ export const getRevenue = async (req, res) => {
       };
     } else {
       groupStage = {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$localCreatedAt" } },
         revenue: { $sum: revenueFieldExpr() },
         orders: { $sum: 1 },
       };
@@ -87,7 +93,19 @@ export const getRevenue = async (req, res) => {
     }
 
     const pipeline = [
-      { $match: match },
+      // create localCreatedAt = created_at + 7 hours (Vietnam time)
+      {
+        $addFields: {
+          localCreatedAt: {
+            $dateAdd: {
+              startDate: "$created_at",
+              unit: "hour",
+              amount: SHIFT_HOURS,
+            },
+          },
+        },
+      },
+      { $match: matchLocal },
       { $group: groupStage },
       sortStage,
       { $project: projectStage },
@@ -110,16 +128,15 @@ export const getRevenue = async (req, res) => {
       `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const formatMonth = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
 
-    // ISO week year/week helper
+    // ISO week year/week helper (use local time, no UTC adjustments)
     const getISOWeekYearAndWeek = (d) => {
-      const date = new Date(
-        Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
-      );
-      // Thursday in current week decides the year.
-      date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-      const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+      const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      // Move to Thursday in current week — ISO week date rule
+      const day = date.getDay() || 7; // 1..7 (Mon..Sun)
+      date.setDate(date.getDate() + 4 - day);
+      const yearStart = new Date(date.getFullYear(), 0, 1);
       const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
-      return { year: date.getUTCFullYear(), week: weekNo };
+      return { year: date.getFullYear(), week: weekNo };
     };
 
     const periods = [];
@@ -131,12 +148,12 @@ export const getRevenue = async (req, res) => {
         cur.setMonth(cur.getMonth() + 1);
       }
     } else if (period === "week") {
-      // move to Monday of the ISO week that contains startDate
+      // move to Monday of the ISO week that contains startDate (local)
       const copy = new Date(startDate);
       const day = copy.getDay(); // 0 Sun .. 6
       const diffToMon = (day + 6) % 7; // days since Monday
       copy.setDate(copy.getDate() - diffToMon);
-      copy.setHours(0, 0, 0, 0, 0);
+      copy.setHours(0, 0, 0, 0);
       const last = new Date(endDate);
       last.setHours(23, 59, 59, 999);
       while (copy <= last) {
@@ -183,8 +200,10 @@ export const getNewOrdersCount = async (req, res) => {
       since,
       new Date(Date.now() - 24 * 60 * 60 * 1000)
     );
+    // convert provided (local) sinceDate to UTC query value by subtracting SHIFT
+    const sinceDateUTC = new Date(sinceDate.getTime() - SHIFT_MS);
     const count = await Order.countDocuments({
-      created_at: { $gte: sinceDate },
+      created_at: { $gte: sinceDateUTC },
     });
     return res.json({
       success: true,
@@ -202,27 +221,42 @@ export const getNewOrdersCount = async (req, res) => {
  */
 export const getDashboardSummary = async (req, res) => {
   try {
-    const now = new Date();
-    const startOfDay = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
+    const now = new Date(); // current instant (UTC-based)
+    // convert to Vietnam local time first
+    const nowLocal = new Date(now.getTime() + SHIFT_MS);
+
+    // start of local day (VN)
+    const startOfDayLocal = new Date(
+      nowLocal.getFullYear(),
+      nowLocal.getMonth(),
+      nowLocal.getDate()
     );
-    const startOfWeek = new Date(startOfDay);
-    // set to Monday (ISO) -> adjust depending on your locale preference; here assume week starts Monday
-    const day = startOfDay.getDay(); // 0 (Sun) .. 6
-    const diffToMon = (day + 6) % 7; // days since Monday
-    startOfWeek.setDate(startOfWeek.getDate() - diffToMon);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // start of local week (Monday)
+    const dayLocal = startOfDayLocal.getDay(); // 0 (Sun) .. 6
+    const diffToMon = (dayLocal + 6) % 7;
+    const startOfWeekLocal = new Date(startOfDayLocal);
+    startOfWeekLocal.setDate(startOfWeekLocal.getDate() - diffToMon);
+
+    // start of local month
+    const startOfMonthLocal = new Date(
+      nowLocal.getFullYear(),
+      nowLocal.getMonth(),
+      1
+    );
 
     const baseMatch = {
       /* optionally filter by status: completed */
     };
 
-    // helper aggregator for a date range
-    const rangeAgg = async (from, to) => {
+    // helper aggregator that expects LOCAL datetimes, converts to UTC inside
+    const rangeAgg = async (fromLocal, toLocal) => {
+      const fromUTC = new Date(fromLocal.getTime() - SHIFT_MS);
+      const toUTC = new Date(toLocal.getTime() - SHIFT_MS);
       const pipeline = [
-        { $match: { created_at: { $gte: from, $lte: to }, ...baseMatch } },
+        {
+          $match: { created_at: { $gte: fromUTC, $lte: toUTC }, ...baseMatch },
+        },
         {
           $group: {
             _id: null,
@@ -230,21 +264,23 @@ export const getDashboardSummary = async (req, res) => {
             orders: { $sum: 1 },
           },
         },
-        {
-          $project: { _id: 0, revenue: 1, orders: 1 },
-        },
+        { $project: { _id: 0, revenue: 1, orders: 1 } },
       ];
       const r = await Order.aggregate(pipeline).allowDiskUse(true);
       return r[0] || { revenue: 0, orders: 0 };
     };
 
-    const [today, week, month, newOrders] = await Promise.all([
-      rangeAgg(startOfDay, now),
-      rangeAgg(startOfWeek, now),
-      rangeAgg(startOfMonth, now),
-      Order.countDocuments({
-        created_at: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-      }),
+    // compute new orders last 24h based on VN local time
+    const sinceLocal = new Date(nowLocal.getTime() - 24 * 60 * 60 * 1000);
+    const sinceUTC = new Date(sinceLocal.getTime() - SHIFT_MS);
+    const newOrdersCount = await Order.countDocuments({
+      created_at: { $gte: sinceUTC },
+    });
+
+    const [today, week, month] = await Promise.all([
+      rangeAgg(startOfDayLocal, nowLocal),
+      rangeAgg(startOfWeekLocal, nowLocal),
+      rangeAgg(startOfMonthLocal, nowLocal),
     ]);
 
     return res.json({
@@ -256,7 +292,7 @@ export const getDashboardSummary = async (req, res) => {
         ordersWeek: week.orders || 0,
         revenueMonth: month.revenue || 0,
         ordersMonth: month.orders || 0,
-        newOrdersLast24h: newOrders,
+        newOrdersLast24h: newOrdersCount,
       },
     });
   } catch (err) {
@@ -265,10 +301,6 @@ export const getDashboardSummary = async (req, res) => {
   }
 };
 
-/**
- * GET /api/revenue/top-products?period=week|month&start=ISO&end=ISO&limit=10&sortBy=quantity|revenue&status=completed
- * returns array of { productId, name, totalQuantity, totalRevenue }
- */
 export const getTopProducts = async (req, res) => {
   try {
     const {
@@ -276,129 +308,31 @@ export const getTopProducts = async (req, res) => {
       start,
       end,
       limit = 10,
-      // sort: "max" => highest totalRevenue, "min" => products with smallest sold qty (include zero-sales)
-      sort,
+      sort = "max",
       status,
     } = req.query;
 
     const now = new Date();
-    let defaultStart;
+    const nowLocal = new Date(now.getTime() + SHIFT_MS);
+    let defaultStartLocal;
     if (period === "month") {
-      defaultStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      defaultStartLocal = new Date(
+        nowLocal.getTime() - 30 * 24 * 60 * 60 * 1000
+      );
     } else {
-      defaultStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      defaultStartLocal = new Date(
+        nowLocal.getTime() - 7 * 24 * 60 * 60 * 1000
+      );
     }
 
-    const startDate = parseDate(start, defaultStart);
-    const endDate = parseDate(end, now);
+    const startDate = parseDate(start, defaultStartLocal);
+    const endDate = parseDate(end, nowLocal);
 
-    const match = {
-      created_at: { $gte: startDate, $lte: endDate },
+    const matchLocal = {
+      localCreatedAt: { $gte: startDate, $lte: endDate },
     };
-    if (status) match.status = status;
+    if (status) matchLocal.status = status;
 
-    // if sort === "min" we must include products with zero sales -> aggregate from products collection with LEFT lookup into orders
-    if (sort === "min") {
-      const prodPipeline = [
-        // optionally filter active products here, e.g. { $match: { active: true } }
-        // normalize fields
-        {
-          $project: {
-            name: { $ifNull: ["$name", "$title"] },
-            slug: 1,
-            images: 1,
-          },
-        },
-        {
-          $lookup: {
-            from: "orders",
-            let: { pid: "$_id", pslug: "$slug" },
-            pipeline: [
-              {
-                $match: {
-                  created_at: { $gte: startDate, $lte: endDate },
-                  ...(status ? { status } : {}),
-                },
-              },
-              { $unwind: "$items" },
-              {
-                $match: {
-                  $expr: {
-                    $or: [
-                      { $eq: ["$items.product", "$$pid"] },
-                      { $eq: ["$items.productId", "$$pid"] },
-                      {
-                        $and: [
-                          { $ifNull: ["$items.slug", null] },
-                          { $eq: ["$items.slug", "$$pslug"] },
-                        ],
-                      },
-                    ],
-                  },
-                },
-              },
-              {
-                $project: {
-                  qty: {
-                    $toDouble: {
-                      $ifNull: ["$items.quantity", "$items.qty", 1],
-                    },
-                  },
-                  price: {
-                    $toDouble: {
-                      $ifNull: [
-                        "$items.price",
-                        "$items.unit_price",
-                        "$items.total_price",
-                        0,
-                      ],
-                    },
-                  },
-                },
-              },
-              {
-                $group: {
-                  _id: null,
-                  totalQuantity: { $sum: "$qty" },
-                  totalRevenue: { $sum: { $multiply: ["$qty", "$price"] } },
-                },
-              },
-            ],
-            as: "sales",
-          },
-        },
-        {
-          $addFields: {
-            totalQuantity: {
-              $ifNull: [{ $arrayElemAt: ["$sales.totalQuantity", 0] }, 0],
-            },
-            totalRevenue: {
-              $ifNull: [{ $arrayElemAt: ["$sales.totalRevenue", 0] }, 0],
-            },
-          },
-        },
-        {
-          $project: {
-            _id: 0,
-            key: { $ifNull: ["$slug", { $toString: "$$ROOT._id" }] },
-            slug: "$slug",
-            name: { $ifNull: ["$name", "Unknown"] },
-            image: { $ifNull: [{ $arrayElemAt: ["$images", 0] }, null] },
-            totalQuantity: 1,
-            totalRevenue: 1,
-          },
-        },
-        // sort by totalQuantity ascending (don't sort by revenue)
-        { $sort: { totalQuantity: 1 } },
-        { $limit: Number(limit) },
-      ];
-
-      const rows = await Product.aggregate(prodPipeline).allowDiskUse(true);
-      return res.json({ success: true, data: rows });
-    }
-
-    // otherwise aggregate from orders (existing behavior)
-    // defensive expressions for item fields
     const productIdExpr = {
       $ifNull: [
         "$items.product",
@@ -411,14 +345,10 @@ export const getTopProducts = async (req, res) => {
       ],
     };
 
-    const itemSlugExpr = {
-      $ifNull: ["$items.slug", "$items.productSlug"],
-    };
-
+    const itemSlugExpr = { $ifNull: ["$items.slug", "$items.productSlug"] };
     const itemImageExpr = {
       $ifNull: ["$items.image", { $arrayElemAt: ["$items.images", 0] }],
     };
-
     const itemNameExpr = {
       $ifNull: [
         "$items.name",
@@ -436,8 +366,20 @@ export const getTopProducts = async (req, res) => {
     };
     const itemRevenueExpr = { $multiply: [qtyExpr, priceExpr] };
 
-    const pipeline = [
-      { $match: match },
+    // base pipeline that aggregates sold quantities/revenue from orders (uses localCreatedAt)
+    const basePipeline = [
+      {
+        $addFields: {
+          localCreatedAt: {
+            $dateAdd: {
+              startDate: "$created_at",
+              unit: "hour",
+              amount: SHIFT_HOURS,
+            },
+          },
+        },
+      },
+      { $match: matchLocal },
       { $unwind: "$items" },
       {
         $project: {
@@ -511,20 +453,88 @@ export const getTopProducts = async (req, res) => {
       },
     ];
 
-    // attach sort stage based on 'sort' query param
-    let sortStage;
-    if (sort === "min") {
-      // least sold first
-      sortStage = { $sort: { totalQuantity: 1 } };
-    } else {
-      // default / "max": most sold first (by quantity)
-      sortStage = { $sort: { totalQuantity: -1 } };
+    // get aggregated sold rows (no sort/limit)
+    const soldRows = await Order.aggregate(basePipeline).allowDiskUse(true);
+
+    // If user requested a merged list (include products with zero sales), build merged array
+    if (sort === "min" || sort === "max") {
+      // map sold rows by key
+      const soldMap = new Map();
+      soldRows.forEach((r) => {
+        const k = String(r.key);
+        soldMap.set(k, {
+          totalQuantity: Number(r.totalQuantity || 0),
+          totalRevenue: Number(r.totalRevenue || 0),
+          slug: r.slug,
+          name: r.name,
+          image: r.image,
+        });
+      });
+
+      // fetch all products to include zero-sales items
+      const products = await Product.find(
+        {},
+        { slug: 1, name: 1, images: 1 }
+      ).lean();
+
+      const productMap = new Map();
+      const merged = [];
+
+      products.forEach((p) => {
+        const key = p.slug || (p._id ? String(p._id) : null);
+        productMap.set(String(key), true);
+        const sold = soldMap.get(String(key)) || {
+          totalQuantity: 0,
+          totalRevenue: 0,
+        };
+        merged.push({
+          key,
+          slug: p.slug || null,
+          name: p.name || "Unknown",
+          image: (p.images && p.images[0]) || null,
+          totalQuantity: sold.totalQuantity,
+          totalRevenue: sold.totalRevenue,
+        });
+      });
+
+      // include soldRows entries that are not present in products list (uncatalogued items)
+      soldRows.forEach((r) => {
+        const k = String(r.key);
+        if (!productMap.has(k)) {
+          merged.push({
+            key: k,
+            slug: r.slug || null,
+            name: r.name || "Unknown",
+            image: r.image || null,
+            totalQuantity: Number(r.totalQuantity || 0),
+            totalRevenue: Number(r.totalRevenue || 0),
+          });
+        }
+      });
+
+      // sort merged array
+      if (sort === "min") {
+        merged.sort((a, b) => {
+          if (a.totalQuantity !== b.totalQuantity)
+            return a.totalQuantity - b.totalQuantity;
+          return a.totalRevenue - b.totalRevenue;
+        });
+      } else {
+        merged.sort((a, b) => {
+          if (b.totalQuantity !== a.totalQuantity)
+            return b.totalQuantity - a.totalQuantity;
+          return b.totalRevenue - a.totalRevenue;
+        });
+      }
+
+      const limited = merged.slice(0, Number(limit));
+      return res.json({ success: true, data: limited });
     }
 
-    pipeline.push(sortStage, { $limit: Number(limit) });
-
+    // default behavior (sort max) — use order aggregation pipeline + sort & limit
+    let sortStage = { $sort: { totalQuantity: -1 } };
+    pipeline = [...basePipeline, sortStage, { $limit: Number(limit) }];
     const rows = await Order.aggregate(pipeline).allowDiskUse(true);
-
     return res.json({ success: true, data: rows });
   } catch (err) {
     console.error("getTopProducts error:", err);

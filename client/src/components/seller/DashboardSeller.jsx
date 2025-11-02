@@ -7,12 +7,12 @@ import BestSellerTable from "./BestSellerTable";
 import { assets } from "@/assets/assets";
 import { Link, useNavigate } from "react-router-dom";
 
-const toInputDate = (iso) => {
-  if (!iso) return "";
+const toInputDate = (isoOrDate) => {
+  if (!isoOrDate) return "";
   try {
-    const d = new Date(iso);
-    // format as yyyy-MM-dd for <input type="date">
-    return d.toISOString().slice(0, 10);
+    const d = new Date(isoOrDate);
+    const pad = (n) => (n < 10 ? "0" + n : String(n));
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   } catch {
     return "";
   }
