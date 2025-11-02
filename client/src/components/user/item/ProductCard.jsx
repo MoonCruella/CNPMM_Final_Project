@@ -4,10 +4,10 @@ import { useCartContext } from "@/context/CartContext";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
-
+import { useSelector } from "react-redux";
 const ProductCard = ({ product }) => {
   const { addToCart } = useCartContext();
-  const { user } = useAppContext();
+  const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
 
   // Định dạng tiền tệ VNĐ
