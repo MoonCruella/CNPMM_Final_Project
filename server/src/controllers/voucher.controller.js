@@ -47,7 +47,7 @@ export const getAllVouchers = async (req, res) => {
     const [totalItems, vouchers] = await Promise.all([
       Voucher.countDocuments(filter),
       Voucher.find(filter)
-        .sort({ updatedAt: -1, _id: -1 })
+        .sort({ created_at: -1, _id: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
     ]);

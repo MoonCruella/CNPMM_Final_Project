@@ -17,6 +17,9 @@ const revenueFieldExpr = () =>
 const SHIFT_HOURS = 7;
 const SHIFT_MS = SHIFT_HOURS * 60 * 60 * 1000;
 
+// exclude cancelled orders by default
+const EXCLUDE_CANCELLED = { status: { $ne: "cancelled" } };
+
 /**
  * GET /api/revenue?period=day|week|month&start=ISO&end=ISO&status=completed
  * returns array of { period: string, revenue: number, orders: number }
@@ -31,8 +34,10 @@ export const getRevenue = async (req, res) => {
     // Build a match that compares the shifted field (localCreatedAt) to the provided start/end (which are local)
     const matchLocal = {
       localCreatedAt: { $gte: startDate, $lte: endDate },
+      ...EXCLUDE_CANCELLED,
     };
-    if (status) matchLocal.status = status;
+    // if caller requests a specific non-cancelled status, include it
+    if (status && status !== "cancelled") matchLocal.status = status;
 
     let groupStage;
     let projectStage;
@@ -196,18 +201,39 @@ export const getRevenue = async (req, res) => {
 export const getNewOrdersCount = async (req, res) => {
   try {
     const { since } = req.query;
-    const sinceDate = parseDate(
+    const sinceLocal = parseDate(
       since,
       new Date(Date.now() - 24 * 60 * 60 * 1000)
-    );
-    // convert provided (local) sinceDate to UTC query value by subtracting SHIFT
-    const sinceDateUTC = new Date(sinceDate.getTime() - SHIFT_MS);
-    const count = await Order.countDocuments({
-      created_at: { $gte: sinceDateUTC },
-    });
+    ); // interpreted as local VN time when provided or default last 24h
+
+    // Use aggregation with localCreatedAt (created_at + SHIFT_HOURS) to avoid timezone mismatch
+    const pipeline = [
+      {
+        $addFields: {
+          localCreatedAt: {
+            $dateAdd: {
+              startDate: "$created_at",
+              unit: "hour",
+              amount: SHIFT_HOURS,
+            },
+          },
+        },
+      },
+      {
+        $match: {
+          localCreatedAt: { $gte: sinceLocal },
+          ...EXCLUDE_CANCELLED,
+        },
+      },
+      { $count: "count" },
+    ];
+
+    const agg = await Order.aggregate(pipeline).allowDiskUse(true);
+    const count = agg && agg[0] && agg[0].count ? agg[0].count : 0;
+
     return res.json({
       success: true,
-      data: { since: sinceDate.toISOString(), count },
+      data: { since: sinceLocal.toISOString(), count },
     });
   } catch (err) {
     console.error("getNewOrdersCount error:", err);
@@ -221,38 +247,53 @@ export const getNewOrdersCount = async (req, res) => {
  */
 export const getDashboardSummary = async (req, res) => {
   try {
-    const now = new Date(); // current instant (UTC-based)
-    // convert to Vietnam local time first
-    const nowLocal = new Date(now.getTime() + SHIFT_MS);
+    // now in UTC instant
+    const nowUTC = new Date();
 
-    // start of local day (VN)
-    const startOfDayLocal = new Date(
-      nowLocal.getFullYear(),
-      nowLocal.getMonth(),
-      nowLocal.getDate()
+    // now in VN local (for display/logic): instant +7h but we keep UTC for DB matching
+    const nowVN = new Date(nowUTC.getTime() + SHIFT_MS);
+
+    // --- compute VN local boundaries (midnight of VN day/week/month),
+    // but then convert them back to UTC instant for matching in DB by subtracting SHIFT_MS ---
+    // VN midnight today (as a JS Date in VN local)
+    const vnYear = nowVN.getFullYear();
+    const vnMonth = nowVN.getMonth();
+    const vnDate = nowVN.getDate();
+
+    // VN midnight as UTC instant = Date.UTC(vnYear, vnMonth, vnDate, 0,0,0) - SHIFT_MS
+    const startOfDayVN_asUTC = new Date(
+      Date.UTC(vnYear, vnMonth, vnDate, 0, 0, 0) - SHIFT_MS
     );
 
-    // start of local week (Monday)
-    const dayLocal = startOfDayLocal.getDay(); // 0 (Sun) .. 6
-    const diffToMon = (dayLocal + 6) % 7;
-    const startOfWeekLocal = new Date(startOfDayLocal);
-    startOfWeekLocal.setDate(startOfWeekLocal.getDate() - diffToMon);
+    // start of week (VN Monday)
+    // compute VN midnight of today as a Date object (local VN)
+    const startOfDayVN_local = new Date(
+      Date.UTC(vnYear, vnMonth, vnDate, 0, 0, 0)
+    ); // this is VN midnight encoded as UTC+0 at same Y/M/D
+    // determine weekday in VN: create a VN-local Date then read its UTC day after shifting
+    const weekdayVN = new Date(
+      startOfDayVN_asUTC.getTime() + SHIFT_MS
+    ).getDay(); // 0..6 (Sun..Sat) in VN local
+    const diffToMon = (weekdayVN + 6) % 7;
+    // VN Monday midnight as UTC instant:
+    const mondayVNDate = new Date(
+      Date.UTC(vnYear, vnMonth, vnDate, 0, 0, 0) - diffToMon * 24 * 3600 * 1000
+    );
+    const startOfWeekVN_asUTC = new Date(mondayVNDate.getTime() - SHIFT_MS);
 
-    // start of local month
-    const startOfMonthLocal = new Date(
-      nowLocal.getFullYear(),
-      nowLocal.getMonth(),
-      1
+    // start of month VN (1st day at 00:00 VN) as UTC instant
+    const startOfMonthVN_asUTC = new Date(
+      Date.UTC(vnYear, vnMonth, 1, 0, 0, 0) - SHIFT_MS
     );
 
-    const baseMatch = {
-      /* optionally filter by status: completed */
-    };
+    // For "to" bound we want "now" expressed in UTC (nowUTC)
+    const endUTC = nowUTC;
 
-    // helper aggregator that expects LOCAL datetimes, converts to UTC inside
-    const rangeAgg = async (fromLocal, toLocal) => {
-      const fromUTC = new Date(fromLocal.getTime() - SHIFT_MS);
-      const toUTC = new Date(toLocal.getTime() - SHIFT_MS);
+    // baseMatch: exclude cancelled
+    const baseMatch = { ...EXCLUDE_CANCELLED };
+
+    // aggregator that matches directly on created_at (stored in UTC) using UTC bounds
+    const rangeAggByCreatedAt = async (fromUTC, toUTC) => {
       const pipeline = [
         {
           $match: { created_at: { $gte: fromUTC, $lte: toUTC }, ...baseMatch },
@@ -270,29 +311,22 @@ export const getDashboardSummary = async (req, res) => {
       return r[0] || { revenue: 0, orders: 0 };
     };
 
-    // compute new orders last 24h based on VN local time
-    const sinceLocal = new Date(nowLocal.getTime() - 24 * 60 * 60 * 1000);
-    const sinceUTC = new Date(sinceLocal.getTime() - SHIFT_MS);
-    const newOrdersCount = await Order.countDocuments({
-      created_at: { $gte: sinceUTC },
-    });
-
+    // compute ranges: day, week, month
     const [today, week, month] = await Promise.all([
-      rangeAgg(startOfDayLocal, nowLocal),
-      rangeAgg(startOfWeekLocal, nowLocal),
-      rangeAgg(startOfMonthLocal, nowLocal),
+      rangeAggByCreatedAt(startOfDayVN_asUTC, endUTC),
+      rangeAggByCreatedAt(startOfWeekVN_asUTC, endUTC),
+      rangeAggByCreatedAt(startOfMonthVN_asUTC, endUTC),
     ]);
 
     return res.json({
       success: true,
       data: {
-        revenueToday: today.revenue || 0,
-        ordersToday: today.orders || 0,
-        revenueWeek: week.revenue || 0,
-        ordersWeek: week.orders || 0,
-        revenueMonth: month.revenue || 0,
-        ordersMonth: month.orders || 0,
-        newOrdersLast24h: newOrdersCount,
+        revenueToday: Number(today.revenue || 0),
+        ordersToday: Number(today.orders || 0),
+        revenueWeek: Number(week.revenue || 0),
+        ordersWeek: Number(week.orders || 0),
+        revenueMonth: Number(month.revenue || 0),
+        ordersMonth: Number(month.orders || 0),
       },
     });
   } catch (err) {
@@ -330,8 +364,9 @@ export const getTopProducts = async (req, res) => {
 
     const matchLocal = {
       localCreatedAt: { $gte: startDate, $lte: endDate },
+      ...EXCLUDE_CANCELLED,
     };
-    if (status) matchLocal.status = status;
+    if (status && status !== "cancelled") matchLocal.status = status;
 
     const productIdExpr = {
       $ifNull: [

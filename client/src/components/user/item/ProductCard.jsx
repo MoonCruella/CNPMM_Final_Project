@@ -1,9 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { assets } from "@/assets/assets";
 import { useCartContext } from "@/context/CartContext";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { useAppContext } from "@/context/AppContext";
 import { useSelector } from "react-redux";
 const ProductCard = ({ product }) => {
   const { addToCart } = useCartContext();
@@ -14,8 +13,9 @@ const ProductCard = ({ product }) => {
   const formatCurrency = (value) =>
     value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-  // Xử lý thêm vào giỏ
-  const handleAddToCart = async () => {
+  // Xử lý thêm vào giỏ (stop event propagation để không trigger navigation của card)
+  const handleAddToCart = async (e) => {
+    e.stopPropagation();
     try {
       if (!user) {
         toast.info("Vui lòng đăng nhập!");
@@ -30,7 +30,15 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group p-5 mx-4 my-2 bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 min-w-[220px]">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => navigate(`/products/${product._id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") navigate(`/products/${product._id}`);
+      }}
+      className="group p-5 mx-4 my-2 bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 min-w-[220px] cursor-pointer"
+    >
       {/* Thumbnail */}
       <div className="relative overflow-hidden">
         <img
@@ -48,19 +56,11 @@ const ProductCard = ({ product }) => {
         <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
           <button
             onClick={handleAddToCart}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow cursor-pointer hover:bg-green-100 transition"
+            aria-label="Add to cart"
+            className="w-12 h-12 flex items-center justify-center rounded-full bg-green-500 text-white shadow-lg hover:bg-green-600 transition"
           >
-            <img
-              src={assets.add_to_cart_icon}
-              className="w-5 h-5"
-              alt="Add to cart"
-            />
-          </button>
-          <button
-            onClick={() => navigate(`/products/${product._id}`)}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow cursor-pointer hover:bg-green-100 transition"
-          >
-            <img src={assets.view_icon} className="w-5 h-5" alt="View" />
+            {/* cart icon from assets */}
+            <img src={assets.add_to_cart_icon} alt="cart" className="w-6 h-6" />
           </button>
         </div>
       </div>

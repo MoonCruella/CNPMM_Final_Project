@@ -1,5 +1,5 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import { useCartContext } from "@/context/CartContext";
 import CartTable from "@/components/user/CartTable";
@@ -10,13 +10,13 @@ const CartPage = () => {
     items: cartItems = [],
     updateQuantity,
     removeFromCart,
-    selectedItems, 
-    toggleSelectItem, 
-    selectAllItems, 
-    deselectAllItems, 
-    isAllSelected, 
-    getSelectedItems, 
-    getSelectedTotal, 
+    selectedItems,
+    toggleSelectItem,
+    selectAllItems,
+    deselectAllItems,
+    isAllSelected,
+    getSelectedItems,
+    getSelectedTotal,
   } = useCartContext();
 
   // Calculate total for ALL items
@@ -28,6 +28,12 @@ const CartPage = () => {
         return total + price * quantity;
       }, 0)
     : 0;
+
+  const location = useLocation();
+  // cuộn lên đầu mỗi khi route thay đổi (đảm bảo khi navigate tới trang Cart luôn ở đầu)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [location.pathname]);
 
   // Calculate total for SELECTED items only
   const selectedTotal = getSelectedTotal();
@@ -78,7 +84,11 @@ const CartPage = () => {
               {selectedItemsCount > 0 && (
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-gray-600">
-                    Đã chọn: <span className="font-semibold text-green-700">{selectedItemsCount}</span> sản phẩm
+                    Đã chọn:{" "}
+                    <span className="font-semibold text-green-700">
+                      {selectedItemsCount}
+                    </span>{" "}
+                    sản phẩm
                   </span>
                   <button
                     onClick={deselectAllItems}
@@ -96,8 +106,8 @@ const CartPage = () => {
             cartItems={cartItems}
             updateQuantity={updateQuantity}
             removeFromCart={removeFromCart}
-            selectedItems={selectedItems} 
-            toggleSelectItem={toggleSelectItem} 
+            selectedItems={selectedItems}
+            toggleSelectItem={toggleSelectItem}
           />
 
           <div className="mt-5 flex justify-end">
@@ -110,9 +120,9 @@ const CartPage = () => {
           </div>
         </div>
 
-        <CartTotals 
-          subtotal={selectedTotal} 
-          cartItems={getSelectedItems()} 
+        <CartTotals
+          subtotal={selectedTotal}
+          cartItems={getSelectedItems()}
           selectedCount={selectedItemsCount}
           totalCount={cartItems.length}
         />
