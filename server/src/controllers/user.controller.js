@@ -3,6 +3,7 @@ import userModel from "../models/user.model.js";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import Order from "../models/order.model.js";
+import Rating from "../models/rating.model.js"
 export const getUsers = async (req, res, next) => {
   try {
     const users = await userModel.find().select("-password -refresh_tokens");
@@ -368,24 +369,58 @@ export const toggleUserStatus = async (req, res) => {
     // Toggle active
     const newActive = !Boolean(user.active);
 
-    const updatedUser = await userModel.findByIdAndUpdate(
-      userId,
-      {
-        active: newActive,
-        updated_at: new Date(),
-      },
-      {
-        new: true,
-        select: "-password -refresh_tokens",
-      }
-    );
+    //  Start transaction để đảm bảo consistency
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    return response.sendSuccess(
-      res,
-      { user: updatedUser },
-      `${newActive ? "Kích hoạt" : "Vô hiệu hóa"} user thành công`,
-      200
-    );
+    try {
+      // Update user status
+      const updatedUser = await userModel.findByIdAndUpdate(
+        userId,
+        {
+          active: newActive,
+          updated_at: new Date(),
+        },
+        {
+          new: true,
+          select: "-password -refresh_tokens",
+          session
+        }
+      );
+
+      //  Tự động ẩn/hiện ratings khi khóa/mở khóa user
+      if (!newActive) {
+        // Khi khóa user -> set status ratings = hidden
+        const updateResult = await Rating.updateMany(
+          { user_id: userId },
+          { $set: { status: "hidden" } },
+          { session }
+        );
+        console.log(` Đã ẩn ${updateResult.modifiedCount} ratings của user ${userId}`);
+      } else {
+        // Khi mở khóa user -> set status ratings = visible
+        const updateResult = await Rating.updateMany(
+          { user_id: userId },
+          { $set: { status: "visible" } },
+          { session }
+        );
+        console.log(` Đã hiện ${updateResult.modifiedCount} ratings của user ${userId}`);
+      }
+
+      await session.commitTransaction();
+
+      return response.sendSuccess(
+        res,
+        { user: updatedUser },
+        `${newActive ? "Kích hoạt" : "Vô hiệu hóa"} user thành công. ${!newActive ? "Đã ẩn tất cả đánh giá." : "Đã hiện lại tất cả đánh giá."}`,
+        200
+      );
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   } catch (error) {
     console.error("Toggle user status error:", error);
     return response.sendError(
