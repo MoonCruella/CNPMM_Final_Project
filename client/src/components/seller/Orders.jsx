@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSelector } from 'react-redux';
+import { useSelector } from "react-redux";
 import OrdersTable from "@/components/user/OrdersTable";
 import { assets } from "@/assets/assets";
 import orderService from "@/services/order.service";
 import { toast } from "sonner";
-import { Calendar, Search } from "lucide-react"; 
+import { Calendar, Search } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 
 const Orders = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { user, isAuthenticated, isSeller } = useSelector((state) => state.auth);
+  const { user, isAuthenticated, isSeller } = useSelector(
+    (state) => state.auth
+  );
 
   const [status, setStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,7 +50,7 @@ const Orders = () => {
     shipped: 0,
     delivered: 0,
     cancelled: 0,
-    cancel_request: 0
+    cancel_request: 0,
   });
 
   const loadOrders = async () => {
@@ -84,6 +86,7 @@ const Orders = () => {
         const data = response.data;
 
         setOrders(data.orders || []);
+        console.log("Fetched orders:", data.orders || []);
         setTotalPages(data.pagination?.total_pages || data.totalPages || 1);
         setTotalOrders(data.pagination?.total_items || data.totalOrders || 0);
 
@@ -107,7 +110,17 @@ const Orders = () => {
     if (isAuthenticated && isSeller) {
       loadOrders();
     }
-  }, [isAuthenticated, isSeller, page, status, debouncedSearchQuery, startDate, endDate, sortBy, sortOrder]);
+  }, [
+    isAuthenticated,
+    isSeller,
+    page,
+    status,
+    debouncedSearchQuery,
+    startDate,
+    endDate,
+    sortBy,
+    sortOrder,
+  ]);
 
   useEffect(() => {
     setPage(1);
@@ -204,7 +217,10 @@ const Orders = () => {
     }
 
     try {
-      const response = await orderService.updateShippingStatus(orderId, newStatus);
+      const response = await orderService.updateShippingStatus(
+        orderId,
+        newStatus
+      );
       if (response.success) {
         toast.success("Cập nhật trạng thái thành công!");
         loadOrders();
@@ -265,18 +281,37 @@ const Orders = () => {
               }}
               className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
             >
-              <option value="all">Tất cả trạng thái ({orderStats.total || 0})</option>
-              <option value="pending">Chờ xác nhận ({orderStats.pending || 0})</option>
-              <option value="confirmed">Đã xác nhận ({orderStats.confirmed || 0})</option>
-              <option value="processing">Đang xử lý ({orderStats.processing || 0})</option>
-              <option value="shipped">Đang giao ({orderStats.shipped || 0})</option>
-              <option value="delivered">Đã giao ({orderStats.delivered || 0})</option>
-              <option value="cancel_request">Yêu cầu hủy ({orderStats.cancel_request || 0})</option>
-              <option value="cancelled">Đã hủy ({orderStats.cancelled || 0})</option>
+              <option value="all">
+                Tất cả trạng thái ({orderStats.total || 0})
+              </option>
+              <option value="pending">
+                Chờ xác nhận ({orderStats.pending || 0})
+              </option>
+              <option value="confirmed">
+                Đã xác nhận ({orderStats.confirmed || 0})
+              </option>
+              <option value="processing">
+                Đang xử lý ({orderStats.processing || 0})
+              </option>
+              <option value="shipped">
+                Đang giao ({orderStats.shipped || 0})
+              </option>
+              <option value="delivered">
+                Đã giao ({orderStats.delivered || 0})
+              </option>
+              <option value="cancel_request">
+                Yêu cầu hủy ({orderStats.cancel_request || 0})
+              </option>
+              <option value="cancelled">
+                Đã hủy ({orderStats.cancelled || 0})
+              </option>
             </select>
 
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
               <input
                 type="text"
                 placeholder="Tìm mã đơn hàng..."
@@ -309,7 +344,7 @@ const Orders = () => {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                max={endDate || new Date().toISOString().split('T')[0]}
+                max={endDate || new Date().toISOString().split("T")[0]}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
               />
             </div>
@@ -321,7 +356,7 @@ const Orders = () => {
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 min={startDate}
-                max={new Date().toISOString().split('T')[0]}
+                max={new Date().toISOString().split("T")[0]}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
               />
             </div>
@@ -335,7 +370,6 @@ const Orders = () => {
               🔄 Xóa bộ lọc
             </button>
 
-
             <button
               onClick={loadOrders}
               disabled={isLoading}
@@ -344,8 +378,6 @@ const Orders = () => {
               {isLoading ? "⏳ Đang tải..." : "🔃 Tải lại"}
             </button>
           </div>
-
-
         </div>
       </section>
 
@@ -372,8 +404,6 @@ const Orders = () => {
                 currentSortBy={sortBy}
                 currentSortOrder={sortOrder}
               />
-
-
             </div>
 
             {totalPages > 1 && (
@@ -382,10 +412,11 @@ const Orders = () => {
                   <button
                     disabled={page === 1}
                     onClick={() => setPage(page - 1)}
-                    className={`px-3 py-1 rounded transition ${page === 1
+                    className={`px-3 py-1 rounded transition ${
+                      page === 1
                         ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                         : "bg-gray-800 text-white hover:bg-gray-900"
-                      }`}
+                    }`}
                   >
                     {"<"}
                   </button>
@@ -394,10 +425,11 @@ const Orders = () => {
                     <button
                       key={idx + 1}
                       onClick={() => setPage(idx + 1)}
-                      className={`px-3 py-1 rounded transition ${page === idx + 1
+                      className={`px-3 py-1 rounded transition ${
+                        page === idx + 1
                           ? "bg-gray-800 text-white"
                           : "bg-gray-200 hover:bg-gray-300"
-                        }`}
+                      }`}
                     >
                       {idx + 1}
                     </button>
@@ -406,10 +438,11 @@ const Orders = () => {
                   <button
                     disabled={page === totalPages}
                     onClick={() => setPage(page + 1)}
-                    className={`px-3 py-1 rounded transition ${page === totalPages
+                    className={`px-3 py-1 rounded transition ${
+                      page === totalPages
                         ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                         : "bg-gray-800 text-white hover:bg-gray-900"
-                      }`}
+                    }`}
                   >
                     {">"}
                   </button>

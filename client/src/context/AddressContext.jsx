@@ -1,12 +1,13 @@
 // context/AddressContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import addressService from "@/services/addressService";
+import { toast } from "sonner";
 import { useSelector } from "react-redux";
 
 const AddressContext = createContext();
 
 export const AddressProvider = ({ children }) => {
-  const { user, isAuthenticated } = useSelector(state => state.auth);
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
 
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null); // lưu object
@@ -24,13 +25,12 @@ export const AddressProvider = ({ children }) => {
       setLoading(true);
       const res = await addressService.getAddresses();
 
-      let list = [];
-      if (Array.isArray(res)) {
-        list = res;
-      } else if (res.success && Array.isArray(res.data)) {
-        list = res.data;
-      }
+      // normalize possible shapes
+      const normalized = Array.isArray(res)
+        ? res
+        : res?.data ?? res?.addresses ?? [];
 
+      const list = Array.isArray(normalized) ? normalized : [];
       setAddresses(list);
 
       // Nếu chưa chọn địa chỉ => chọn mặc định hoặc địa chỉ đầu tiên
@@ -52,28 +52,46 @@ export const AddressProvider = ({ children }) => {
   const addAddress = async (data) => {
     try {
       const res = await addressService.addAddress(data);
-      if (res?.success && res.data) {
-        setAddresses((prev) => {
-          let updated = [...prev, res.data];
+      console.log("Add address response:", res);
 
-          // Nếu địa chỉ mới là mặc định -> reset các địa chỉ khác
-          if (res.data.is_default) {
-            updated = updated.map((a) => ({
-              ...a,
-              is_default: a._id === res.data._id,
-            }));
-          }
+      if (res?.success) {
+        // nếu API trả về danh sách addresses
+        if (Array.isArray(res.addresses) && res.addresses.length > 0) {
+          setAddresses(res.addresses);
+          const newAddr = res.addresses[res.addresses.length - 1];
+          setSelectedAddress(newAddr);
+          toast.success("Thêm địa chỉ thành công");
+          return newAddr;
+        }
 
-          return updated;
-        });
+        // nếu trả về object address trong res.data
+        if (res.data) {
+          setAddresses((prev) => {
+            let updated = [...prev, res.data];
+            if (res.data.is_default) {
+              updated = updated.map((a) => ({
+                ...a,
+                is_default: a._id === res.data._id,
+              }));
+            }
+            return updated;
+          });
+          setSelectedAddress(res.data);
+          toast.success("Thêm địa chỉ thành công");
+          return res.data;
+        }
 
-        setSelectedAddress(res.data); // lưu object
-        return res.data;
+        // fallback: refresh list
+        await loadAddresses();
+        toast.success("Thêm địa chỉ thành công");
+        return null;
       } else {
-        await loadAddresses(); // fallback
+        toast.error(res?.message || "Thêm địa chỉ thất bại");
+        await loadAddresses();
       }
     } catch (err) {
       console.error("Error adding address:", err);
+      toast.error("Thêm địa chỉ thất bại");
     }
   };
 
@@ -81,50 +99,79 @@ export const AddressProvider = ({ children }) => {
   const updateAddress = async (id, data) => {
     try {
       const res = await addressService.updateAddress(id, data);
-      if (res?.success && res.data) {
-        setAddresses((prev) => {
-          let updated = prev.map((addr) => (addr._id === id ? res.data : addr));
+      if (res?.success) {
+        if (res.data) {
+          setAddresses((prev) => {
+            let updated = prev.map((addr) =>
+              addr._id === id ? res.data : addr
+            );
+            if (res.data.is_default) {
+              updated = updated.map((a) => ({
+                ...a,
+                is_default: a._id === res.data._id,
+              }));
+            }
+            return updated;
+          });
+          setSelectedAddress(res.data);
+          toast.success("Cập nhật địa chỉ thành công");
+          return res.data;
+        }
 
-          // Nếu địa chỉ vừa cập nhật là mặc định -> reset các địa chỉ khác
-          if (res.data.is_default) {
-            updated = updated.map((a) => ({
-              ...a,
-              is_default: a._id === res.data._id,
-            }));
-          }
+        if (Array.isArray(res.addresses)) {
+          setAddresses(res.addresses);
+          const updatedItem = res.addresses.find((a) => a._id === id);
+          if (updatedItem) setSelectedAddress(updatedItem);
+          toast.success("Cập nhật địa chỉ thành công");
+          return updatedItem || null;
+        }
 
-          return updated;
-        });
-
-        setSelectedAddress(res.data); // lưu object
-        return res.data;
+        await loadAddresses();
+        toast.success("Cập nhật địa chỉ thành công");
+        return null;
       } else {
+        toast.error(res?.message || "Cập nhật địa chỉ thất bại");
         await loadAddresses();
       }
     } catch (err) {
       console.error("Error updating address:", err);
+      toast.error("Cập nhật địa chỉ thất bại");
     }
   };
 
   /* Xóa địa chỉ */
   const removeAddress = async (id) => {
+    // xác nhận xóa
+    if (!window.confirm("Bạn có chắc muốn xóa địa chỉ này?")) return false;
     try {
       const res = await addressService.removeAddress(id);
       if (res?.success) {
-        setAddresses((prev) => prev.filter((addr) => addr._id !== id));
+        if (Array.isArray(res.addresses)) {
+          setAddresses(res.addresses);
+        } else {
+          setAddresses((prev) => prev.filter((addr) => addr._id !== id));
+        }
 
-        // Nếu xóa địa chỉ đang chọn => set lại
         if (selectedAddress?._id === id) {
-          const remaining = addresses.filter((a) => a._id !== id);
+          const remaining = (
+            Array.isArray(res.addresses) ? res.addresses : addresses
+          ).filter((a) => a._id !== id);
           setSelectedAddress(
             remaining.length > 0
               ? remaining.find((a) => a.is_default) || remaining[0]
               : null
           );
         }
+        toast.success("Xóa địa chỉ thành công");
+        return true;
+      } else {
+        toast.error(res?.message || "Xóa địa chỉ thất bại");
+        return false;
       }
     } catch (err) {
       console.error("Error removing address:", err);
+      toast.error("Xóa địa chỉ thất bại");
+      return false;
     }
   };
 

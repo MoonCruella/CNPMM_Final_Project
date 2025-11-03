@@ -26,6 +26,7 @@ import promo_code_icon from "./promo_code_icon.png";
 import edit_icon from "./edit_icon.png";
 import delete_icon from "./delete_icon.png";
 import up from "./up.png";
+import wishlist from "./wishlist.png";
 export const assets = {
   logo,
   search_icon,
@@ -55,6 +56,7 @@ export const assets = {
   page_banner,
   freeship_icon,
   up,
+  wishlist,
 };
 
 export const categoriesColors = [

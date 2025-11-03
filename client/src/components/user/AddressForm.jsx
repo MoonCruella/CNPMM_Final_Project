@@ -62,7 +62,6 @@ const AddressForm = ({ addressToEdit, onCancel }) => {
   const handleProvinceChange = (e) => {
     const code = parseInt(e.target.value);
     setProvince(code);
-    setDistrict("");
     setWard("");
     const selectedProvince = provinces.find((p) => p.code === code);
     setDistricts(selectedProvince ? selectedProvince.districts : []);
@@ -80,6 +79,16 @@ const AddressForm = ({ addressToEdit, onCancel }) => {
   const validateForm = () => {
     const newErrors = {};
     if (!fullName.trim()) newErrors.fullName = "Vui lòng nhập họ tên";
+    // Chỉ cho phép ký tự chữ (Unicode), khoảng trắng, '-' và '\''; yêu cầu ít nhất 2 từ
+    const nameValid = /^[\p{L}\s']+$/u.test(fullName.trim());
+    const words = fullName.trim().split(/\s+/).filter(Boolean);
+    // Cho phép:
+    // - tối thiểu 2 từ, hoặc
+    // - 1 từ nhưng dài >= 2 ký tự (ví dụ: "Lee")
+    const singleWordOk = words.length === 1 && words[0].length >= 2;
+    if (!nameValid || !(words.length >= 2 || singleWordOk))
+      newErrors.fullName =
+        "Họ tên không hợp lệ. Nhập ít nhất 2 từ hoặc 1 từ >=2 ký tự; chỉ chữ, dấu -, ' và khoảng trắng.";
     if (!phone.trim()) newErrors.phone = "Vui lòng nhập số điện thoại";
     else if (!/^(0\d{9})$/.test(phone))
       newErrors.phone = "Số điện thoại không hợp lệ";

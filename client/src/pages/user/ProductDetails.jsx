@@ -10,7 +10,7 @@ import { useCartContext } from "@/context/CartContext";
 import { useAppContext } from "@/context/AppContext";
 import { useSelector } from "react-redux";
 import ratingService from "@/services/rating.service.js";
-import { Rate } from "antd";
+import { Rate, Skeleton } from "antd";
 import ScrollToTopButton from "@/components/user/ScrollToTopButton.jsx";
 
 const StarRating = ({ rating }) => {
@@ -35,6 +35,12 @@ const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCartContext();
+
+  // Khi mở trang chi tiết hoặc chuyển sang sản phẩm khác, cuộn lên đầu trang
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [id]);
+
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [thumbnail, setThumbnail] = useState(null);
@@ -219,7 +225,56 @@ const ProductDetails = () => {
     ],
   };
 
-  if (loading) return <p className="text-center mt-10">Đang tải sản phẩm...</p>;
+  useEffect(() => {
+    window.scrollTo({ top: 420, behavior: "smooth" });
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="w-full h-auto mb-10">
+        {/* Banner luôn hiển thị */}
+        <div className="relative w-full h-[400px]">
+          <img
+            src={assets.banner_main_1}
+            alt="banner"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center">
+            <h1 className="text-5xl font-bold mb-4">Chi tiết sản phẩm</h1>
+            <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full">
+              <a href="/" className="hover:underline">
+                Home
+              </a>
+              <span>|</span>
+              <span>Product Details</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Loading skeleton — chỉ cho phần nội dung phía dưới (card/info) */}
+        <div className="flex flex-col md:flex-row gap-8 m-8">
+          {/* ảnh chính placeholder */}
+          <div className="flex-1">
+            <div className="w-full h-[500px] bg-gray-200 rounded animate-pulse" />
+          </div>
+
+          {/* cột thông tin placeholder */}
+          <div className="w-80 space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="w-full h-6 bg-gray-200 rounded animate-pulse"
+              />
+            ))}
+            <div className="w-full h-10 bg-gray-200 rounded mt-4 animate-pulse" />
+            <div className="w-full h-10 bg-gray-200 rounded mt-2 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!product)
     return <p className="text-center mt-10">Không tìm thấy sản phẩm.</p>;
 

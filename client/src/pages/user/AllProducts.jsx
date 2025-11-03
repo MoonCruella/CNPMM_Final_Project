@@ -5,13 +5,20 @@ import productService from "../../services/productService.js";
 import categoryService from "../../services/categoryService.js";
 import ProductCard from "../../components/user/item/ProductCard.jsx";
 import { useDebounce } from "../../hooks/useDebounce.jsx";
-import ScrollToTopButton from "@/components/user/ScrollToTopButton.jsx";
 
 const AllProducts = () => {
+  const location = useLocation();
+
+  // ưu tiên location.state, fallback query param ?category=
+  const initialCategory =
+    location.state?.categoryId ??
+    new URLSearchParams(location.search).get("category") ??
+    null;
+
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [products, setProducts] = useState([]);
   const [displayProducts, setDisplayProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [activeCategory, setActiveCategory] = useState(null);
   const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sortOption, setSortOption] = useState("default");
@@ -21,16 +28,16 @@ const AllProducts = () => {
   const [totalProducts, setTotalProducts] = useState(0);
   const productsPerPage = 9;
 
-  const location = useLocation();
-  const categoryIdFromState = location.state?.categoryId || null;
-
   const debouncedSearch = useDebounce(searchInput, 500);
 
+  // khi location thay đổi (navigate từ Home) cập nhật lại activeCategory
   useEffect(() => {
-    if (categoryIdFromState) {
-      setActiveCategory(categoryIdFromState);
-    }
-  }, [categoryIdFromState]);
+    const cat =
+      location.state?.categoryId ??
+      new URLSearchParams(location.search).get("category") ??
+      null;
+    setActiveCategory(cat);
+  }, [location.key, location.state, location.search]);
 
   // Fetch categories
   useEffect(() => {
@@ -123,20 +130,10 @@ const AllProducts = () => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   useEffect(() => {
-    window.scrollTo({ top: 500, behavior: "smooth" });
+    window.scrollTo({ top: 420, behavior: "smooth" });
   }, [currentPage]);
 
-  if (loading && currentPage === 1) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải sản phẩm...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // không trả về toàn bộ trang khi loading, sẽ hiển thị skeleton cho phần card bên dưới
   return (
     <div className="w-full h-auto mb-10">
       {/* Banner */}
@@ -246,8 +243,19 @@ const AllProducts = () => {
             </div>
 
             {loading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+              // skeleton chỉ cho vùng card khi lần đầu load
+              <div className="grid grid-cols-3 gap-6 px-8">
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="p-5 bg-white rounded-xl shadow-md overflow-hidden min-h-[220px] relative animate-pulse"
+                    style={{ animationDelay: `${i * 80}ms` }}
+                  >
+                    <div className="w-full h-40 bg-gray-200 rounded mb-4" />
+                    <div className="w-3/4 h-4 bg-gray-200 rounded mb-2" />
+                    <div className="w-1/2 h-4 bg-gray-200 rounded" />
+                  </div>
+                ))}
               </div>
             ) : displayProducts.length === 0 ? (
               <div className="text-center py-12">
@@ -296,7 +304,6 @@ const AllProducts = () => {
           </div>
         </div>
       </div>
-      <ScrollToTopButton />
     </div>
   );
 };
