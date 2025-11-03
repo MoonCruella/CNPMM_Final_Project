@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useUserContext } from "@/context/UserContext";
-import { useCartContext } from "@/context/CartContext"; //    Add CartContext
+import { useCartContext } from "@/context/CartContext";
 import orderService from "@/services/order.service";
 import CancelOrderModal from "../../components/user/modal/CancelOrderModal";
-
 import { toast } from "sonner";
 
 const OrderDetailPage = () => {
@@ -14,9 +13,38 @@ const OrderDetailPage = () => {
   const { fetchCart } = useCartContext();
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isReordering, setIsReordering] = useState(false); 
-   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
+  // ✅ Tính thời gian đã trôi qua
+  const timeElapsed = useMemo(() => {
+    if (!order?.created_at) return 0;
+    return Date.now() - new Date(order.created_at).getTime();
+  }, [order?.created_at]);
+
+  const thirtyMinutes = 30 * 60 * 1000;
+
+  // ✅ Check xem có thể hủy trực tiếp không
+  const canDirectCancel = useMemo(() => {
+    if (!order) return false;
+    return ["pending", "confirmed"].includes(order.status) && timeElapsed <= thirtyMinutes;
+  }, [order, timeElapsed, thirtyMinutes]);
+
+  // ✅ Check xem có thể gửi yêu cầu hủy không
+  const canRequestCancel = useMemo(() => {
+    if (!order) return false;
+    return (
+      (["pending", "confirmed"].includes(order.status) && timeElapsed > thirtyMinutes) ||
+      order.status === "processing"
+    );
+  }, [order, timeElapsed, thirtyMinutes]);
+
+  // ✅ Check xem có thể đặt lại không
+  const canReorder = useMemo(() => {
+    if (!order) return false;
+    return ["delivered", "cancelled"].includes(order.status);
+  }, [order]);
 
   useEffect(() => {
     if (isAuthenticated && orderId) {
@@ -34,12 +62,12 @@ const OrderDetailPage = () => {
         setOrder(orderData);
       } else {
         toast.error("Không tìm thấy đơn hàng");
-        navigate("/user/purchase");
+        navigate("/user/orders");
       }
     } catch (error) {
       console.error("Load order detail error:", error);
       toast.error("Có lỗi xảy ra khi tải đơn hàng");
-      navigate("/user/purchase");
+      navigate("/user/orders");
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +97,7 @@ const OrderDetailPage = () => {
       confirmed: { label: "Đã xác nhận", color: "bg-blue-100 text-blue-800", icon: "✔️" },
       processing: { label: "Đang xử lý", color: "bg-purple-100 text-purple-800", icon: "🛒" },
       shipped: { label: "Đang giao", color: "bg-indigo-100 text-indigo-800", icon: "🚚" },
-      delivered: { label: "Đã giao", color: "bg-green-100 text-green-800", icon: " ✅ " },
+      delivered: { label: "Đã giao", color: "bg-green-100 text-green-800", icon: "✅" },
       cancelled: { label: "Đã hủy", color: "bg-red-100 text-red-800", icon: "❌" },
       cancel_request: { label: "Yêu cầu hủy", color: "bg-orange-100 text-orange-800", icon: "🔄" },
     };
@@ -101,6 +129,7 @@ const OrderDetailPage = () => {
       toast.error("Có lỗi xảy ra khi hủy đơn hàng");
     }
   };
+
   const handleOpenCancelModal = () => {
     setShowCancelModal(true);
   };
@@ -108,13 +137,15 @@ const OrderDetailPage = () => {
   const handleCloseCancelModal = () => {
     setShowCancelModal(false);
   };
+
   const handleSubmitCancelRequest = async (orderId, reason) => {
     try {
       setIsSubmittingCancel(true);
       const response = await orderService.cancelOrder(orderId, reason);
-      
+
       if (response.success) {
         toast.success(response.message || "Đã gửi yêu cầu hủy đơn hàng");
+        setShowCancelModal(false);
         loadOrderDetail();
       } else {
         toast.error(response.message || "Không thể gửi yêu cầu hủy");
@@ -128,9 +159,8 @@ const OrderDetailPage = () => {
     }
   };
 
-  //    IMPROVED handleReorder - Same as MyOrderPage
   const handleReorder = async () => {
-    if (isReordering) return; // Prevent double click
+    if (isReordering) return;
 
     try {
       setIsReordering(true);
@@ -140,18 +170,13 @@ const OrderDetailPage = () => {
       if (response.success) {
         toast.success("Đã thêm sản phẩm vào giỏ hàng");
 
-        //    Wait for cart to load completely
         try {
-          const cartData = await fetchCart();
-
-          //  Wait a bit more to ensure state propagates
-          await new Promise(resolve => setTimeout(resolve, 300));
-
-          navigate('/cart');
+          await fetchCart();
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          navigate("/cart");
         } catch (fetchError) {
-          console.error(" Cart fetch error:", fetchError);
-          // Navigate anyway
-          navigate('/cart');
+          console.error("Cart fetch error:", fetchError);
+          navigate("/cart");
         }
       } else {
         toast.error(response.message || "Không thể đặt lại đơn hàng");
@@ -199,7 +224,7 @@ const OrderDetailPage = () => {
           <div className="text-6xl mb-4">❌</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Không tìm thấy đơn hàng</h2>
           <Link
-            to="/user/purchase"
+            to="/user/orders"
             className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
           >
             Quay lại danh sách
@@ -210,18 +235,19 @@ const OrderDetailPage = () => {
   }
 
   const statusInfo = getStatusInfo(order.status);
-  const canCancel = ["pending", "confirmed"].includes(order.status);
-  const canRequestCancel = order.status === "processing";
-  const canReorder = ["delivered", "cancelled"].includes(order.status);
 
   return (
     <main className="space-y-6">
       <div className="container mx-auto px-4">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-          <Link to="/" className="hover:text-green-600">Trang chủ</Link>
+          <Link to="/" className="hover:text-green-600">
+            Trang chủ
+          </Link>
           <span>/</span>
-          <Link to="/user/orders" className="hover:text-green-600">Đơn hàng của tôi</Link>
+          <Link to="/user/orders" className="hover:text-green-600">
+            Đơn hàng của tôi
+          </Link>
           <span>/</span>
           <span className="font-medium text-gray-900">Chi tiết đơn hàng</span>
         </div>
@@ -241,11 +267,16 @@ const OrderDetailPage = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Chi tiết đơn hàng</h1>
                 <p className="text-sm text-gray-600 mt-1">
-                  Mã đơn: <span className="font-semibold text-green-600">#{order.order_number || order._id?.slice(-8).toUpperCase()}</span>
+                  Mã đơn:{" "}
+                  <span className="font-semibold text-green-600">
+                    #{order.order_number || order._id?.slice(-8).toUpperCase()}
+                  </span>
                 </p>
               </div>
             </div>
-            <span className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 ${statusInfo.color}`}>
+            <span
+              className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 ${statusInfo.color}`}
+            >
               <span>{statusInfo.icon}</span>
               {statusInfo.label}
             </span>
@@ -369,103 +400,98 @@ const OrderDetailPage = () => {
                   <div className="flex-1 pb-4 border-b">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium text-gray-800">Đặt hàng</h4>
-                      <span className="text-sm text-gray-500">
-                        - lúc {formatDate(order.created_at)}
-                      </span>
+                      <span className="text-sm text-gray-500">- lúc {formatDate(order.created_at)}</span>
                     </div>
                     <p className="text-sm text-gray-600">Đơn hàng đã được tạo thành công</p>
                   </div>
                 </div>
 
                 {/* Xác nhận & Chuẩn bị - Show if not cancelled */}
-                {order.status !== 'cancelled' && order.status !== 'cancel_request' && (
+                {order.status !== "cancelled" && order.status !== "cancel_request" && (
                   <div className="flex items-start gap-4">
-                    <div className={`w-4 h-4 rounded-full mt-1 flex-shrink-0 ${['confirmed', 'processing', 'shipped', 'delivered'].includes(order.status)
-                        ? "bg-green-500"
-                        : "bg-gray-300"
-                      }`}></div>
+                    <div
+                      className={`w-4 h-4 rounded-full mt-1 flex-shrink-0 ${
+                        ["confirmed", "processing", "shipped", "delivered"].includes(order.status)
+                          ? "bg-green-500"
+                          : "bg-gray-300"
+                      }`}
+                    ></div>
                     <div className="flex-1 pb-4 border-b">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className={`font-medium ${['confirmed', 'processing', 'shipped', 'delivered'].includes(order.status)
-                            ? "text-gray-800"
-                            : "text-gray-500"
-                          }`}>
+                        <h4
+                          className={`font-medium ${
+                            ["confirmed", "processing", "shipped", "delivered"].includes(order.status)
+                              ? "text-gray-800"
+                              : "text-gray-500"
+                          }`}
+                        >
                           Xác nhận & Chuẩn bị
                         </h4>
-                        {order.confirmed_at && ['confirmed', 'processing', 'shipped', 'delivered'].includes(order.status) && (
-                          <span className="text-sm text-gray-500">
-                            - lúc {formatDate(order.confirmed_at)}
-                          </span>
-                        )}
+                        {order.confirmed_at &&
+                          ["confirmed", "processing", "shipped", "delivered"].includes(order.status) && (
+                            <span className="text-sm text-gray-500">
+                              - lúc {formatDate(order.confirmed_at)}
+                            </span>
+                          )}
                       </div>
-                      <p className="text-sm text-gray-600">
-                        Đơn hàng đã được xác nhận và đang chuẩn bị
-                      </p>
+                      <p className="text-sm text-gray-600">Đơn hàng đã được xác nhận và đang chuẩn bị</p>
                     </div>
                   </div>
                 )}
 
                 {/* Giao hàng - Show if not cancelled */}
-                {order.status !== 'cancelled' && order.status !== 'cancel_request' && (
+                {order.status !== "cancelled" && order.status !== "cancel_request" && (
                   <div className="flex items-start gap-4">
-                    <div className={`w-4 h-4 rounded-full mt-1 flex-shrink-0 ${['shipped', 'delivered'].includes(order.status)
-                        ? "bg-green-500"
-                        : "bg-gray-300"
-                      }`}></div>
+                    <div
+                      className={`w-4 h-4 rounded-full mt-1 flex-shrink-0 ${
+                        ["shipped", "delivered"].includes(order.status) ? "bg-green-500" : "bg-gray-300"
+                      }`}
+                    ></div>
                     <div className="flex-1 pb-4 border-b">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className={`font-medium ${['shipped', 'delivered'].includes(order.status)
-                            ? "text-gray-800"
-                            : "text-gray-500"
-                          }`}>
+                        <h4
+                          className={`font-medium ${
+                            ["shipped", "delivered"].includes(order.status) ? "text-gray-800" : "text-gray-500"
+                          }`}
+                        >
                           Giao hàng
                         </h4>
-                        {order.shipped_at && ['shipped', 'delivered'].includes(order.status) && (
-                          <span className="text-sm text-gray-500">
-                            - lúc {formatDate(order.shipped_at)}
-                          </span>
+                        {order.shipped_at && ["shipped", "delivered"].includes(order.status) && (
+                          <span className="text-sm text-gray-500">- lúc {formatDate(order.shipped_at)}</span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600">
-                        Đơn hàng đang được vận chuyển
-                      </p>
+                      <p className="text-sm text-gray-600">Đơn hàng đang được vận chuyển</p>
                     </div>
                   </div>
                 )}
 
                 {/* Hoàn thành - Show if delivered */}
-                {order.status === 'delivered' && (
+                {order.status === "delivered" && (
                   <div className="flex items-start gap-4">
                     <div className="w-4 h-4 rounded-full mt-1 bg-green-500 flex-shrink-0"></div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium text-gray-800">Hoàn thành</h4>
                         {order.delivered_at && (
-                          <span className="text-sm text-gray-500">
-                            - lúc {formatDate(order.delivered_at)}
-                          </span>
+                          <span className="text-sm text-gray-500">- lúc {formatDate(order.delivered_at)}</span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600">
-                        Đơn hàng đã được giao thành công
-                      </p>
+                      <p className="text-sm text-gray-600">Đơn hàng đã được giao thành công</p>
                     </div>
                   </div>
                 )}
 
                 {/* Đã hủy - Show if cancelled */}
-                {(order.status === 'cancelled' || order.status === 'cancel_request') && (
+                {(order.status === "cancelled" || order.status === "cancel_request") && (
                   <div className="flex items-start gap-4">
                     <div className="w-4 h-4 rounded-full mt-1 bg-red-500 flex-shrink-0"></div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium text-gray-800">
-                          {order.status === 'cancel_request' ? 'Yêu cầu hủy' : 'Đã hủy'}
+                          {order.status === "cancel_request" ? "Yêu cầu hủy" : "Đã hủy"}
                         </h4>
                         {order.cancelled_at && (
-                          <span className="text-sm text-gray-500">
-                            - lúc {formatDate(order.cancelled_at)}
-                          </span>
+                          <span className="text-sm text-gray-500">- lúc {formatDate(order.cancelled_at)}</span>
                         )}
                       </div>
                       <p className="text-sm text-gray-600">
@@ -489,7 +515,9 @@ const OrderDetailPage = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tổng tiền hàng:</span>
-                  <span className="font-medium">{formatCurrency(order.subtotal || order.total_amount)}</span>
+                  <span className="font-medium">
+                    {formatCurrency(order.subtotal || order.total_amount)}
+                  </span>
                 </div>
                 {order.shipping_fee > 0 && (
                   <div className="flex justify-between">
@@ -522,8 +550,11 @@ const OrderDetailPage = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Trạng thái thanh toán:</span>
-                  <span className={`font-medium ${order.payment_status === "paid" ? "text-green-600" : "text-orange-600"
-                    }`}>
+                  <span
+                    className={`font-medium ${
+                      order.payment_status === "paid" ? "text-green-600" : "text-orange-600"
+                    }`}
+                  >
                     {order.payment_status === "paid" ? "Đã thanh toán" : "Chưa thanh toán"}
                   </span>
                 </div>
@@ -536,7 +567,8 @@ const OrderDetailPage = () => {
               </div>
 
               <div className="mt-6 space-y-3">
-                {canCancel && (
+                {/* ✅ Hiển thị nút hủy trực tiếp nếu trong vòng 30 phút */}
+                {canDirectCancel && (
                   <button
                     onClick={handleCancelOrder}
                     className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium cursor-pointer"
@@ -544,18 +576,21 @@ const OrderDetailPage = () => {
                     ❌ Hủy đơn hàng
                   </button>
                 )}
+
+                {/* ✅ Hiển thị nút gửi yêu cầu hủy nếu đã quá 30 phút hoặc đang processing */}
                 {canRequestCancel && (
                   <button
                     onClick={handleOpenCancelModal}
                     className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium cursor-pointer"
                   >
-                    🔄 Yêu cầu hủy đơn
+                    🔄 Gửi yêu cầu hủy đơn
                   </button>
                 )}
+
                 {canReorder && (
                   <button
                     onClick={handleReorder}
-                    disabled={isReordering} 
+                    disabled={isReordering}
                     className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isReordering ? (
@@ -571,6 +606,7 @@ const OrderDetailPage = () => {
                     )}
                   </button>
                 )}
+
                 <button
                   onClick={() => navigate("/user/orders")}
                   className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium cursor-pointer"
@@ -582,6 +618,7 @@ const OrderDetailPage = () => {
           </div>
         </div>
       </div>
+
       <CancelOrderModal
         isOpen={showCancelModal}
         onClose={handleCloseCancelModal}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import OrderDetailModal from "./modal/OrderDetailModal";
 import CancelOrderModal from "../user/modal/CancelOrderModal";
@@ -11,7 +11,7 @@ const OrderCard = ({
   onCancelOrder,
   onReorder,
   onUpdateShippingStatus,
-  onCancelRequest, 
+  onCancelRequest,
   user,
   autoOpen = false,
   onModalClose
@@ -21,6 +21,27 @@ const OrderCard = ({
   const [showDetails, setShowDetails] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const navigate = useNavigate();
+
+  // ✅ Tính thời gian đã trôi qua
+  const timeElapsed = useMemo(() => {
+    if (!order.created_at) return 0;
+    return Date.now() - new Date(order.created_at).getTime();
+  }, [order.created_at]);
+
+  const thirtyMinutes = 30 * 60 * 1000;
+
+  // ✅ Check xem có thể hủy trực tiếp không
+  const canDirectCancel = useMemo(() => {
+    return ["pending", "confirmed"].includes(order.status) && timeElapsed <= thirtyMinutes;
+  }, [order.status, timeElapsed, thirtyMinutes]);
+
+  // ✅ Check xem có thể gửi yêu cầu hủy không
+  const canRequestCancel = useMemo(() => {
+    return (
+      (["pending", "confirmed"].includes(order.status) && timeElapsed > thirtyMinutes) ||
+      order.status === "processing"
+    );
+  }, [order.status, timeElapsed, thirtyMinutes]);
 
   useEffect(() => {
     if (autoOpen) {
@@ -71,7 +92,7 @@ const OrderCard = ({
     if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
       return;
     }
-    
+
     if (onCancelOrder) {
       onCancelOrder(order._id, "Người dùng hủy đơn");
     }
@@ -106,9 +127,8 @@ const OrderCard = ({
     <>
       <div
         id={`order-${orderId}`}
-        className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-300 ${
-          autoOpen ? 'ring-4 ring-blue-500 ring-offset-2' : 'hover:shadow-md'
-        }`}
+        className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-300 ${autoOpen ? 'ring-4 ring-blue-500 ring-offset-2' : 'hover:shadow-md'
+          }`}
       >
         <div className="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b border-green-200">
           <div className="flex items-center justify-between flex-wrap gap-3">
@@ -121,7 +141,13 @@ const OrderCard = ({
                   </span>
                 </div>
                 <div className="text-xs text-gray-500">
-                  📅 {formatDate(order.created_at)}
+                  <span>📅 Đặt ngày: {formatDate(order.created_at)}</span>
+                  {order.updated_at && order.updated_at !== order.created_at && (
+                    <>
+                      <span> • </span>
+                      <span>🔄 Cập nhật: {formatDate(order.updated_at)}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -185,7 +211,8 @@ const OrderCard = ({
                   👁️ Xem chi tiết
                 </button>
 
-                {user?.role === "user" && ["pending", "confirmed"].includes(order.status) && (
+                {/* ✅ Hủy trực tiếp nếu trong vòng 30 phút */}
+                {user?.role === "user" && canDirectCancel && (
                   <button
                     onClick={handleCancelOrder}
                     className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition cursor-pointer"
@@ -194,10 +221,11 @@ const OrderCard = ({
                   </button>
                 )}
 
-                {user?.role === "user" && order.status === "processing" && (
+                {/* ✅ Gửi yêu cầu hủy nếu đã quá 30 phút hoặc đang processing */}
+                {user?.role === "user" && canRequestCancel && (
                   <button
                     onClick={handleOpenCancelModal}
-                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition cursor-pointer"
+                    className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition cursor-pointer"
                   >
                     🔄 Gửi yêu cầu hủy đơn
                   </button>

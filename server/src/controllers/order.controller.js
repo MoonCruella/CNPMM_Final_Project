@@ -346,18 +346,31 @@ export const cancelOrder = async (req, res) => {
     }
 
     const now = new Date();
-    const canCancel =
-      ["pending", "confirmed"].includes(order.status) &&
-      now - order.created_at <= 30 * 60 * 1000;
+    const timeElapsed = now - order.created_at;
+    const thirtyMinutes = 30 * 60 * 1000;
 
-    if (canCancel) {
-      // Direct cancel
+    //  Cho phép hủy trực tiếp nếu:
+    // 1. Status là "pending" hoặc "confirmed"
+    // 2. Trong vòng 30 phút kể từ khi tạo đơn
+    const canDirectCancel =
+      ["pending", "confirmed"].includes(order.status) &&
+      timeElapsed <= thirtyMinutes;
+
+    if (canDirectCancel) {
+      //  Hủy trực tiếp
       order.status = "cancelled";
       order.cancelled_at = now;
       order.cancel_reason = reason;
+      
+      order.history = order.history || [];
+      order.history.push({
+        status: "cancelled",
+        date: now,
+        note: reason || "Khách hàng hủy đơn hàng",
+      });
+      
       await order.save();
       
-      // Send notification to user
       try {
         await notificationService.notifyOrderCancelled(order);
       } catch (notifyError) {
@@ -370,13 +383,14 @@ export const cancelOrder = async (req, res) => {
         "Hủy đơn hàng thành công",
         200
       );
-    } else if (order.status === "processing") {
-      // Cancel request
+    } 
+    // Nếu đã quá 30 phút nhưng vẫn ở pending/confirmed hoặc đang processing
+    // → Gửi yêu cầu hủy
+    else if (["pending", "confirmed", "processing"].includes(order.status)) {
       order.status = "cancel_request";
       order.cancel_reason = reason;
       order.cancel_requested_at = now;
       
-      // Add to history
       order.history = order.history || [];
       order.history.push({
         status: "cancel_request",
@@ -386,7 +400,6 @@ export const cancelOrder = async (req, res) => {
       
       await order.save();
       
-      // Send notification to sellers
       try {
         await notificationService.notifyCancelRequest(order);
       } catch (notifyError) {
@@ -399,10 +412,12 @@ export const cancelOrder = async (req, res) => {
         "Đã gửi yêu cầu hủy đơn hàng đến shop",
         200
       );
-    } else {
+    } 
+    else {
+      // Các trạng thái khác không thể hủy
       return response.sendError(
         res,
-        "Không thể hủy đơn hàng ở trạng thái này",
+        `Không thể hủy đơn hàng ở trạng thái "${order.status}". Vui lòng liên hệ shop để được hỗ trợ.`,
         400
       );
     }
