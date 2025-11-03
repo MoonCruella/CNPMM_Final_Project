@@ -51,7 +51,7 @@ const MainBanner = () => {
                     Mua ngay
                   </Link>
                   <Link
-                    to={"/introduce"}
+                    to={"/blog"}
                     className="flex items-center justify-center gap-2 px-8 py-3 btn-secondary transition rounded text-black font-medium shadow min-w-[200px]"
                   >
                     Xem thêm
