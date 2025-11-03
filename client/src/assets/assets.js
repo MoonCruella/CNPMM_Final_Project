@@ -25,6 +25,7 @@ import freeship_icon from "./freeship_icon.png";
 import promo_code_icon from "./promo_code_icon.png";
 import edit_icon from "./edit_icon.png";
 import delete_icon from "./delete_icon.png";
+import up from "./up.png";
 export const assets = {
   logo,
   search_icon,
@@ -53,6 +54,7 @@ export const assets = {
   cod_icon,
   page_banner,
   freeship_icon,
+  up,
 };
 
 export const categoriesColors = [
@@ -71,5 +73,17 @@ export const categoriesColors = [
   {
     bgColor: "#f9f5ff",
     bgMainColor: "#eee2ff",
+  },
+  {
+    bgColor: "#fbefef",
+    bgMainColor: "#f0bfbd",
+  },
+  {
+    bgColor: "#fff8ee",
+    bgMainColor: "#ffd28e",
+  },
+  {
+    bgColor: "#e3f8ee",
+    bgMainColor: "#8ee3ba",
   },
 ];

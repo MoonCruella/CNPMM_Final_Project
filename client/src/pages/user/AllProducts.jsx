@@ -4,7 +4,8 @@ import { assets } from "@/assets/assets";
 import productService from "../../services/productService.js";
 import categoryService from "../../services/categoryService.js";
 import ProductCard from "../../components/user/item/ProductCard.jsx";
-import { useDebounce } from "../../hooks/useDebounce.jsx"; 
+import { useDebounce } from "../../hooks/useDebounce.jsx";
+import ScrollToTopButton from "@/components/user/ScrollToTopButton.jsx";
 
 const AllProducts = () => {
   const [products, setProducts] = useState([]);
@@ -37,13 +38,13 @@ const AllProducts = () => {
       try {
         const categoryRes = await categoryService.getAll();
         console.log("Categories response:", categoryRes);
-        
+
         if (categoryRes.success) {
           // Check if data is array or nested object
-          const categoriesData = Array.isArray(categoryRes.data) 
-            ? categoryRes.data 
+          const categoriesData = Array.isArray(categoryRes.data)
+            ? categoryRes.data
             : categoryRes.data?.categories || [];
-          
+
           setCategories(categoriesData);
         }
       } catch (err) {
@@ -64,7 +65,7 @@ const AllProducts = () => {
         const params = {
           page: currentPage,
           limit: productsPerPage,
-          status: 'active',
+          status: "active",
         };
 
         if (activeCategory) {
@@ -90,7 +91,9 @@ const AllProducts = () => {
 
           const formatted = productList.map((p) => ({
             ...p,
-            primary_image: p.images?.find((img) => img.is_primary)?.image_url || p.images?.[0]?.image_url,
+            primary_image:
+              p.images?.find((img) => img.is_primary)?.image_url ||
+              p.images?.[0]?.image_url,
           }));
 
           setProducts(formatted);
@@ -114,7 +117,8 @@ const AllProducts = () => {
     setCurrentPage(1);
   }, [activeCategory, debouncedSearch, sortOption]);
 
-  const showingFrom = totalProducts > 0 ? (currentPage - 1) * productsPerPage + 1 : 0;
+  const showingFrom =
+    totalProducts > 0 ? (currentPage - 1) * productsPerPage + 1 : 0;
   const showingTo = Math.min(currentPage * productsPerPage, totalProducts);
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -248,8 +252,18 @@ const AllProducts = () => {
             ) : displayProducts.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-gray-400 mb-4">
-                  <svg className="w-16 h-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  <svg
+                    className="w-16 h-16 mx-auto"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                    />
                   </svg>
                 </div>
                 <p className="text-gray-600">No products found</p>
@@ -282,6 +296,7 @@ const AllProducts = () => {
           </div>
         </div>
       </div>
+      <ScrollToTopButton />
     </div>
   );
 };
