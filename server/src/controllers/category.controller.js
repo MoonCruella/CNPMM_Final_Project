@@ -1,4 +1,5 @@
 import Category from "../models/category.model.js";
+import Product from "../models/product.model.js";
 import response from "../helpers/response.js";
 import {
   removeVietnameseTones,
@@ -10,12 +11,12 @@ import {
 const generateSlug = (name) => {
   return name
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
     .trim();
 };
 
@@ -23,18 +24,18 @@ const generateSlug = (name) => {
 const ensureUniqueSlug = async (baseSlug, excludeId = null) => {
   let slug = baseSlug;
   let counter = 1;
-  
+
   while (true) {
     const query = { slug };
     if (excludeId) {
       query._id = { $ne: excludeId };
     }
-    
+
     const existing = await Category.findOne(query);
     if (!existing) {
       return slug;
     }
-    
+
     slug = `${baseSlug}-${counter}`;
     counter++;
   }
@@ -135,7 +136,7 @@ export const createCategory = async (req, res) => {
 
     //  Generate slug from name or use custom slug
     const baseSlug = customSlug?.trim() || generateSlug(name);
-    
+
     // Ensure unique slug
     const uniqueSlug = await ensureUniqueSlug(baseSlug);
 
@@ -149,20 +150,10 @@ export const createCategory = async (req, res) => {
 
     await category.save();
 
-    return response.sendSuccess(
-      res,
-      category,
-      "Tạo danh mục thành công",
-      201
-    );
+    return response.sendSuccess(res, category, "Tạo danh mục thành công", 201);
   } catch (error) {
     console.error("Error creating category:", error);
-    return response.sendError(
-      res,
-      "Lỗi khi tạo danh mục",
-      400,
-      error.message
-    );
+    return response.sendError(res, "Lỗi khi tạo danh mục", 400, error.message);
   }
 };
 
@@ -228,7 +219,8 @@ export const updateCategory = async (req, res) => {
     category.slug = newSlug;
     category.description = description?.trim() || "";
     category.image = image?.trim() || "";
-    category.is_active = is_active !== undefined ? is_active : category.is_active;
+    category.is_active =
+      is_active !== undefined ? is_active : category.is_active;
 
     await category.save();
 
@@ -259,17 +251,24 @@ export const deleteCategory = async (req, res) => {
       return response.sendError(res, "Không tìm thấy danh mục", 404);
     }
 
+    // kiểm tra số lượng sản phẩm thuộc category này
+    const productCount = await Product.countDocuments({
+      category_id: category._id,
+    });
+    if (productCount > 0) {
+      return response.sendError(
+        res,
+        `Không thể xóa danh mục này vì còn ${productCount} sản phẩm.`,
+        400
+      );
+    }
+
     await Category.findByIdAndDelete(id);
 
     return response.sendSuccess(res, null, "Xóa danh mục thành công", 200);
   } catch (error) {
     console.error("Error deleting category:", error);
-    return response.sendError(
-      res,
-      "Lỗi khi xóa danh mục",
-      500,
-      error.message
-    );
+    return response.sendError(res, "Lỗi khi xóa danh mục", 500, error.message);
   }
 };
 
