@@ -14,16 +14,19 @@ import {
   getViewedProducts,
   getSimilarProducts,
   getProductStats,
-  
+  getByCategory,
 } from "../controllers/product.controller.js";
-import { authenticateToken, checkAuth, checkAuthOptional } from "../middleware/auth.middleware.js";
+import {
+  authenticateToken,
+  checkAuth,
+  checkAuthOptional,
+} from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
 // Favorite routes
 router.post("/:productId/favorite", authenticateToken, toggleFavorite);
 router.get("/favorites", authenticateToken, getFavoriteProducts);
-
 
 router.get("/viewed", authenticateToken, getViewedProducts);
 
@@ -41,9 +44,9 @@ router.delete("/:id", authenticateToken, deleteProduct);
 router.get("/best-sellers", getBestSellers);
 router.get("/discounts", getBiggestDiscounts);
 router.get("/newest", getNewestProducts);
-
+router.get("/byCategory/:categoryId", getByCategory);
 
 // Product detail route
-router.get("/:id", checkAuth ,getProductById);
+router.get("/:id", checkAuth, getProductById);
 
 export default router;

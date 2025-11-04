@@ -122,11 +122,11 @@ const ProductDetails = () => {
         }
 
         // 3️ Fetch related products
-        const relatedRes = await productService.getAll();
+        const relatedRes = await productService.getByCategory(prod.category_id);
+        console.log("Related products response:", relatedRes);
         if (relatedRes.success) {
-          const related = relatedRes.data
-            .filter((p) => p._id !== prod._id && p.category === prod.category)
-            .slice(0, 5);
+          // console.log(relatedRes);
+          const related = relatedRes.data.products;
           setRelatedProducts(related);
         }
       } catch (err) {
@@ -556,7 +556,7 @@ const ProductDetails = () => {
       {relatedProducts.length > 0 && (
         <div className="m-16">
           <h2 className="text-4xl font-semibold mb-4 text-center gap-6">
-            Related Products
+            Sản phẩm khác
           </h2>
           <Slider {...sliderSettings}>
             {relatedProducts.map((product) => {
