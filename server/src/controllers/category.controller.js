@@ -6,7 +6,7 @@ import {
   sortByRelevance,
 } from "../utils/fuzzySearch.js";
 
-// ✅ Helper function to generate slug
+//  Helper function to generate slug
 const generateSlug = (name) => {
   return name
     .toLowerCase()
@@ -19,7 +19,7 @@ const generateSlug = (name) => {
     .trim();
 };
 
-// ✅ Helper function to ensure unique slug
+//  Helper function to ensure unique slug
 const ensureUniqueSlug = async (baseSlug, excludeId = null) => {
   let slug = baseSlug;
   let counter = 1;
@@ -133,10 +133,10 @@ export const createCategory = async (req, res) => {
       return response.sendError(res, "Tên danh mục không được để trống", 400);
     }
 
-    // ✅ Generate slug from name or use custom slug
+    //  Generate slug from name or use custom slug
     const baseSlug = customSlug?.trim() || generateSlug(name);
     
-    // ✅ Ensure unique slug
+    // Ensure unique slug
     const uniqueSlug = await ensureUniqueSlug(baseSlug);
 
     const category = new Category({
@@ -210,7 +210,7 @@ export const updateCategory = async (req, res) => {
       return response.sendError(res, "Tên danh mục không được để trống", 400);
     }
 
-    // ✅ Generate slug from name if customSlug not provided
+    //  Generate slug from name if customSlug not provided
     let newSlug;
     if (customSlug && customSlug.trim()) {
       newSlug = customSlug.trim();
@@ -218,7 +218,7 @@ export const updateCategory = async (req, res) => {
       newSlug = generateSlug(name);
     }
 
-    // ✅ Check if slug is changed and ensure unique
+    //  Check if slug is changed and ensure unique
     if (newSlug !== category.slug) {
       newSlug = await ensureUniqueSlug(newSlug, id);
     }

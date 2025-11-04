@@ -9,7 +9,7 @@ class ChatbotService {
     this.GROQ_BASE = "https://api.groq.com/openai/v1";
   }
 
-  // ✅ Lấy top sản phẩm bán chạy để tư vấn
+  //   Lấy top sản phẩm bán chạy để tư vấn
   async getTopSellingProducts(limit = 5) {
     try {
       const topProducts = await Product.find({ status: 'active' })
@@ -29,7 +29,7 @@ class ChatbotService {
     }
   }
 
-  // ✅ Lấy sản phẩm có đánh giá cao
+  //   Lấy sản phẩm có đánh giá cao
   async getHighRatedProducts(limit = 5) {
     try {
       const highRatedProducts = await Product.find({ 
@@ -51,7 +51,7 @@ class ChatbotService {
     }
   }
 
-  // ✅ Tư vấn sản phẩm theo ngân sách
+  //   Tư vấn sản phẩm theo ngân sách
   async recommendByBudget(budget, limit = 5) {
     try {
       const products = await Product.find({ 
@@ -74,7 +74,7 @@ class ChatbotService {
     }
   }
 
-  // ✅ Tư vấn sản phẩm theo danh mục
+  //   Tư vấn sản phẩm theo danh mục
   async recommendByCategory(categoryName, limit = 5) {
     try {
       const products = await Product.find({ 
@@ -101,7 +101,7 @@ class ChatbotService {
     try {
       const searchTerms = query.toLowerCase();
       
-      // ✅ Tư vấn chung - Top sản phẩm bán chạy
+      //   Tư vấn chung - Top sản phẩm bán chạy
       if (
         searchTerms.includes('tư vấn') || 
         searchTerms.includes('nên mua') || 
@@ -119,7 +119,7 @@ class ChatbotService {
         };
       }
 
-      // ✅ Tư vấn theo ngân sách
+      //   Tư vấn theo ngân sách
       const budgetMatch = searchTerms.match(/(\d+)(?:k|tr|triệu|nghìn)?/i);
       if (budgetMatch && (
         searchTerms.includes('ngân sách') || 
@@ -146,7 +146,7 @@ class ChatbotService {
         };
       }
 
-      // ✅ Tìm sản phẩm bán chạy
+      //   Tìm sản phẩm bán chạy
       if (searchTerms.includes('bán chạy') || searchTerms.includes('phổ biến')) {
         const popularProducts = await Product.find({ status: 'active' })
           .populate('category_id', 'name')
@@ -160,7 +160,7 @@ class ChatbotService {
         };
       }
 
-      // ✅ Tìm sản phẩm có đánh giá cao
+      //   Tìm sản phẩm có đánh giá cao
       if (
         searchTerms.includes('đánh giá cao') || 
         searchTerms.includes('chất lượng') ||
@@ -175,7 +175,7 @@ class ChatbotService {
         };
       }
 
-      // ✅ Tìm sản phẩm giá rẻ
+      //   Tìm sản phẩm giá rẻ
       if (searchTerms.includes('rẻ') || searchTerms.includes('giá thấp')) {
         const cheapProducts = await Product.find({ status: 'active' })
           .populate('category_id', 'name')
@@ -189,7 +189,7 @@ class ChatbotService {
         };
       }
 
-      // ✅ Tìm sản phẩm mới
+      //   Tìm sản phẩm mới
       if (searchTerms.includes('mới') || searchTerms.includes('mới nhất')) {
         const newProducts = await Product.find({ status: 'active' })
           .populate('category_id', 'name')
@@ -203,7 +203,7 @@ class ChatbotService {
         };
       }
 
-      // ✅ Tìm sản phẩm nổi bật
+      //   Tìm sản phẩm nổi bật
       if (searchTerms.includes('nổi bật') || searchTerms.includes('đặc sản')) {
         const featuredProducts = await Product.find({ 
           $or: [
@@ -222,7 +222,7 @@ class ChatbotService {
         };
       }
 
-      // ✅ Tìm kiếm theo giá
+      //   Tìm kiếm theo giá
       const priceMatch = searchTerms.match(/(\d+)/);
       if (priceMatch && (searchTerms.includes('dưới') || searchTerms.includes('từ') || searchTerms.includes('đến'))) {
         const price = parseInt(priceMatch[1]);
@@ -244,7 +244,7 @@ class ChatbotService {
         };
       }
 
-      // ✅ Tìm kiếm thông thường
+      //   Tìm kiếm thông thường
       const searchConditions = [
         { name: { $regex: searchTerms, $options: "i" } },
         { description: { $regex: searchTerms, $options: "i" } },
@@ -284,7 +284,7 @@ class ChatbotService {
         ? ` (🎉 Giảm giá: ${product.sale_price.toLocaleString()} VNĐ - Tiết kiệm ${((product.price - product.sale_price) / product.price * 100).toFixed(0)}%)` 
         : '';
       
-      const stock = product.stock_quantity > 0 ? '✅ Còn hàng' : '❌ Hết hàng';
+      const stock = product.stock_quantity > 0 ? '  Còn hàng' : '❌ Hết hàng';
       const category = product.category_id?.name || 'Chưa phân loại';
       const rating = product.avg_rating ? `⭐ ${product.avg_rating.toFixed(1)}/5` : '';
       

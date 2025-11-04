@@ -8,11 +8,11 @@ const CartContext = createContext();
 export const CartProvider = ({ children }) => {
   const { user, isAuthenticated } = useSelector(state => state.auth);
   const [isLoading, setIsLoading] = useState(true);
-  const [items, setItems] = useState([]); // ✅ Main state
+  const [items, setItems] = useState([]); //  Main state
   const [loading, setLoading] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
 
-  // ✅ UNIFIED loadCart function - Update items state
+  //  UNIFIED loadCart function - Update items state
   const loadCart = useCallback(async () => {
     if (!isAuthenticated || !user) {
       setItems([]);
@@ -29,7 +29,7 @@ export const CartProvider = ({ children }) => {
       
       if (res.success) {
         const cartData = res.data || [];
-        setItems(cartData); // ✅ Update items state
+        setItems(cartData); 
         return cartData;
       } else {
         console.warn("⚠️ Cart load failed");
@@ -46,10 +46,10 @@ export const CartProvider = ({ children }) => {
     }
   }, [isAuthenticated, user]);
 
-  // ✅ fetchCart is now just an alias for loadCart
+  //  fetchCart is now just an alias for loadCart
   const fetchCart = loadCart;
 
-  // ✅ Initial load
+  //  Initial load
   useEffect(() => {
     loadCart();
   }, [loadCart]);
@@ -116,13 +116,13 @@ export const CartProvider = ({ children }) => {
       const response = await cartService.removeFromCart(itemId);
       
       if (response.success) {
-        // ✅ Update local state immediately
+        //  Update local state immediately
         setItems(prev => prev.filter(item => item._id !== itemId));
         setSelectedItems(prev => prev.filter(id => id !== itemId));
         
         toast.success('Đã xóa khỏi giỏ hàng');
         
-        // ✅ Reload to ensure sync
+        //  Reload to ensure sync
         await loadCart();
       } else {
         toast.error(response.message || 'Không thể xóa sản phẩm');

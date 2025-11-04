@@ -37,16 +37,32 @@ export const getUserOrders = async (req, res) => {
     // Calculate skip value for pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Get orders with pagination
+    //  Get orders without populating product_id - use hardcoded data
     const orders = await Order.find(filter)
-      .populate({
-        path: "items.product_id",
-        select: "name images price category brand",
-      })
       .sort(sortObj)
       .skip(skip)
       .limit(parseInt(limit))
       .lean();
+
+    //  Enrich items with product existence check
+    const enrichedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const enrichedItems = await Promise.all(
+          order.items.map(async (item) => {
+            const productExists = await Product.exists({ _id: item.product_id });
+            return {
+              ...item,
+              product_exists: !!productExists,
+              product_deleted: !productExists,
+            };
+          })
+        );
+        return {
+          ...order,
+          items: enrichedItems,
+        };
+      })
+    );
 
     // Get total count for pagination
     const totalOrders = await Order.countDocuments(filter);
@@ -56,28 +72,18 @@ export const getUserOrders = async (req, res) => {
     const allUserOrders = await Order.find({ user_id: userId }).lean();
     const orderStats = {
       total: allUserOrders.length,
-      pending: allUserOrders.filter((order) => order.status === "pending")
-        .length,
-      confirmed: allUserOrders.filter((order) => order.status == "confirmed")
-        .length,
-      processing: allUserOrders.filter((order) => order.status === "processing")
-        .length,
-      shipped: allUserOrders.filter((order) => order.status === "shipped")
-        .length,
-      delivered: allUserOrders.filter((order) => order.status === "delivered")
-        .length,
-      cancel_request: allUserOrders.filter((o) => o.status === "cancel_request")
-        .length,
-      cancelled: allUserOrders.filter((order) => order.status === "cancelled")
-        .length,
-      totalAmount: allUserOrders.reduce(
-        (sum, order) => sum + (order.total_amount || 0),
-        0
-      ),
+      pending: allUserOrders.filter((order) => order.status === "pending").length,
+      confirmed: allUserOrders.filter((order) => order.status === "confirmed").length,
+      processing: allUserOrders.filter((order) => order.status === "processing").length,
+      shipped: allUserOrders.filter((order) => order.status === "shipped").length,
+      delivered: allUserOrders.filter((order) => order.status === "delivered").length,
+      cancel_request: allUserOrders.filter((o) => o.status === "cancel_request").length,
+      cancelled: allUserOrders.filter((order) => order.status === "cancelled").length,
+      totalAmount: allUserOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0),
     };
 
     const data = {
-      orders,
+      orders: enrichedOrders,
       pagination: {
         current_page: parseInt(page),
         total_pages: totalPages,
@@ -140,16 +146,32 @@ export const getUserOrdersByAdmin = async (req, res) => {
     // Calculate skip value for pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Get orders with pagination
+    // Get orders without populating product_id - use hardcoded data
     const orders = await Order.find(filter)
-      .populate({
-        path: "items.product_id",
-        select: "name images price category brand",
-      })
       .sort(sortObj)
       .skip(skip)
       .limit(parseInt(limit))
       .lean();
+
+    // Enrich items with product existence check
+    const enrichedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const enrichedItems = await Promise.all(
+          order.items.map(async (item) => {
+            const productExists = await Product.exists({ _id: item.product_id });
+            return {
+              ...item,
+              product_exists: !!productExists,
+              product_deleted: !productExists,
+            };
+          })
+        );
+        return {
+          ...order,
+          items: enrichedItems,
+        };
+      })
+    );
 
     // Get total count for pagination
     const totalOrders = await Order.countDocuments(filter);
@@ -159,28 +181,18 @@ export const getUserOrdersByAdmin = async (req, res) => {
     const allUserOrders = await Order.find({ user_id: userId }).lean();
     const orderStats = {
       total: allUserOrders.length,
-      pending: allUserOrders.filter((order) => order.status === "pending")
-        .length,
-      confirmed: allUserOrders.filter((order) => order.status == "confirmed")
-        .length,
-      processing: allUserOrders.filter((order) => order.status === "processing")
-        .length,
-      shipped: allUserOrders.filter((order) => order.status === "shipped")
-        .length,
-      delivered: allUserOrders.filter((order) => order.status === "delivered")
-        .length,
-      cancel_request: allUserOrders.filter((o) => o.status === "cancel_request")
-        .length,
-      cancelled: allUserOrders.filter((order) => order.status === "cancelled")
-        .length,
-      totalAmount: allUserOrders.reduce(
-        (sum, order) => sum + (order.total_amount || 0),
-        0
-      ),
+      pending: allUserOrders.filter((order) => order.status === "pending").length,
+      confirmed: allUserOrders.filter((order) => order.status === "confirmed").length,
+      processing: allUserOrders.filter((order) => order.status === "processing").length,
+      shipped: allUserOrders.filter((order) => order.status === "shipped").length,
+      delivered: allUserOrders.filter((order) => order.status === "delivered").length,
+      cancel_request: allUserOrders.filter((o) => o.status === "cancel_request").length,
+      cancelled: allUserOrders.filter((order) => order.status === "cancelled").length,
+      totalAmount: allUserOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0),
     };
 
     const data = {
-      orders,
+      orders: enrichedOrders,
       pagination: {
         current_page: parseInt(page),
         total_pages: totalPages,
@@ -234,12 +246,8 @@ export const getOrderById = async (req, res) => {
       query.user_id = userId;
     }
 
-    // Find order
+    //  Find order - KHÔNG populate product_id nữa, dùng hardcoded data
     const order = await Order.findOne(query)
-      .populate({
-        path: "items.product_id",
-        select: "name images price category brand description",
-      })
       .populate({
         path: "user_id",
         select: "name email phone",
@@ -256,36 +264,46 @@ export const getOrderById = async (req, res) => {
       );
     }
 
-    // Add order timeline
+    // Enrich items with product existence check (optional)
+    const enrichedItems = await Promise.all(
+      order.items.map(async (item) => {
+        const productExists = await Product.exists({ _id: item.product_id });
+        return {
+          ...item,
+          product_exists: !!productExists,
+          product_deleted: !productExists,
+        };
+      })
+    );
+
+    //  Add order timeline
     const timeline = [
       {
         status: "pending",
         label: "Đơn hàng mới",
         date: order.created_at,
-        completed: order.status !== "pending",
+        completed: true,
         description: "Đơn hàng đã được tạo",
       },
       {
         status: "confirmed",
-        label: "Đã xác nhận đơn hàng",
+        label: "Đã xác nhận",
         date: order.confirmed_at,
-        completed: ["processing", "shipped", "delivered", "cancelled"].includes(
-          order.status
-        ),
+        completed: ["confirmed", "processing", "shipped", "delivered"].includes(order.status),
         description: "Đơn hàng đã được xác nhận",
       },
       {
         status: "processing",
-        label: "Shop đang chuẩn bị hàng",
+        label: "Đang chuẩn bị",
         date: order.processing_at,
-        completed: ["shipped", "delivered", "cancelled"].includes(order.status),
+        completed: ["processing", "shipped", "delivered"].includes(order.status),
         description: "Shop đang chuẩn bị hàng",
       },
       {
         status: "shipped",
         label: "Đang giao hàng",
         date: order.shipped_at,
-        completed: ["delivered", "cancelled"].includes(order.status),
+        completed: ["shipped", "delivered"].includes(order.status),
         description: "Đơn hàng đang được giao",
       },
       {
@@ -295,18 +313,34 @@ export const getOrderById = async (req, res) => {
         completed: order.status === "delivered",
         description: "Đơn hàng đã giao thành công",
       },
-      {
+    ];
+
+    //  Add cancelled step if applicable
+    if (order.status === "cancelled" || order.cancelled_at) {
+      timeline.push({
         status: "cancelled",
-        label: "Đã hủy đơn hàng",
+        label: "Đã hủy",
         date: order.cancelled_at,
         completed: order.status === "cancelled",
         description: order.cancel_reason || "Đơn hàng đã bị hủy",
-      },
-    ].filter((step) => step.date);
+      });
+    }
+
+    //  Add cancel request step if applicable
+    if (order.status === "cancel_request" || order.cancel_requested_at) {
+      timeline.push({
+        status: "cancel_request",
+        label: "Yêu cầu hủy",
+        date: order.cancel_requested_at,
+        completed: order.status === "cancel_request",
+        description: order.cancel_reason || "Đang chờ shop xác nhận hủy",
+      });
+    }
 
     const data = {
       order: {
         ...order,
+        items: enrichedItems, //  Use enriched items with product existence flag
         timeline,
       },
     };
@@ -565,7 +599,7 @@ export const reorder = async (req, res) => {
 
 
     const data = {
-      cart: { items: cartItems }, // ✅ Wrap in object for consistency
+      cart: { items: cartItems }, 
       unavailable_items: unavailableItems,
       total_added: addedCount,
       total_unavailable: unavailableItems.length,
@@ -589,6 +623,7 @@ export const reorder = async (req, res) => {
 };
 
 // Create new order
+// Create new order
 export const createOrder = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -602,6 +637,7 @@ export const createOrder = async (req, res) => {
       discount_value,
     } = req.body;
     const { freeship, discount } = voucherCodes;
+
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
       return response.sendError(
@@ -637,6 +673,7 @@ export const createOrder = async (req, res) => {
     let subtotal = 0; // Tổng tiền sản phẩm
     const orderItems = [];
 
+    // Process each item with hardcoded data
     for (const item of items) {
       if (!mongoose.Types.ObjectId.isValid(item.product_id)) {
         return response.sendError(
@@ -646,11 +683,23 @@ export const createOrder = async (req, res) => {
         );
       }
 
-      const product = await Product.findById(item.product_id);
+      // Populate full product data
+      const product = await Product.findById(item.product_id)
+        .populate("category_id", "name")
+        .lean();
+
       if (!product) {
         return response.sendError(
           res,
           `Sản phẩm với ID ${item.product_id} không tồn tại`,
+          400
+        );
+      }
+
+      if (product.status !== "active") {
+        return response.sendError(
+          res,
+          `Sản phẩm ${product.name} không còn bán`,
           400
         );
       }
@@ -663,17 +712,58 @@ export const createOrder = async (req, res) => {
         );
       }
 
-      const itemTotal = product.sale_price
-        ? product.sale_price * item.quantity
-        : product.price * item.quantity;
+      if (product.stock_quantity < item.quantity) {
+        return response.sendError(
+          res,
+          `Sản phẩm ${product.name} chỉ còn ${product.stock_quantity} sản phẩm`,
+          400
+        );
+      }
+
+      //  Get primary image
+      const primaryImage = product.images?.find((img) => img.is_primary);
+      const productImage = primaryImage?.image_url || product.images?.[0]?.image_url || "";
+
+      // Calculate prices
+      const salePrice = product.sale_price || 0;
+      const finalPrice = salePrice > 0 && salePrice < product.price ? salePrice : product.price;
+      const itemTotal = finalPrice * item.quantity;
+      const discountAmount = product.price - finalPrice;
+      const discountPercent = discountAmount > 0 ? Math.round((discountAmount / product.price) * 100) : 0;
+
       subtotal += itemTotal;
 
+      // Create order item with hardcoded data
       orderItems.push({
         product_id: product._id,
+        // Hardcoded product info
+        product_name: product.name,
+        product_slug: product.slug,
+        product_image: productImage,
+        product_description: product.description || product.short_description || "",
+        category_name: product.category_id?.name || "",
+        category_id: product.category_id?._id,
+        // Pricing
         quantity: item.quantity,
-        price: product.price,
+        price: finalPrice,
+        sale_price: salePrice,
+        original_price: product.price,
         total: itemTotal,
-        sale_price: product.sale_price || null,
+        // Additional info
+        sku: product.sku,
+        weight: product.weight,
+        unit: product.unit || "sản phẩm",
+        // Variant
+        variant: item.variant || {},
+        // Discount
+        discount_percent: discountPercent,
+        discount_amount: discountAmount,
+        // Product status
+        was_on_sale: salePrice > 0 && salePrice < product.price,
+        was_featured: product.featured || false,
+        // Hometown
+        hometown_origin: product.hometown_origin || {},
+        created_at: new Date(),
       });
     }
 
@@ -681,13 +771,13 @@ export const createOrder = async (req, res) => {
     const shippingFee = 30000;
     const totalAmount = subtotal + shippingFee - (discount_value || 0) - (freeship_value || 0);
 
-    // Tạo đơn
+    // Tạo đơn với hardcoded items
     const newOrder = new Order({
       user_id: userId,
       order_number: orderNumber,
       items: orderItems,
-      subtotal: subtotal, 
-      total_amount: totalAmount, 
+      subtotal: subtotal,
+      total_amount: totalAmount,
       shipping_fee: shippingFee,
       freeship_value: freeship_value || 0,
       discount_value: discount_value || 0,
@@ -695,9 +785,30 @@ export const createOrder = async (req, res) => {
       shipping_info,
       notes,
       status: "pending",
+      history: [
+        {
+          status: "pending",
+          date: new Date(),
+          note: "Đơn hàng được tạo",
+        },
+      ],
     });
 
     await newOrder.save();
+
+    // Update product stock and sold quantity
+    for (const item of orderItems) {
+      await Product.findByIdAndUpdate(item.product_id, {
+        $inc: {
+          stock_quantity: -item.quantity,
+          sold_quantity: item.quantity,
+          purchase_count: 1,
+        },
+      });
+    }
+
+    // Clear cart
+    await CartItem.deleteMany({ user_id: userId });
 
     // Tăng usedCount cho voucher freeship nếu có
     if (freeship) {
@@ -715,16 +826,21 @@ export const createOrder = async (req, res) => {
       );
     }
 
-    // Populate the created order
-    const populatedOrder = await Order.findById(newOrder._id)
-      .populate("items.product_id", "name images price sale_price")
+    // Không populate nữa, dùng hardcoded data
+    const createdOrder = await Order.findById(newOrder._id)
       .populate("user_id", "name email phone")
       .lean();
 
     const data = {
-      order: populatedOrder,
+      order: createdOrder,
     };
-    await notificationService.notifyNewOrder(newOrder);
+
+    // Send notification
+    try {
+      await notificationService.notifyNewOrder(newOrder);
+    } catch (notifyError) {
+      console.error("Error sending notification:", notifyError);
+    }
 
     return response.sendSuccess(res, data, "Đặt hàng thành công", 201);
   } catch (error) {

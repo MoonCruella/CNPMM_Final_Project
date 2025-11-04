@@ -11,7 +11,7 @@ const OrderCard = ({
   onCancelOrder,
   onReorder,
   onUpdateShippingStatus,
-  onCancelRequest,
+  onCancelRequest, 
   user,
   autoOpen = false,
   onModalClose
@@ -22,7 +22,7 @@ const OrderCard = ({
   const [showCancelModal, setShowCancelModal] = useState(false);
   const navigate = useNavigate();
 
-  // ✅ Tính thời gian đã trôi qua
+  // Tính thời gian đã trôi qua
   const timeElapsed = useMemo(() => {
     if (!order.created_at) return 0;
     return Date.now() - new Date(order.created_at).getTime();
@@ -30,12 +30,12 @@ const OrderCard = ({
 
   const thirtyMinutes = 30 * 60 * 1000;
 
-  // ✅ Check xem có thể hủy trực tiếp không
+  //  Check xem có thể hủy trực tiếp không
   const canDirectCancel = useMemo(() => {
     return ["pending", "confirmed"].includes(order.status) && timeElapsed <= thirtyMinutes;
   }, [order.status, timeElapsed, thirtyMinutes]);
 
-  // ✅ Check xem có thể gửi yêu cầu hủy không
+  //  Check xem có thể gửi yêu cầu hủy không
   const canRequestCancel = useMemo(() => {
     return (
       (["pending", "confirmed"].includes(order.status) && timeElapsed > thirtyMinutes) ||
@@ -70,11 +70,9 @@ const OrderCard = ({
     }).format(amount);
   }, []);
 
-  const getPrimaryImage = useCallback((item) => {
-    const images = item.product_id?.images;
-    if (!images || !Array.isArray(images)) return "/placeholder-product.jpg";
-    const primaryImage = images.find((img) => img.is_primary);
-    return primaryImage?.image_url || images[0]?.image_url || "/placeholder-product.jpg";
+  //  Get product image from hardcoded data
+  const getProductImage = useCallback((item) => {
+    return item.product_image || "/placeholder-product.jpg";
   }, []);
 
   const handleOpenModal = useCallback(() => {
@@ -92,7 +90,7 @@ const OrderCard = ({
     if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
       return;
     }
-
+    
     if (onCancelOrder) {
       onCancelOrder(order._id, "Người dùng hủy đơn");
     }
@@ -127,8 +125,9 @@ const OrderCard = ({
     <>
       <div
         id={`order-${orderId}`}
-        className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-300 ${autoOpen ? 'ring-4 ring-blue-500 ring-offset-2' : 'hover:shadow-md'
-          }`}
+        className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-300 ${
+          autoOpen ? 'ring-4 ring-blue-500 ring-offset-2' : 'hover:shadow-md'
+        }`}
       >
         <div className="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b border-green-200">
           <div className="flex items-center justify-between flex-wrap gap-3">
@@ -141,13 +140,7 @@ const OrderCard = ({
                   </span>
                 </div>
                 <div className="text-xs text-gray-500">
-                  <span>📅 Đặt ngày: {formatDate(order.created_at)}</span>
-                  {order.updated_at && order.updated_at !== order.created_at && (
-                    <>
-                      <span> • </span>
-                      <span>🔄 Cập nhật: {formatDate(order.updated_at)}</span>
-                    </>
-                  )}
+                  📅 {formatDate(order.created_at)}
                 </div>
               </div>
             </div>
@@ -157,7 +150,10 @@ const OrderCard = ({
         <div className="p-6">
           <div className="space-y-4">
             {order.items?.map((item, index) => {
-              const imageUrl = getPrimaryImage(item);
+              const imageUrl = getProductImage(item);
+              const productName = item.product_name || "Sản phẩm";
+              const isDeleted = item.product_deleted || !item.product_exists;
+              
               return (
                 <div
                   key={item._id || `${order._id}-item-${index}`}
@@ -166,7 +162,7 @@ const OrderCard = ({
                   <div className="w-20 h-20 flex-shrink-0">
                     <img
                       src={imageUrl}
-                      alt={item.product_id?.name}
+                      alt={productName}
                       className="w-full h-full object-cover rounded-lg border border-gray-200"
                       loading="lazy"
                       onError={(e) => {
@@ -175,17 +171,43 @@ const OrderCard = ({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-800 mb-1 line-clamp-2">
-                      {item.product_id?.name || "Sản phẩm không tồn tại"}
-                    </h4>
+                    {/*  Hiển thị tên sản phẩm bình thường, không phân biệt deleted */}
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-medium mb-1 line-clamp-2 text-gray-800">
+                        {productName}
+                      </h4>
+                    </div>
+                    {item.category_name && (
+                      <div className="text-xs text-gray-500 mb-1">
+                        📁 {item.category_name}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                       <span>Số lượng: {item.quantity}</span>
+                      {item.unit && <span>• {item.unit}</span>}
                     </div>
                     <div className="flex items-center gap-3">
+                      {item.was_on_sale && item.original_price > item.price && (
+                        <span className="text-sm text-gray-400 line-through">
+                          {formatCurrency(item.original_price)}
+                        </span>
+                      )}
                       <span className="font-semibold text-green-600">
                         {formatCurrency(item.price)}
                       </span>
+                      {item.discount_percent > 0 && (
+                        <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">
+                          -{item.discount_percent}%
+                        </span>
+                      )}
                     </div>
+                    {item.was_featured && (
+                      <div className="mt-1">
+                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">
+                          ⭐ Nổi bật
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -195,11 +217,33 @@ const OrderCard = ({
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="text-sm text-gray-600">
-                <div>
-                  <span className="font-medium">Thành tiền:</span>{" "}
-                  <span className="text-xl font-bold text-green-600">
-                    {formatCurrency(order.total_amount)}
-                  </span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span>Tổng tiền hàng:</span>
+                    <span className="font-medium">{formatCurrency(order.subtotal)}</span>
+                  </div>
+                  {order.shipping_fee > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span>Phí vận chuyển:</span>
+                      <span className="font-medium">{formatCurrency(order.shipping_fee)}</span>
+                    </div>
+                  )}
+                  {order.freeship_value > 0 && (
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <span>Miễn phí ship:</span>
+                      <span className="font-medium">-{formatCurrency(order.freeship_value)}</span>
+                    </div>
+                  )}
+                  {order.discount_value > 0 && (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <span>Giảm giá:</span>
+                      <span className="font-medium">-{formatCurrency(order.discount_value)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-lg font-bold text-green-600 pt-2 border-t">
+                    <span>Thành tiền:</span>
+                    <span>{formatCurrency(order.total_amount)}</span>
+                  </div>
                 </div>
               </div>
 
@@ -211,7 +255,7 @@ const OrderCard = ({
                   👁️ Xem chi tiết
                 </button>
 
-                {/* ✅ Hủy trực tiếp nếu trong vòng 30 phút */}
+                {/*  Hủy trực tiếp nếu trong vòng 30 phút */}
                 {user?.role === "user" && canDirectCancel && (
                   <button
                     onClick={handleCancelOrder}
@@ -221,7 +265,7 @@ const OrderCard = ({
                   </button>
                 )}
 
-                {/* ✅ Gửi yêu cầu hủy nếu đã quá 30 phút hoặc đang processing */}
+                {/*  Gửi yêu cầu hủy nếu đã quá 30 phút hoặc đang processing */}
                 {user?.role === "user" && canRequestCancel && (
                   <button
                     onClick={handleOpenCancelModal}

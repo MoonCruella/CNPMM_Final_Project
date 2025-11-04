@@ -60,7 +60,7 @@ const initSocket = (httpServer) => {
       socket.join('seller');
     }
 
-    // ✅ BỔ SUNG: Xử lý Support Chat
+    //  BỔ SUNG: Xử lý Support Chat
     // Join support chat room
     socket.on('join_support_room', (conversationId) => {
       const roomName = `support:${conversationId}`;

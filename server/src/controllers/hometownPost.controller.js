@@ -114,7 +114,7 @@ export const getPosts = async (req, res) => {
         // Admin: xem tất cả (không filter status)
         // Không set filter.status để lấy tất cả
       } else if (req.user.role === 'seller') {
-        // ✅ Seller: xem tất cả bài của mình (không filter status)
+        // Seller: xem tất cả bài của mình (không filter status)
         filter.author_id = req.user.userId;
       } else {
         // User thường: chỉ xem published
@@ -126,7 +126,7 @@ export const getPosts = async (req, res) => {
       filter['location.district'] = req.query.location;
     }
     
-    // ✅ Thêm tìm kiếm
+    // Thêm tìm kiếm
     if (req.query.search && req.query.search.trim()) {
       const searchRegex = new RegExp(req.query.search.trim(), 'i');
       filter.$or = [

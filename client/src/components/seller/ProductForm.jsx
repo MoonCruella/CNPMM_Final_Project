@@ -17,7 +17,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
   const [previews, setPreviews] = useState([]);
   const fileInputRef = useRef(null);
   
-  // ✅ Loading states
+  // Loading states
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,7 +53,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
       setPreviews([]);
     }
     
-    // ✅ Reset loading states khi mở/đóng form
+    //  Reset loading states khi mở/đóng form
     setIsUploading(false);
     setIsSubmitting(false);
   }, [initialData, open]);
@@ -76,7 +76,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    // ✅ Set uploading state
+    //  Set uploading state
     setIsUploading(true);
     const toastId = toast.loading(`Đang upload ${files.length} ảnh...`);
 
@@ -128,7 +128,7 @@ const ProductForm = ({ open, onClose, initialData, onSubmit, categories }) => {
       console.error("❌ Upload error:", err);
       toast.error("Có lỗi khi upload ảnh: " + err.message, { id: toastId });
     } finally {
-      // ✅ Reset uploading state
+      //  Reset uploading state
       setIsUploading(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";

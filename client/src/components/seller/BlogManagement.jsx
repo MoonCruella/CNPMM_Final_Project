@@ -83,10 +83,10 @@ const BlogManagement = () => {
     }
   };
 
-  // ✅ FIX: Cập nhật status locally trước khi gọi API
+  //  FIX: Cập nhật status locally trước khi gọi API
   const handleChangeStatus = async (postId, newStatus) => {
     try {
-      // ✅ Cập nhật UI ngay lập tức
+      // Cập nhật UI ngay lập tức
       setPosts(prevPosts => 
         prevPosts.map(post => 
           post._id === postId 
@@ -100,18 +100,18 @@ const BlogManagement = () => {
       if (response.success) {
         toast.success(`Bài viết đã được ${newStatus === 'published' ? 'đăng' : newStatus === 'draft' ? 'chuyển về bản nháp' : 'lưu trữ'}`);
         
-        // ✅ Nếu đang filter và status mới không khớp với filter, reload lại
+        //  Nếu đang filter và status mới không khớp với filter, reload lại
         if (filterStatus !== 'all' && filterStatus !== newStatus) {
           fetchPosts();
         }
       } else {
-        // ✅ Nếu lỗi, revert lại status cũ
+        //  Nếu lỗi, revert lại status cũ
         fetchPosts();
         toast.error(response.message || 'Không thể thay đổi trạng thái bài viết');
       }
     } catch (error) {
       console.error('Error changing blog post status:', error);
-      // ✅ Nếu lỗi, revert lại status cũ
+      //  Nếu lỗi, revert lại status cũ
       fetchPosts();
       toast.error('Có lỗi xảy ra khi thay đổi trạng thái bài viết');
     }
@@ -195,7 +195,7 @@ const BlogManagement = () => {
             </select>
           </div>
 
-          {/* ✅ Thêm thông báo khi đang filter */}
+          {/*  Thêm thông báo khi đang filter */}
           {filterStatus !== 'all' && (
             <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">

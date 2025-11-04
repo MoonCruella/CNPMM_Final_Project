@@ -23,7 +23,6 @@ const orderSchema = new mongoose.Schema(
         "cancelled",
         "cancel_request",
       ],
-
       default: "pending",
     },
     items: [
@@ -33,10 +32,95 @@ const orderSchema = new mongoose.Schema(
           ref: "Product",
           required: true,
         },
-        quantity: { type: Number, required: true },
-        price: { type: Number, required: true },
-        total: { type: Number, required: true },
-        sale_price: { type: Number },
+        // Hardcoded product data - Lưu thông tin sản phẩm tại thời điểm đặt hàng
+        product_name: {
+          type: String,
+          required: true,
+        },
+        product_slug: {
+          type: String,
+        },
+        product_image: {
+          type: String, // URL ảnh chính
+        },
+        product_description: {
+          type: String,
+        },
+        category_name: {
+          type: String,
+        },
+        category_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Category",
+        },
+        // Pricing info
+        quantity: { 
+          type: Number, 
+          required: true,
+          min: 1 
+        },
+        price: { 
+          type: Number, 
+          required: true,
+          min: 0
+        },
+        sale_price: { 
+          type: Number,
+          default: 0,
+          min: 0
+        },
+        original_price: { 
+          type: Number, // Giá gốc trước khi giảm
+        },
+        total: { 
+          type: Number, 
+          required: true,
+          min: 0
+        },
+        // Additional product info
+        sku: {
+          type: String,
+        },
+        weight: {
+          type: Number, // Khối lượng (gram)
+        },
+        unit: {
+          type: String, // Đơn vị: kg, gói, hộp...
+        },
+        // Variant info (nếu có)
+        variant: {
+          size: String,
+          color: String,
+          other_attributes: mongoose.Schema.Types.Mixed,
+        },
+        // Discount info
+        discount_percent: {
+          type: Number,
+          default: 0,
+        },
+        discount_amount: {
+          type: Number,
+          default: 0,
+        },
+        // Product status at order time
+        was_on_sale: {
+          type: Boolean,
+          default: false,
+        },
+        was_featured: {
+          type: Boolean,
+          default: false,
+        },
+        // Hometown origin (nếu là đặc sản)
+        hometown_origin: {
+          province: String,
+          district: String,
+        },
+        // Metadata
+        created_at: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
     subtotal: {
@@ -63,10 +147,18 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ["cod", "bank_transfer", "vnpay", "momo", "zalopay"],
     },
+    payment_status: {
+      type: String,
+      enum: ["pending", "paid", "failed", "refunded"],
+      default: "pending",
+    },
     shipping_info: {
       name: String,
       phone: String,
       address: String,
+      province: String,
+      district: String,
+      ward: String,
     },
     notes: String,
     tracking_number: String,
@@ -77,6 +169,10 @@ const orderSchema = new mongoose.Schema(
         status: String,
         date: Date,
         note: String,
+        updated_by: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
       },
     ],
 
@@ -91,9 +187,20 @@ const orderSchema = new mongoose.Schema(
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
   }
 );
+
+// Indexes
 orderSchema.index({ user_id: 1, status: 1 });
 orderSchema.index({ order_number: 1 });
 orderSchema.index({ created_at: -1 });
 orderSchema.index({ status: 1, created_at: 1 });
+orderSchema.index({ "items.product_id": 1 });
+
+// Virtual để check xem product còn tồn tại không
+orderSchema.virtual("items.product_exists").get(function () {
+  return this.items.map(async (item) => {
+    const Product = mongoose.model("Product");
+    return await Product.exists({ _id: item.product_id });
+  });
+});
 
 export default mongoose.model("Order", orderSchema);

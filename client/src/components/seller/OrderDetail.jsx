@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { toast } from "sonner";
 import orderService from "@/services/order.service";
-import { assets } from "@/assets/assets";
 
 const OrderDetail = () => {
   const { orderId } = useParams();
@@ -96,16 +95,9 @@ const OrderDetail = () => {
     }).format(date);
   };
 
-  const getPrimaryImage = (item) => {
-    const images = item.product_id?.images;
-    if (!images || !Array.isArray(images)) return "/placeholder-product.jpg";
-    
-    if (images.length > 0 && typeof images[0] === 'object') {
-      const primaryImage = images.find((img) => img.is_primary);
-      return primaryImage?.image_url || images[0]?.image_url || "/placeholder-product.jpg";
-    }
-    
-    return images[0] || "/placeholder-product.jpg";
+  //  Get product image from hardcoded data
+  const getProductImage = (item) => {
+    return item.product_image || "/placeholder-product.jpg";
   };
 
   const getNextStatus = (currentStatus) => {
@@ -148,7 +140,7 @@ const OrderDetail = () => {
           <p className="text-xl text-gray-600">Không tìm thấy đơn hàng</p>
           <button
             onClick={() => navigate(-1)}
-            className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+            className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 cursor-pointer"
           >
             Quay lại
           </button>
@@ -168,7 +160,7 @@ const OrderDetail = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-800">
-                    {order.order_number}
+                    #{order.order_number}
                   </h2>
                   <p className="text-sm text-gray-500">
                     Đặt lúc: {formatDate(order.created_at)}
@@ -215,7 +207,6 @@ const OrderDetail = () => {
                       {isUpdating ? "⏳ Đang cập nhật..." : `✓ ${getNextStatusLabel(order.status)}`}
                     </button>
                   )}
-                
                 </div>
               )}
             </div>
@@ -225,13 +216,17 @@ const OrderDetail = () => {
               <h3 className="text-xl font-bold mb-4">Sản phẩm ({order.items?.length || 0})</h3>
               <div className="space-y-4">
                 {order.items?.map((item, index) => {
-                  const imageUrl = getPrimaryImage(item);
+                  const imageUrl = getProductImage(item);
+                  const productName = item.product_name || "Sản phẩm";
+                  const isDeleted = item.product_deleted || !item.product_exists;
+                  
                   return (
-                    <div key={index} className="flex gap-4 p-4 border rounded-lg hover:bg-gray-50 transition">
+                    <div key={item._id || index} className="flex gap-4 p-4 border rounded-lg hover:bg-gray-50 transition">
+                      {/*  Loại bỏ overlay "Đã xóa" */}
                       <div className="w-20 h-20 flex-shrink-0">
                         <img
                           src={imageUrl}
-                          alt={item.product_id?.name || 'Product'}
+                          alt={productName}
                           className="w-full h-full object-cover rounded border border-gray-200"
                           onError={(e) => {
                             e.target.src = "/placeholder-product.jpg";
@@ -240,22 +235,59 @@ const OrderDetail = () => {
                       </div>
                       
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-800 mb-1">
-                          {item.product_id?.name || 'Sản phẩm không tồn tại'}
-                        </h4>
-                        <p className="text-sm text-gray-500 mb-2">
-                          Số lượng: {item.quantity}
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <p className="text-sm text-gray-500">
-                            Đơn giá: {formatCurrency(item.price)}
+                        {/*  Hiển thị tên sản phẩm bình thường */}
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h4 className="font-medium text-gray-800">
+                            {productName}
+                          </h4>
+                        </div>
+                        
+                        {item.category_name && (
+                          <p className="text-xs text-gray-500 mb-1">
+                            📁 {item.category_name}
                           </p>
-                          {item.sale_price && item.sale_price < item.price && (
-                            <span className="text-xs text-gray-400 line-through">
-                              {formatCurrency(item.price)}
+                        )}
+                        
+                        {item.sku && (
+                          <p className="text-xs text-gray-400 mb-1">
+                            SKU: {item.sku}
+                          </p>
+                        )}
+                        
+                        <p className="text-sm text-gray-500 mb-2">
+                          Số lượng: {item.quantity} {item.unit || ""}
+                        </p>
+                        
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {item.was_on_sale && item.original_price > item.price && (
+                            <span className="text-sm text-gray-400 line-through">
+                              {formatCurrency(item.original_price)}
+                            </span>
+                          )}
+                          <span className="text-sm text-gray-600">
+                            Đơn giá: {formatCurrency(item.price)}
+                          </span>
+                          {item.discount_percent > 0 && (
+                            <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">
+                              -{item.discount_percent}%
                             </span>
                           )}
                         </div>
+                        
+                        {item.was_featured && (
+                          <div className="mt-2">
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">
+                              ⭐ Nổi bật
+                            </span>
+                          </div>
+                        )}
+                        
+                        {item.hometown_origin?.province && (
+                          <div className="mt-1 text-xs text-blue-600">
+                            📍 Xuất xứ: {item.hometown_origin.province}
+                            {item.hometown_origin.district && `, ${item.hometown_origin.district}`}
+                          </div>
+                        )}
                       </div>
                       
                       <div className="text-right">
@@ -271,23 +303,26 @@ const OrderDetail = () => {
 
             {/* Shipping Info */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-xl font-bold mb-4">Thông tin giao hàng</h3>
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <span>📍</span>
+                Thông tin giao hàng
+              </h3>
               <div className="space-y-2">
                 <p className="text-gray-700">
                   <span className="font-medium">Người nhận:</span>{" "}
-                  {order.shipping_info?.name}
+                  {order.shipping_info?.name || "N/A"}
                 </p>
                 <p className="text-gray-700">
                   <span className="font-medium">Email:</span>{" "}
-                  {order.user_id?.email}
+                  {order.user_id?.email || "N/A"}
                 </p>
                 <p className="text-gray-700">
                   <span className="font-medium">Số điện thoại:</span>{" "}
-                  {order.shipping_info?.phone}
+                  {order.shipping_info?.phone || "N/A"}
                 </p>
                 <p className="text-gray-700">
                   <span className="font-medium">Địa chỉ:</span>{" "}
-                  {order.shipping_info?.address}
+                  {order.shipping_info?.address || "N/A"}
                 </p>
                 {order.notes && (
                   <p className="text-gray-700">
@@ -304,35 +339,78 @@ const OrderDetail = () => {
                 )}
               </div>
             </div>
+
+            {/* Order Timeline */}
+            {order.timeline && order.timeline.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                  <span>📝</span>
+                  Lịch sử đơn hàng
+                </h3>
+                <div className="space-y-4">
+                  {order.timeline.map((step, index) => (
+                    <div key={index} className="flex items-start gap-4">
+                      <div
+                        className={`w-4 h-4 rounded-full mt-1 flex-shrink-0 ${
+                          step.completed ? "bg-green-500" : "bg-gray-300"
+                        }`}
+                      ></div>
+                      <div className={`flex-1 ${index < order.timeline.length - 1 ? "pb-4 border-b" : ""}`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4
+                            className={`font-medium ${
+                              step.completed ? "text-gray-800" : "text-gray-500"
+                            }`}
+                          >
+                            {step.label}
+                          </h4>
+                          {step.date && (
+                            <span className="text-sm text-gray-500">
+                              - lúc {formatDate(step.date)}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">{step.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm p-6 sticky top-4">
-              <h3 className="text-xl font-bold mb-4">Tổng quan đơn hàng</h3>
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <span>💳</span>
+                Tổng quan đơn hàng
+              </h3>
               
-              <div className="space-y-3">
+              <div className="space-y-3 text-sm">
                 <div className="flex justify-between text-gray-700">
-                  <span>Tạm tính:</span>
-                  <span>{formatCurrency(order.subtotal)}</span>
+                  <span>Tổng tiền hàng:</span>
+                  <span className="font-medium">{formatCurrency(order.subtotal)}</span>
                 </div>
                 
-                <div className="flex justify-between text-gray-700">
-                  <span>Phí vận chuyển:</span>
-                  <span>{formatCurrency(order.shipping_fee)}</span>
-                </div>
-                
-                {order.discount_value > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Giảm giá:</span>
-                    <span>-{formatCurrency(order.discount_value)}</span>
+                {order.shipping_fee > 0 && (
+                  <div className="flex justify-between text-gray-700">
+                    <span>Phí vận chuyển:</span>
+                    <span className="font-medium">{formatCurrency(order.shipping_fee)}</span>
                   </div>
                 )}
                 
                 {order.freeship_value > 0 && (
-                  <div className="flex justify-between text-green-600">
+                  <div className="flex justify-between text-blue-600">
                     <span>Miễn phí ship:</span>
-                    <span>-{formatCurrency(order.freeship_value)}</span>
+                    <span className="font-medium">-{formatCurrency(order.freeship_value)}</span>
+                  </div>
+                )}
+                
+                {order.discount_value > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Giảm giá:</span>
+                    <span className="font-medium">-{formatCurrency(order.discount_value)}</span>
                   </div>
                 )}
                 
@@ -346,23 +424,42 @@ const OrderDetail = () => {
                 </div>
               </div>
 
-              <div className="mt-6 pt-6 border-t">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Phương thức thanh toán:</span>
-                  <br />
-                  {order.payment_method === "cod" && "Thanh toán khi nhận hàng (COD)"}
-                  {order.payment_method === "bank_transfer" && "Chuyển khoản ngân hàng"}
-                  {order.payment_method === "vnpay" && "VNPay"}
-                  {order.payment_method === "momo" && "MoMo"}
-                  {order.payment_method === "zalopay" && "ZaloPay"}
-                </p>
+              <div className="mt-6 pt-6 border-t space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Phương thức thanh toán:</span>
+                  <span className="font-medium capitalize">
+                    {order.payment_method === "cod" && "COD"}
+                    {order.payment_method === "bank_transfer" && "Chuyển khoản"}
+                    {order.payment_method === "vnpay" && "VNPay"}
+                    {order.payment_method === "momo" && "MoMo"}
+                    {order.payment_method === "zalopay" && "ZaloPay"}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Trạng thái thanh toán:</span>
+                  <span
+                    className={`font-medium ${
+                      order.payment_status === "paid" ? "text-green-600" : "text-orange-600"
+                    }`}
+                  >
+                    {order.payment_status === "paid" ? "Đã thanh toán" : "Chưa thanh toán"}
+                  </span>
+                </div>
+                
+                {order.payment_date && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Ngày thanh toán:</span>
+                    <span className="font-medium">{formatDate(order.payment_date)}</span>
+                  </div>
+                )}
               </div>
 
               <button
                 onClick={() => navigate("/seller/orders")}
-                className="w-full mt-6 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition cursor-pointer"
+                className="w-full mt-6 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition cursor-pointer font-medium"
               >
-                Quay lại danh sách
+                📋 Quay lại danh sách
               </button>
             </div>
           </div>

@@ -248,7 +248,7 @@ export const getAllProducts = async (req, res) => {
       message: "Lấy danh sách sản phẩm thành công"
     });
   } catch (err) {
-    console.error("❌ Error fetching all products:", err);
+    console.error("Error fetching all products:", err);
     res.status(500).json({
       success: false,
       message: "Server error",
