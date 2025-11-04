@@ -21,7 +21,12 @@ const MyOrdersPage = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchDebounceTimer, setSearchDebounceTimer] = useState(null);
   const [initialOrderLoaded, setInitialOrderLoaded] = useState(false);
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
+  
+  // ✅ Add flag to prevent initial auto-load
+  const [isInitialMount, setIsInitialMount] = useState(true);
+  const [userInteracted, setUserInteracted] = useState(false);
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -42,6 +47,18 @@ const MyOrdersPage = () => {
     cancelled: 0,
     cancel_request: 0,
   });
+
+  // ✅ Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    
+    // Set flag after a short delay to allow initial render
+    const timer = setTimeout(() => {
+      setIsInitialMount(false);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (orderIdFromUrl && isAuthenticated) {
@@ -93,9 +110,6 @@ const MyOrdersPage = () => {
               orderCard.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
             }, 3000);
           }
-
-          const modal = document.querySelector('[role="dialog"]');
-
         }, 1500);
 
       } else {
@@ -114,7 +128,6 @@ const MyOrdersPage = () => {
 
   const loadOtherOrders = async (excludeOrderId) => {
     try {
-
       const response = await orderService.getUserOrders(filter, 1, ORDERS_PER_PAGE);
 
       if (response.success) {
@@ -122,7 +135,6 @@ const MyOrdersPage = () => {
 
         // Filter out the order we already have
         const filteredOrders = newOrders.filter(o => o._id !== excludeOrderId);
-
 
         setOrders(prev => {
           // Keep the specific order at top, add others below
@@ -171,25 +183,28 @@ const MyOrdersPage = () => {
     };
   }, [searchTerm]);
 
-  // Intersection Observer - Enable after initial load
+  // ✅ Modified Intersection Observer - prevent initial trigger
   useEffect(() => {
+    // Disable if still mounting
+    if (isInitialMount) {
+      return;
+    }
+
     // Allow infinite scroll if:
     // 1. No orderIdFromUrl, OR
     // 2. orderIdFromUrl exists BUT initialOrderLoaded is true
     const shouldDisableScroll = orderIdFromUrl && !initialOrderLoaded;
 
     if (!loadMoreTriggerRef.current || !hasMore || isLoadingMore || isLoading || shouldDisableScroll) {
-      if (shouldDisableScroll) {
-      }
       return;
     }
-
 
     const observer = new IntersectionObserver(
       (entries) => {
         const firstEntry = entries[0];
 
-        if (firstEntry.isIntersecting && hasMore && !isLoadingMore && !isLoading) {
+        // ✅ Only trigger if user has scrolled (not initial mount)
+        if (firstEntry.isIntersecting && hasMore && !isLoadingMore && !isLoading && userInteracted) {
           loadMoreOrders();
         }
       },
@@ -207,7 +222,38 @@ const MyOrdersPage = () => {
         observer.unobserve(loadMoreTriggerRef.current);
       }
     };
-  }, [hasMore, isLoadingMore, isLoading, currentPage, orderIdFromUrl, initialOrderLoaded]);
+  }, [hasMore, isLoadingMore, isLoading, currentPage, orderIdFromUrl, initialOrderLoaded, isInitialMount, userInteracted]);
+
+  // ✅ Track user scroll interaction
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!userInteracted && window.scrollY > 50) {
+        setUserInteracted(true);
+      }
+    };
+
+    const handleWheel = () => {
+      if (!userInteracted) {
+        setUserInteracted(true);
+      }
+    };
+
+    const handleTouchMove = () => {
+      if (!userInteracted) {
+        setUserInteracted(true);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [userInteracted]);
 
   // Handle Search
   const handleSearch = async () => {
@@ -352,6 +398,8 @@ const MyOrdersPage = () => {
     setFilter(newFilter);
     setSearchTerm("");
     setIsSearching(false);
+    // ✅ Reset user interaction on filter change
+    setUserInteracted(false);
   };
 
   const handleCancelOrder = async (orderId, reason = "Người dùng hủy đơn") => {
@@ -397,32 +445,30 @@ const MyOrdersPage = () => {
     }
   };
 
-   const handleReorder = async (orderId) => {
-  try {
-    const response = await orderService.reorder(orderId);
-    if (response.success) {
-      toast.success("Đã thêm sản phẩm vào giỏ hàng");
-      
-      // Wait for cart to fetch completely
-      try {
-        await fetchCart();
-      } catch (fetchError) {
-        console.error("Cart fetch error:", fetchError);
-        // Continue anyway
+  const handleReorder = async (orderId) => {
+    try {
+      const response = await orderService.reorder(orderId);
+      if (response.success) {
+        toast.success("Đã thêm sản phẩm vào giỏ hàng");
+        
+        // Wait for cart to fetch completely
+        try {
+          await fetchCart();
+        } catch (fetchError) {
+          console.error("Cart fetch error:", fetchError);
+        }
+        
+        setTimeout(() => {
+          navigate('/cart');
+        }, 500);
+      } else {
+        toast.error(response.message || "Không thể đặt lại đơn hàng");
       }
-      
-      //  Navigate after a longer delay to ensure state updates
-      setTimeout(() => {
-        navigate('/cart');
-      }, 500); // Increase from 300ms to 500ms
-    } else {
-      toast.error(response.message || "Không thể đặt lại đơn hàng");
+    } catch (error) {
+      console.error("Reorder error:", error);
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi đặt lại đơn hàng");
     }
-  } catch (error) {
-    console.error("Reorder error:", error);
-    toast.error(error.response?.data?.message || "Có lỗi xảy ra khi đặt lại đơn hàng");
-  }
-};
+  };
 
   const handleUpdateShippingStatus = async (orderId, newStatus) => {
     try {
@@ -473,177 +519,175 @@ const MyOrdersPage = () => {
 
   return (
     <main className="bg-gray-50 min-h-screen">
-    <div className="max-w-[1215px] mx-auto px-4">
-      {/* Notification Banner */}
-      <section className="">       
-        {/* Search Bar - Matching width */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                placeholder="Tìm kiếm theo tên sản phẩm hoặc mã đơn hàng..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-              />
-              {searchTerm && (
-                <button
-                  onClick={handleClearSearch}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  ❌
-                </button>
-              )}
-            </div>
-            
-          </div>
-
-        </div>
-      </section>
-
-      {/* Filter Tabs - Matching width, no extra space */}
-      <section>
-        <div className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden"> 
-          <div className="flex gap-2 p-2 overflow-x-auto"> 
-            {[
-              { key: "all", label: "Tất cả", count: orderStats.total },
-              { key: "pending", label: "Chờ xác nhận", count: orderStats.pending },
-              { key: "confirmed", label: "Đã xác nhận", count: orderStats.confirmed },
-              { key: "processing", label: "Đang xử lý", count: orderStats.processing },
-              { key: "shipped", label: "Đang giao", count: orderStats.shipped },
-              { key: "delivered", label: "Đã giao", count: orderStats.delivered },
-              { key: "cancel_request", label: "Yêu cầu hủy", count: orderStats.cancel_request },
-              { key: "cancelled", label: "Đã hủy", count: orderStats.cancelled },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => handleFilterChange(tab.key)}
-                className={`px-4 py-2.5 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2 flex-shrink-0 ${
-                  filter === tab.key
-                    ? "bg-green-600 text-white shadow-md scale-105 hover:bg-green-700 cursor-pointer"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer"
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                    filter === tab.key
-                      ? "bg-white text-green-600"
-                      : "bg-gray-200 text-gray-600"
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Orders List - Matching width */}
-      <section className="pb-16">
-        {isLoading && !isLoadingMore ? (
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">
-              {orderIdFromUrl
-                ? "Đang tải đơn hàng..."
-                : isSearching
-                  ? "Đang tìm kiếm..."
-                  : "Đang tải đơn hàng..."}
-            </p>
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <div className="text-6xl mb-4">📦</div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              Chưa có đơn hàng
-            </h3>
-            <p className="text-gray-600 mb-6">
-              {searchTerm
-                ? `Không tìm thấy đơn hàng phù hợp với "${searchTerm}"`
-                : "Bạn chưa có đơn hàng nào"}
-            </p>
-            <Link
-              to="/products"
-              className="inline-block bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
-            >
-              Mua sắm ngay
-            </Link>
-          </div>
-        ) : (
-          <>
-            {/* Orders List */}
-            <div className="space-y-4">
-              {orders.map((order, index) => {
-                if (!order?._id) {
-                  console.warn('⚠️ Order without _id at index', index, order);
-                }
-
-                const shouldAutoOpen = selectedOrderId && order._id === selectedOrderId;
-
-                const orderKey = shouldAutoOpen
-                  ? `${order._id}-highlighted-${Date.now()}`
-                  : order._id || `order-${index}`;
-
-                return (
-                  <OrderCard
-                    key={orderKey}
-                    orderId={order._id}
-                    order={order}
-                    onCancelOrder={handleCancelOrder}
-                    onCancelRequest={handleCancelRequest} 
-                    onReorder={handleReorder}
-                    onUpdateShippingStatus={handleUpdateShippingStatus}
-                    user={user}
-                    autoOpen={shouldAutoOpen}
-                    onModalClose={handleCloseOrderDetail}
-                  />
-                );
-              })}
-            </div>
-
-            {hasMore && (
-              <div
-                ref={loadMoreTriggerRef}
-                className="flex justify-center items-center py-8 min-h-[80px]"
-              >
-                {isLoadingMore ? (
-                  <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                    <p className="text-sm text-gray-600">Đang tải thêm...</p>
-                  </div>
-                ) : orderIdFromUrl && !initialOrderLoaded ? (
-                  <div className="text-center text-gray-400 text-sm">
-                    <div className="w-8 h-8 border-4 border-gray-300 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                    <p>Đang tải đơn hàng...</p>
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-400 text-sm invisible">
-                    <p>Cuộn xuống để tải thêm...</p>
-                  </div>
+      <div className="max-w-[1215px] mx-auto px-4">
+        {/* Search Bar */}
+        <section className="">       
+          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 relative">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  placeholder="Tìm kiếm theo tên sản phẩm hoặc mã đơn hàng..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    ❌
+                  </button>
                 )}
               </div>
-            )}
+            </div>
+          </div>
+        </section>
 
-            {!hasMore && orders.length > 0 && (
-              <div className="text-center py-8">
-                <div className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 rounded-full">
-                  <span className="text-2xl">🎉</span>
-                  <p className="text-gray-600 font-medium">
-                    Đã hiển thị tất cả {orders.length} đơn hàng
-                    {isSearching && searchTerm && ` cho "${searchTerm}"`}
-                  </p>
-                </div>
+        {/* Filter Tabs */}
+        <section>
+          <div className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden"> 
+            <div className="flex gap-2 p-2 overflow-x-auto"> 
+              {[
+                { key: "all", label: "Tất cả", count: orderStats.total },
+                { key: "pending", label: "Chờ xác nhận", count: orderStats.pending },
+                { key: "confirmed", label: "Đã xác nhận", count: orderStats.confirmed },
+                { key: "processing", label: "Đang xử lý", count: orderStats.processing },
+                { key: "shipped", label: "Đang giao", count: orderStats.shipped },
+                { key: "delivered", label: "Đã giao", count: orderStats.delivered },
+                { key: "cancel_request", label: "Yêu cầu hủy", count: orderStats.cancel_request },
+                { key: "cancelled", label: "Đã hủy", count: orderStats.cancelled },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => handleFilterChange(tab.key)}
+                  className={`px-4 py-2.5 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-2 flex-shrink-0 ${
+                    filter === tab.key
+                      ? "bg-green-600 text-white shadow-md scale-105 hover:bg-green-700 cursor-pointer"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      filter === tab.key
+                        ? "bg-white text-green-600"
+                        : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Orders List */}
+        <section className="pb-16">
+          {isLoading && !isLoadingMore ? (
+            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+              <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">
+                {orderIdFromUrl
+                  ? "Đang tải đơn hàng..."
+                  : isSearching
+                    ? "Đang tìm kiếm..."
+                    : "Đang tải đơn hàng..."}
+              </p>
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+              <div className="text-6xl mb-4">📦</div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                Chưa có đơn hàng
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {searchTerm
+                  ? `Không tìm thấy đơn hàng phù hợp với "${searchTerm}"`
+                  : "Bạn chưa có đơn hàng nào"}
+              </p>
+              <Link
+                to="/products"
+                className="inline-block bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
+              >
+                Mua sắm ngay
+              </Link>
+            </div>
+          ) : (
+            <>
+              {/* Orders List */}
+              <div className="space-y-4">
+                {orders.map((order, index) => {
+                  if (!order?._id) {
+                    console.warn('⚠️ Order without _id at index', index, order);
+                  }
+
+                  const shouldAutoOpen = selectedOrderId && order._id === selectedOrderId;
+
+                  const orderKey = shouldAutoOpen
+                    ? `${order._id}-highlighted-${Date.now()}`
+                    : order._id || `order-${index}`;
+
+                  return (
+                    <OrderCard
+                      key={orderKey}
+                      orderId={order._id}
+                      order={order}
+                      onCancelOrder={handleCancelOrder}
+                      onCancelRequest={handleCancelRequest} 
+                      onReorder={handleReorder}
+                      onUpdateShippingStatus={handleUpdateShippingStatus}
+                      user={user}
+                      autoOpen={shouldAutoOpen}
+                      onModalClose={handleCloseOrderDetail}
+                    />
+                  );
+                })}
               </div>
-            )}
-          </>
-        )}  
-      </section>
-    </div>
-  </main>
+
+              {/* ✅ Load More Trigger - Only shown after user scrolls */}
+              {hasMore && (
+                <div
+                  ref={loadMoreTriggerRef}
+                  className="flex justify-center items-center py-8 min-h-[80px]"
+                >
+                  {isLoadingMore ? (
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                      <p className="text-sm text-gray-600">Đang tải thêm...</p>
+                    </div>
+                  ) : orderIdFromUrl && !initialOrderLoaded ? (
+                    <div className="text-center text-gray-400 text-sm">
+                      <div className="w-8 h-8 border-4 border-gray-300 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                      <p>Đang tải đơn hàng...</p>
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-400 text-sm invisible">
+                      <p>Cuộn xuống để tải thêm...</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!hasMore && orders.length > 0 && (
+                <div className="text-center py-8">
+                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 rounded-full">
+                    <span className="text-2xl">🎉</span>
+                    <p className="text-gray-600 font-medium">
+                      Đã hiển thị tất cả {orders.length} đơn hàng
+                      {isSearching && searchTerm && ` cho "${searchTerm}"`}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}  
+        </section>
+      </div>
+    </main>
   );
 };
 
