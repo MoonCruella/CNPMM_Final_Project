@@ -5,12 +5,12 @@ import Voucher from "../models/voucher.model.js";
 import mongoose from "mongoose";
 import response from "../helpers/response.js";
 import * as notificationService from "../services/notification.service.js";
-import CartItem from "../models/cart.model.js"; 
-import { 
-  createFuzzyMongoQuery, 
-  sortByRelevance, 
+import CartItem from "../models/cart.model.js";
+import {
+  createFuzzyMongoQuery,
+  sortByRelevance,
   removeVietnameseTones,
-  createVietnameseRegex 
+  createVietnameseRegex,
 } from "../utils/fuzzySearch.js";
 //Get user orders with filter and pagination
 export const getUserOrders = async (req, res) => {
@@ -49,7 +49,9 @@ export const getUserOrders = async (req, res) => {
       orders.map(async (order) => {
         const enrichedItems = await Promise.all(
           order.items.map(async (item) => {
-            const productExists = await Product.exists({ _id: item.product_id });
+            const productExists = await Product.exists({
+              _id: item.product_id,
+            });
             return {
               ...item,
               product_exists: !!productExists,
@@ -72,14 +74,24 @@ export const getUserOrders = async (req, res) => {
     const allUserOrders = await Order.find({ user_id: userId }).lean();
     const orderStats = {
       total: allUserOrders.length,
-      pending: allUserOrders.filter((order) => order.status === "pending").length,
-      confirmed: allUserOrders.filter((order) => order.status === "confirmed").length,
-      processing: allUserOrders.filter((order) => order.status === "processing").length,
-      shipped: allUserOrders.filter((order) => order.status === "shipped").length,
-      delivered: allUserOrders.filter((order) => order.status === "delivered").length,
-      cancel_request: allUserOrders.filter((o) => o.status === "cancel_request").length,
-      cancelled: allUserOrders.filter((order) => order.status === "cancelled").length,
-      totalAmount: allUserOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0),
+      pending: allUserOrders.filter((order) => order.status === "pending")
+        .length,
+      confirmed: allUserOrders.filter((order) => order.status === "confirmed")
+        .length,
+      processing: allUserOrders.filter((order) => order.status === "processing")
+        .length,
+      shipped: allUserOrders.filter((order) => order.status === "shipped")
+        .length,
+      delivered: allUserOrders.filter((order) => order.status === "delivered")
+        .length,
+      cancel_request: allUserOrders.filter((o) => o.status === "cancel_request")
+        .length,
+      cancelled: allUserOrders.filter((order) => order.status === "cancelled")
+        .length,
+      totalAmount: allUserOrders.reduce(
+        (sum, order) => sum + (order.total_amount || 0),
+        0
+      ),
     };
 
     const data = {
@@ -158,7 +170,9 @@ export const getUserOrdersByAdmin = async (req, res) => {
       orders.map(async (order) => {
         const enrichedItems = await Promise.all(
           order.items.map(async (item) => {
-            const productExists = await Product.exists({ _id: item.product_id });
+            const productExists = await Product.exists({
+              _id: item.product_id,
+            });
             return {
               ...item,
               product_exists: !!productExists,
@@ -181,14 +195,24 @@ export const getUserOrdersByAdmin = async (req, res) => {
     const allUserOrders = await Order.find({ user_id: userId }).lean();
     const orderStats = {
       total: allUserOrders.length,
-      pending: allUserOrders.filter((order) => order.status === "pending").length,
-      confirmed: allUserOrders.filter((order) => order.status === "confirmed").length,
-      processing: allUserOrders.filter((order) => order.status === "processing").length,
-      shipped: allUserOrders.filter((order) => order.status === "shipped").length,
-      delivered: allUserOrders.filter((order) => order.status === "delivered").length,
-      cancel_request: allUserOrders.filter((o) => o.status === "cancel_request").length,
-      cancelled: allUserOrders.filter((order) => order.status === "cancelled").length,
-      totalAmount: allUserOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0),
+      pending: allUserOrders.filter((order) => order.status === "pending")
+        .length,
+      confirmed: allUserOrders.filter((order) => order.status === "confirmed")
+        .length,
+      processing: allUserOrders.filter((order) => order.status === "processing")
+        .length,
+      shipped: allUserOrders.filter((order) => order.status === "shipped")
+        .length,
+      delivered: allUserOrders.filter((order) => order.status === "delivered")
+        .length,
+      cancel_request: allUserOrders.filter((o) => o.status === "cancel_request")
+        .length,
+      cancelled: allUserOrders.filter((order) => order.status === "cancelled")
+        .length,
+      totalAmount: allUserOrders.reduce(
+        (sum, order) => sum + (order.total_amount || 0),
+        0
+      ),
     };
 
     const data = {
@@ -240,9 +264,9 @@ export const getOrderById = async (req, res) => {
 
     //  Build query based on role
     let query = { _id: orderId };
-    
+
     // Nếu không phải admin/seller, chỉ cho phép xem đơn hàng của chính mình
-    if (userRole !== 'admin' && userRole !== 'seller') {
+    if (userRole !== "admin" && userRole !== "seller") {
       query.user_id = userId;
     }
 
@@ -257,8 +281,8 @@ export const getOrderById = async (req, res) => {
     if (!order) {
       return response.sendError(
         res,
-        userRole === 'admin' || userRole === 'seller' 
-          ? "Không tìm thấy đơn hàng" 
+        userRole === "admin" || userRole === "seller"
+          ? "Không tìm thấy đơn hàng"
           : "Không tìm thấy đơn hàng hoặc bạn không có quyền truy cập",
         404
       );
@@ -289,14 +313,18 @@ export const getOrderById = async (req, res) => {
         status: "confirmed",
         label: "Đã xác nhận",
         date: order.confirmed_at,
-        completed: ["confirmed", "processing", "shipped", "delivered"].includes(order.status),
+        completed: ["confirmed", "processing", "shipped", "delivered"].includes(
+          order.status
+        ),
         description: "Đơn hàng đã được xác nhận",
       },
       {
         status: "processing",
         label: "Đang chuẩn bị",
         date: order.processing_at,
-        completed: ["processing", "shipped", "delivered"].includes(order.status),
+        completed: ["processing", "shipped", "delivered"].includes(
+          order.status
+        ),
         description: "Shop đang chuẩn bị hàng",
       },
       {
@@ -395,59 +423,61 @@ export const cancelOrder = async (req, res) => {
       order.status = "cancelled";
       order.cancelled_at = now;
       order.cancel_reason = reason;
-      
+
       order.history = order.history || [];
       order.history.push({
         status: "cancelled",
         date: now,
         note: reason || "Khách hàng hủy đơn hàng",
       });
-      
+
       await order.save();
-      
+
       try {
         await notificationService.notifyOrderCancelled(order);
       } catch (notifyError) {
         console.error("Error sending cancellation notification:", notifyError);
       }
-      
+
       return response.sendSuccess(
         res,
         { order },
         "Hủy đơn hàng thành công",
         200
       );
-    } 
+    }
     // Nếu đã quá 30 phút nhưng vẫn ở pending/confirmed hoặc đang processing
     // → Gửi yêu cầu hủy
     else if (["pending", "confirmed", "processing"].includes(order.status)) {
       order.status = "cancel_request";
       order.cancel_reason = reason;
       order.cancel_requested_at = now;
-      
+
       order.history = order.history || [];
       order.history.push({
         status: "cancel_request",
         date: now,
         note: reason || "Yêu cầu hủy đơn hàng",
       });
-      
+
       await order.save();
-      
+
       try {
         await notificationService.notifyCancelRequest(order);
       } catch (notifyError) {
-        console.error("Error sending cancel request notification:", notifyError);
+        console.error(
+          "Error sending cancel request notification:",
+          notifyError
+        );
       }
-      
+
       return response.sendSuccess(
         res,
         { order },
         "Đã gửi yêu cầu hủy đơn hàng đến shop",
         200
       );
-    } 
-    else {
+    } else {
       // Các trạng thái khác không thể hủy
       return response.sendError(
         res,
@@ -476,16 +506,21 @@ export const autoConfirmOrders = async () => {
       order.status = "confirmed";
       order.confirmed_at = new Date();
       await order.save();
-      
+
       // Send notification to user
       try {
         await notificationService.notifyOrderAutoConfirmed(order);
-        console.log(`Sent auto-confirm notification for order ${order.order_number}`);
+        console.log(
+          `Sent auto-confirm notification for order ${order.order_number}`
+        );
       } catch (notifyError) {
-        console.error(`Error sending auto-confirm notification for order ${order.order_number}:`, notifyError);
+        console.error(
+          `Error sending auto-confirm notification for order ${order.order_number}:`,
+          notifyError
+        );
       }
     }
-    
+
     return orders.length;
   } catch (error) {
     console.error("Auto-confirm orders error:", error);
@@ -498,7 +533,6 @@ export const reorder = async (req, res) => {
   try {
     const { orderId } = req.params;
     const userId = req.user.userId;
-
 
     // Validate orderId
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
@@ -519,7 +553,6 @@ export const reorder = async (req, res) => {
       );
     }
 
-
     const unavailableItems = [];
     let addedCount = 0;
 
@@ -539,7 +572,7 @@ export const reorder = async (req, res) => {
       }
 
       // Check status
-      if (product.status === 'inactive') {
+      if (product.status === "inactive") {
         unavailableItems.push({
           name: product.name,
           reason: "Sản phẩm không còn bán",
@@ -565,7 +598,7 @@ export const reorder = async (req, res) => {
       if (cartItem) {
         // Update quantity
         const newQuantity = cartItem.quantity + item.quantity;
-        
+
         if (newQuantity > product.stock) {
           cartItem.quantity = product.stock;
           unavailableItems.push({
@@ -575,7 +608,7 @@ export const reorder = async (req, res) => {
         } else {
           cartItem.quantity = newQuantity;
         }
-        
+
         await cartItem.save();
       } else {
         // Create new cart item
@@ -584,9 +617,14 @@ export const reorder = async (req, res) => {
           product_id: productId,
           quantity: item.quantity,
         });
-        
+
         await cartItem.save();
-        console.log("➕ Added new cart item:", product.name, "qty:", item.quantity);
+        console.log(
+          "➕ Added new cart item:",
+          product.name,
+          "qty:",
+          item.quantity
+        );
       }
 
       addedCount++;
@@ -597,9 +635,8 @@ export const reorder = async (req, res) => {
       .populate("product_id", "name images price sale_price stock status")
       .sort({ updated_at: -1 });
 
-
     const data = {
-      cart: { items: cartItems }, 
+      cart: { items: cartItems },
       unavailable_items: unavailableItems,
       total_added: addedCount,
       total_unavailable: unavailableItems.length,
@@ -722,14 +759,19 @@ export const createOrder = async (req, res) => {
 
       //  Get primary image
       const primaryImage = product.images?.find((img) => img.is_primary);
-      const productImage = primaryImage?.image_url || product.images?.[0]?.image_url || "";
+      const productImage =
+        primaryImage?.image_url || product.images?.[0]?.image_url || "";
 
       // Calculate prices
       const salePrice = product.sale_price || 0;
-      const finalPrice = salePrice > 0 && salePrice < product.price ? salePrice : product.price;
+      const finalPrice =
+        salePrice > 0 && salePrice < product.price ? salePrice : product.price;
       const itemTotal = finalPrice * item.quantity;
       const discountAmount = product.price - finalPrice;
-      const discountPercent = discountAmount > 0 ? Math.round((discountAmount / product.price) * 100) : 0;
+      const discountPercent =
+        discountAmount > 0
+          ? Math.round((discountAmount / product.price) * 100)
+          : 0;
 
       subtotal += itemTotal;
 
@@ -740,7 +782,8 @@ export const createOrder = async (req, res) => {
         product_name: product.name,
         product_slug: product.slug,
         product_image: productImage,
-        product_description: product.description || product.short_description || "",
+        product_description:
+          product.description || product.short_description || "",
         category_name: product.category_id?.name || "",
         category_id: product.category_id?._id,
         // Pricing
@@ -769,7 +812,8 @@ export const createOrder = async (req, res) => {
 
     // Tính total_amount = subtotal + shipping_fee - discount - freeship
     const shippingFee = 30000;
-    const totalAmount = subtotal + shippingFee - (discount_value || 0) - (freeship_value || 0);
+    const totalAmount =
+      subtotal + shippingFee - (discount_value || 0) - (freeship_value || 0);
 
     // Tạo đơn với hardcoded items
     const newOrder = new Order({
@@ -1108,8 +1152,8 @@ export const getAllOrders = async (req, res) => {
       limit = 10,
       sort = "created_at",
       order = "desc",
-      startDate, // 
-      endDate,   // 
+      startDate, //
+      endDate, //
     } = req.query;
 
     const filter = {};
@@ -1148,12 +1192,19 @@ export const getAllOrders = async (req, res) => {
     const totalPages = Math.ceil(totalOrders / parseInt(limit));
 
     //  Calculate statistics (respect date filter)
-    const statsFilter = startDate || endDate ? {
-      created_at: {
-        ...(startDate ? { $gte: new Date(startDate) } : {}),
-        ...(endDate ? { $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) } : {})
-      }
-    } : {};
+    const statsFilter =
+      startDate || endDate
+        ? {
+            created_at: {
+              ...(startDate ? { $gte: new Date(startDate) } : {}),
+              ...(endDate
+                ? {
+                    $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+                  }
+                : {}),
+            },
+          }
+        : {};
 
     const allOrders = await Order.find(statsFilter).lean();
 
@@ -1165,7 +1216,8 @@ export const getAllOrders = async (req, res) => {
       shipped: allOrders.filter((o) => o.status === "shipped").length,
       delivered: allOrders.filter((o) => o.status === "delivered").length,
       cancelled: allOrders.filter((o) => o.status === "cancelled").length,
-      cancel_request: allOrders.filter((o) => o.status === "cancel_request").length,
+      cancel_request: allOrders.filter((o) => o.status === "cancel_request")
+        .length,
       totalAmount: allOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0),
     };
 
@@ -1209,21 +1261,20 @@ export const searchOrders = async (req, res) => {
       limit = 10,
       sort = "created_at",
       order = "desc",
-      startDate, // 
-      endDate,   // 
+      startDate, //
+      endDate, //
     } = req.query;
 
-    if (!q || q.trim() === '') {
+    if (!q || q.trim() === "") {
       return response.sendError(res, "Vui lòng nhập từ khóa tìm kiếm", 400);
     }
-
 
     const normalizedQuery = removeVietnameseTones(q.toLowerCase());
     const words = normalizedQuery.split(/\s+/).filter(Boolean);
 
     // Build base filter
     const filter = {};
-    
+
     if (req.user.role === "user") {
       filter.user_id = req.user.userId;
     }
@@ -1244,29 +1295,26 @@ export const searchOrders = async (req, res) => {
       }
     }
 
-    const productSearchConditions = words.flatMap(word => {
-      const normalizedPattern = { name: { $regex: word, $options: 'i' } };
+    const productSearchConditions = words.flatMap((word) => {
+      const normalizedPattern = { name: { $regex: word, $options: "i" } };
       const vietnamesePattern = createVietnameseRegex(word);
-      
-      return [
-        normalizedPattern,
-        { name: vietnamesePattern }
-      ];
+
+      return [normalizedPattern, { name: vietnamesePattern }];
     });
 
-
     const matchingProducts = await Product.find({
-      $or: productSearchConditions
-    }).select('_id name').lean();
+      $or: productSearchConditions,
+    })
+      .select("_id name")
+      .lean();
 
-
-    const matchingProductIds = matchingProducts.map(p => p._id);
+    const matchingProductIds = matchingProducts.map((p) => p._id);
 
     //  Order number search
-    const orderNumberSearchConditions = words.flatMap(word => {
+    const orderNumberSearchConditions = words.flatMap((word) => {
       return [
-        { order_number: { $regex: word, $options: 'i' } },
-        { order_number: createVietnameseRegex(word) }
+        { order_number: { $regex: word, $options: "i" } },
+        { order_number: createVietnameseRegex(word) },
       ];
     });
 
@@ -1278,7 +1326,7 @@ export const searchOrders = async (req, res) => {
 
     if (matchingProductIds.length > 0) {
       searchConditions.push({
-        'items.product_id': { $in: matchingProductIds }
+        "items.product_id": { $in: matchingProductIds },
       });
     }
 
@@ -1298,7 +1346,7 @@ export const searchOrders = async (req, res) => {
           matches: {
             by_order_number: 0,
             by_product_name: 0,
-          }
+          },
         },
         "Không tìm thấy đơn hàng nào",
         200
@@ -1329,28 +1377,31 @@ export const searchOrders = async (req, res) => {
 
     // STEP 5: Sort by relevance
     const sortedResults = sortByRelevance(orders, q, [
-      'order_number',
-      'items.product_id.name'
+      "order_number",
+      "items.product_id.name",
     ]);
 
-    const ordersWithScores = sortedResults.map(result => ({
+    const ordersWithScores = sortedResults.map((result) => ({
       ...result.item,
-      relevance_score: result.score.toFixed(2)
+      relevance_score: result.score.toFixed(2),
     }));
 
     // Calculate statistics
-    const matchedByOrderNumber = orders.filter(order => {
-      const normalized = removeVietnameseTones(order.order_number.toLowerCase());
-      return words.some(word => normalized.includes(word));
+    const matchedByOrderNumber = orders.filter((order) => {
+      const normalized = removeVietnameseTones(
+        order.order_number.toLowerCase()
+      );
+      return words.some((word) => normalized.includes(word));
     }).length;
 
-    const matchedByProductName = orders.filter(order =>
-      order.items.some(item => {
-        const productName = removeVietnameseTones(item.product_id?.name || '').toLowerCase();
-        return words.some(word => productName.includes(word));
+    const matchedByProductName = orders.filter((order) =>
+      order.items.some((item) => {
+        const productName = removeVietnameseTones(
+          item.product_id?.name || ""
+        ).toLowerCase();
+        return words.some((word) => productName.includes(word));
       })
     ).length;
-
 
     return response.sendSuccess(
       res,
@@ -1378,12 +1429,11 @@ export const searchOrders = async (req, res) => {
           order,
           startDate: startDate || null,
           endDate: endDate || null,
-        }
+        },
       },
       `Tìm thấy ${totalOrders} đơn hàng phù hợp`,
       200
     );
-
   } catch (error) {
     console.error("Search orders error:", error);
     return response.sendError(

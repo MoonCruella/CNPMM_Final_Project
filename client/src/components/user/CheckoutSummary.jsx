@@ -18,7 +18,7 @@ const CheckoutSummary = ({
 }) => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { removeMultipleItems } = useCartContext(); 
+  const { removeMultipleItems } = useCartContext();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -53,9 +53,9 @@ const CheckoutSummary = ({
   // Helper function to remove checked out items
   const removeCheckedOutItems = async () => {
     if (!Array.isArray(cartItems) || cartItems.length === 0) return;
-    
-    const itemIdsToRemove = cartItems.map(item => item._id);
-    
+
+    const itemIdsToRemove = cartItems.map((item) => item._id);
+
     await removeMultipleItems(itemIdsToRemove);
   };
 
@@ -79,7 +79,7 @@ const CheckoutSummary = ({
         orderService.createOrder(orderData).then(async (res) => {
           if (res.success) {
             toast.success("Thanh toán VNPay thành công!");
-            await removeCheckedOutItems(); 
+            await removeCheckedOutItems();
             localStorage.removeItem("pendingOrderData");
             navigate("/user/orders");
           } else {
@@ -104,7 +104,7 @@ const CheckoutSummary = ({
             const res = await orderService.createOrder(pendingOrderData);
             if (res.success) {
               toast.success("Thanh toán ZaloPay thành công!");
-              await removeCheckedOutItems(); 
+              await removeCheckedOutItems();
               localStorage.removeItem("pendingOrderData");
               navigate("/user/orders");
             } else {
@@ -148,7 +148,7 @@ const CheckoutSummary = ({
         discount: payload.discount ?? payload.data?.discount ?? 0,
         finalAmount: payload.finalAmount ?? payload.data?.finalAmount ?? null,
       });
-      toast.success('Áp dụng voucher thành công!');
+      toast.success("Áp dụng voucher thành công!");
     } catch (err) {
       console.error("Apply discount voucher failed", err);
       toast.error(
@@ -196,15 +196,17 @@ const CheckoutSummary = ({
         discount_value: discountAmount,
       };
 
-
       if (paymentMethod === "vnpay") {
         setLoading(true);
         const tempOrderId = new Date().getTime();
         orderData.orderId = tempOrderId;
-        
+
         //     Store cart items in localStorage for later removal
         localStorage.setItem("pendingOrderData", JSON.stringify(orderData));
-        localStorage.setItem("pendingCartItems", JSON.stringify(cartItems.map(i => i._id)));
+        localStorage.setItem(
+          "pendingCartItems",
+          JSON.stringify(cartItems.map((i) => i._id))
+        );
 
         const { success, url, message } = await vnpayService.createPayment(
           orderData.orderId,
@@ -221,10 +223,13 @@ const CheckoutSummary = ({
         setLoading(true);
         const tempOrderId = new Date().getTime();
         orderData.orderId = tempOrderId;
-        
+
         //     Store cart items in localStorage for later removal
         localStorage.setItem("pendingOrderData", JSON.stringify(orderData));
-        localStorage.setItem("pendingCartItems", JSON.stringify(cartItems.map(i => i._id)));
+        localStorage.setItem(
+          "pendingCartItems",
+          JSON.stringify(cartItems.map((i) => i._id))
+        );
 
         const { success, data, message } = await zalopayService.createPayment(
           orderData.orderId,
@@ -247,7 +252,7 @@ const CheckoutSummary = ({
         const res = await orderService.createOrder(orderData);
         if (res.success) {
           toast.success("Đặt hàng thành công!");
-          await removeCheckedOutItems(); 
+          await removeCheckedOutItems();
           navigate("/user/orders");
         } else {
           toast.error("Đặt hàng thất bại: " + res.message);
@@ -357,12 +362,16 @@ const CheckoutSummary = ({
         <div className="space-y-3 text-sm border-t pt-4">
           <div className="flex justify-between">
             <span className="text-gray-600">Tổng tiền hàng</span>
-            <span className="font-medium">{subtotal.toLocaleString("vi-VN")}₫</span>
+            <span className="font-medium">
+              {subtotal.toLocaleString("vi-VN")}₫
+            </span>
           </div>
 
           <div className="flex justify-between">
             <span className="text-gray-600">Phí vận chuyển</span>
-            <span className="font-medium">{defaultShippingFee.toLocaleString("vi-VN")}₫</span>
+            <span className="font-medium">
+              {defaultShippingFee.toLocaleString("vi-VN")}₫
+            </span>
           </div>
 
           {freeshipAmount > 0 && (
@@ -385,7 +394,9 @@ const CheckoutSummary = ({
 
           <div className="flex justify-between font-semibold text-lg pt-3 border-t">
             <span>Tổng thanh toán</span>
-            <span className="text-green-700">{total.toLocaleString("vi-VN")}₫</span>
+            <span className="text-green-700">
+              {total.toLocaleString("vi-VN")}₫
+            </span>
           </div>
         </div>
       </div>
@@ -417,7 +428,9 @@ const CheckoutSummary = ({
               : "bg-gray-400 cursor-not-allowed"
           }`}
         >
-          {loading ? "Đang xử lý..." : `Thanh toán ${selectedItemsCount} sản phẩm`}
+          {loading
+            ? "Đang xử lý..."
+            : `Thanh toán ${selectedItemsCount} sản phẩm`}
         </button>
       </div>
 

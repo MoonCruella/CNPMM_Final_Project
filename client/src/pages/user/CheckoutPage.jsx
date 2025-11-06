@@ -17,20 +17,61 @@ const Checkout = () => {
   const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
-    // Priority 1: From navigation state (cart page)
-    if (location.state?.selectedItems && location.state.selectedItems.length > 0) {
-      setSelectedItems(location.state.selectedItems);
-    } 
-    // Priority 2: From cart context (direct access)
-    else if (getSelectedItems && getSelectedItems().length > 0) {
-      setSelectedItems(getSelectedItems());
+    const query = new URLSearchParams(location.search);
+
+    // Nếu quay về từ gateway (VNPay / ZaloPay) — không redirect về cart ngay
+    // (CheckoutSummary sẽ xử lý callback và lưu đơn / xoá giỏ hàng)
+    if (
+      query.get("success") !== null ||
+      query.get("apptransid") !== null ||
+      query.get("orderId") !== null
+    ) {
+      // Thử phục hồi các item đang chờ thanh toán từ localStorage (nếu có)
+      const pendingIds = JSON.parse(
+        localStorage.getItem("pendingCartItems") || "[]"
+      );
+      if (
+        Array.isArray(pendingIds) &&
+        pendingIds.length > 0 &&
+        Array.isArray(allCartItems) &&
+        allCartItems.length > 0
+      ) {
+        const pendingItems = allCartItems.filter((it) =>
+          pendingIds.includes(it._id)
+        );
+        if (pendingItems.length > 0) {
+          setSelectedItems(pendingItems);
+        }
+      }
+      // chờ CheckoutSummary xử lý callback, không redirect
+      return;
     }
-    // Priority 3: No selection - redirect back
-    else {
-      toast.error('Vui lòng chọn sản phẩm trước khi thanh toán');
-      navigate('/cart');
+
+    // 1) ưu tiên items được truyền khi navigate từ Cart
+    const navSelected = location.state?.selectedItems;
+    if (Array.isArray(navSelected) && navSelected.length > 0) {
+      setSelectedItems(navSelected);
+      return;
     }
-  }, [location.state, getSelectedItems, navigate]);
+
+    // 2) dùng selected items từ CartContext (nếu có)
+    const ctxSelected =
+      typeof getSelectedItems === "function" ? getSelectedItems() : [];
+    if (Array.isArray(ctxSelected) && ctxSelected.length > 0) {
+      setSelectedItems(ctxSelected);
+      return;
+    }
+
+    // 3) fallback: nếu trong cart còn items -> dùng toàn bộ cart
+    if (Array.isArray(allCartItems) && allCartItems.length > 0) {
+      setSelectedItems(allCartItems);
+      return;
+    }
+
+    // 4) không có item ở đâu -> báo lỗi và quay về cart
+    toast.error("Vui lòng chọn sản phẩm trước khi thanh toán");
+    navigate("/cart");
+  }, [location, allCartItems, getSelectedItems, navigate]);
 
   //Calculate subtotal from selected items only
   const subtotal = Array.isArray(selectedItems)
@@ -75,7 +116,6 @@ const Checkout = () => {
       <div className="bg-white border-b border-gray-200 py-3">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between">
-            
             <Link
               to="/cart"
               className="text-sm text-green-600 hover:text-green-700 font-medium"
@@ -96,7 +136,7 @@ const Checkout = () => {
           {/* Cart bên phải */}
           <div className="flex-1 border rounded-2xl shadow bg-white p-6">
             <CheckoutSummary
-              cartItems={selectedItems} 
+              cartItems={selectedItems}
               subtotal={subtotal}
               selectedAddress={selectedAddress}
               paymentMethod={paymentMethod}
